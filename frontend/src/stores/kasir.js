@@ -84,10 +84,24 @@ export const useKasirStore = defineStore('kasir', () => {
     return res.tiket
   }
 
+  // item bisa baris gabungan (item.rows): jumlahnya dibatalkan dari baris terbaru dulu, tiketnya disatukan
   async function batalItem(item, body) {
-    const res = await post(path(`/item/${item.id}/batal`), body)
-    pesanan.value = res.pesanan
-    return res.tiket
+    let sisa = body.qty
+    let tiket = null
+    for (const row of [...(item.rows ?? [item])].reverse()) {
+      if (sisa <= 0) break
+      const qty = Math.min(sisa, row.qty)
+      const res = await post(path(`/item/${row.id}/batal`), { ...body, qty })
+      pesanan.value = res.pesanan
+      sisa -= qty
+      if (!res.tiket) continue
+      if (!tiket) tiket = res.tiket
+      else {
+        tiket.items = [...(tiket.items ?? []), ...(res.tiket.items ?? [])]
+        Object.assign(tiket.antrean ?? (tiket.antrean = {}), res.tiket.antrean)
+      }
+    }
+    return tiket
   }
 
   async function bayar(pembayaran) {

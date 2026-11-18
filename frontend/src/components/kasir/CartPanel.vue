@@ -5,7 +5,7 @@ import { useRun } from '@/composables/useRun'
 import { useAuthStore } from '@/stores/auth'
 import { useKasirStore } from '@/stores/kasir'
 import { rp } from '@/utils/format'
-import { printDapur, sisaLokal } from '@/utils/print'
+import { gabungTerkirim, printDapur, sisaLokal } from '@/utils/print'
 
 defineProps({ bisaTutup: Boolean, lebar: Boolean })
 const emit = defineEmits(['bayar', 'pisah', 'pindah', 'gabung', 'denah', 'tutup', 'lebar'])
@@ -15,6 +15,7 @@ const toast = useToast()
 const run = useRun()
 
 const p = computed(() => store.pesanan)
+const baris = computed(() => gabungTerkirim(p.value?.items ?? []))
 const belumKirim = computed(() => p.value?.items.filter((i) => !i.dikirim).length ?? 0)
 const jumlahItem = computed(() => p.value?.items.reduce((s, i) => s + i.qty, 0) ?? 0)
 const aktif = computed(() => p.value ?? store.draft)
@@ -63,7 +64,9 @@ function hapus(item) {
 function ubah(item, delta) {
   if (item.qty + delta <= 0) return hapus(item)
   if (delta < 0 && item.dikirim) return bukaBatal(item, 1)
-  return run(() => store.updateItem(item, item.qty + delta, item.catatan))
+  // baris gabungan: tambah lewat baris aslinya yang terakhir, server membuatnya baris baru yang belum dikirim
+  const asli = item.rows?.at(-1) ?? item
+  return run(() => store.updateItem(asli, asli.qty + delta, asli.catatan))
 }
 
 async function simpanCatatan() {
@@ -144,7 +147,7 @@ async function kirim() {
     </div>
 
     <ul v-else class="items">
-      <li v-for="i in p.items" :key="i.id" class="item" :class="{ lebar }">
+      <li v-for="i in baris" :key="i.id" class="item" :class="{ lebar }">
         <span class="barisnama" :title="[i.nama, i.opsi, i.catatan && `“${i.catatan}”`, `${rp(i.harga)} per porsi`].filter(Boolean).join(' · ')">
           <i v-if="i.dikirim" class="pi pi-send kirim" title="Sudah dikirim ke dapur" />
           <strong>{{ i.nama }}</strong>

@@ -29,6 +29,9 @@
         <p id="salah"></p>
       </form>
     </main>
+    <!-- shortcut: salinan dist dari node_modules (tanpa bundler); salin ulang bila versi Capacitor naik -->
+    <script src="capacitor-core.js"></script>
+    <script src="capacitor-push.js"></script>
     <script>
       const KUNCI = 'serverUrl'
       const $ = (id) => document.getElementById(id)
@@ -38,7 +41,8 @@
       // Token FCM diambil di halaman ini (plugin native pasti tersedia di sini), lalu dibawa ke server lewat ?fcm=.
       // Gagal atau ditolak tetap lanjut membuka server tanpa notifikasi.
       const tokenPush = new Promise((selesai) => {
-        const push = window.Capacitor?.Plugins?.PushNotifications
+        const push = window.capacitorPushNotifications?.PushNotifications
+        if (!window.Capacitor?.isNativePlatform?.()) return selesai('')
         if (!push) return selesai('')
         setTimeout(() => selesai(''), 5000)
         push.addListener('registration', (t) => selesai(t.value))

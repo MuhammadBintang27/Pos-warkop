@@ -21,4 +21,6 @@ Hasilnya: `mobile/android/app/build/outputs/apk/debug/app-debug.apk`.
 
 - Layar pertama meminta alamat server dan mengingatnya. Untuk menggantinya: hapus data aplikasi (Setelan > Aplikasi > POS Warkop > Hapus data) atau pasang ulang.
 - `android:usesCleartextTraffic="true"` di `AndroidManifest.xml` mengizinkan alamat `http://` untuk uji jaringan lokal. **Cabut sebelum produksi** dan pakai HTTPS.
+- `www/capacitor-core.js` dan `www/capacitor-push.js` adalah salinan `dist` dari `@capacitor/core` dan `@capacitor/push-notifications`, karena halaman awal tidak memakai bundler. Salin ulang setelah menaikkan versi Capacitor.
+- Push notifikasi butuh `android/app/google-services.json` dari Firebase (project `pos-warkop-5b964`, package `id.warkop.pos`).
 - Cetak dari HP lewat browser terbatas. Struk dan tiket dicetak di PC kasir oleh stasiun cetak (lihat `tauri/`).

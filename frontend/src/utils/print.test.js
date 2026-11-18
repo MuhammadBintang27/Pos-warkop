@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { gabungItem } from './print'
+import { gabungItem, gabungTerkirim } from './print'
 
 const item = (o) => ({ menuId: 1, nama: 'Dimsum Ayam', harga: 20000, qty: 1, opsi: '', catatan: '', ...o })
 
@@ -19,5 +19,19 @@ describe('gabungItem', () => {
     const asli = [item({ qty: 3 }), item({ qty: 5 })]
     gabungItem(asli)
     expect(asli[0].qty).toBe(3)
+  })
+})
+
+describe('gabungTerkirim', () => {
+  it('menggabung baris terkirim yang sama, baris belum terkirim tetap terpisah', () => {
+    const hasil = gabungTerkirim([
+      item({ id: 1, dikirim: true }),
+      item({ id: 2, dikirim: true, qty: 2 }),
+      item({ id: 3, dikirim: false }),
+      item({ id: 4, dikirim: true, opsi: 'Es' }),
+    ])
+    expect(hasil.map((i) => i.qty)).toEqual([3, 1, 1])
+    expect(hasil[0].rows.map((r) => r.id)).toEqual([1, 2])
+    expect(hasil[1].id).toBe(3)
   })
 })

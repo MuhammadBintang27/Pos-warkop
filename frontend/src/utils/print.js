@@ -38,6 +38,30 @@ export function gabungItem(items) {
   return [...peta.values()]
 }
 
+// gabungTerkirim: tampilan keranjang. Baris yang sudah dikirim dan sama persis jadi satu (rows = baris aslinya);
+// baris belum dikirim tetap sendiri supaya jelas mana yang masih harus dikirim.
+export function gabungTerkirim(items) {
+  const out = []
+  const peta = new Map()
+  for (const i of items) {
+    if (!i.dikirim) {
+      out.push(i)
+      continue
+    }
+    const kunci = [i.menuId, i.harga, i.opsi, i.catatan].join('|')
+    const ada = peta.get(kunci)
+    if (ada) {
+      ada.qty += i.qty
+      ada.rows.push(i)
+    } else {
+      const g = { ...i, rows: [i] }
+      peta.set(kunci, g)
+      out.push(g)
+    }
+  }
+  return out
+}
+
 function perTenant(items) {
   const grup = new Map()
   for (const i of items) {
