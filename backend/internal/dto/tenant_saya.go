@@ -12,7 +12,9 @@ type ItemMasuk struct {
 	Qty       int        `json:"qty"`
 	Opsi      string     `json:"opsi"`
 	Catatan   string     `json:"catatan"`
-	DibuatAt  time.Time  `json:"dibuatAt"`
+	DikirimAt time.Time  `json:"dikirimAt"`
+	Oleh      string     `json:"oleh"`
+	Tambahan  bool       `json:"tambahan"` // tenant ini sudah pernah menerima kiriman dari bill yang sama
 	SiapAt    *time.Time `json:"siapAt"`
 }
 

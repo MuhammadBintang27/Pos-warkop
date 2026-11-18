@@ -20,11 +20,14 @@ func (s *TenantService) PesananMasuk(kid, tenantID int64) (*dto.PesananMasukResp
 		return nil, types.NotFound("Tenant")
 	}
 	now := time.Now()
-	rows, err := s.db.Query(`SELECT i.id,i.pesanan_id,COALESCE(m.nama,''),p.atas_nama,i.nama,i.qty,i.opsi,i.catatan,p.dibuat_at,i.siap_at
+	// item lama (sebelum kolom dikirim_at ada) memakai waktu bill dibuat
+	rows, err := s.db.Query(`SELECT i.id,i.pesanan_id,COALESCE(m.nama,''),p.atas_nama,i.nama,i.qty,i.opsi,i.catatan,
+			COALESCE(i.dikirim_at,p.dibuat_at),i.dikirim_oleh,i.siap_at,
+			EXISTS(SELECT 1 FROM pesanan_item j WHERE j.pesanan_id=i.pesanan_id AND j.tenant_id=i.tenant_id AND j.dikirim=1 AND j.dikirim_at<i.dikirim_at)
 		FROM pesanan_item i JOIN pesanan p ON p.id=i.pesanan_id LEFT JOIN meja m ON m.id=p.meja_id
 		WHERE i.klien_id=? AND i.tenant_id=? AND i.dikirim=1 AND p.status<>'batal'
-			AND ((i.siap_at IS NULL AND p.dibuat_at>=?) OR i.siap_at>=?)
-		ORDER BY i.siap_at IS NOT NULL, i.siap_at DESC, i.id`,
+			AND ((i.siap_at IS NULL AND COALESCE(i.dikirim_at,p.dibuat_at)>=?) OR i.siap_at>=?)
+		ORDER BY i.siap_at IS NOT NULL, i.siap_at DESC, COALESCE(i.dikirim_at,p.dibuat_at), i.id`,
 		kid, tenantID, now.Add(-batasAntreanTenant), now.Add(-batasSiapTenant))
 	if err != nil {
 		return nil, err
@@ -32,7 +35,7 @@ func (s *TenantService) PesananMasuk(kid, tenantID int64) (*dto.PesananMasukResp
 	defer rows.Close()
 	for rows.Next() {
 		var it dto.ItemMasuk
-		if err := rows.Scan(&it.ID, &it.PesananID, &it.MejaNama, &it.AtasNama, &it.Nama, &it.Qty, &it.Opsi, &it.Catatan, &it.DibuatAt, &it.SiapAt); err != nil {
+		if err := rows.Scan(&it.ID, &it.PesananID, &it.MejaNama, &it.AtasNama, &it.Nama, &it.Qty, &it.Opsi, &it.Catatan, &it.DikirimAt, &it.Oleh, &it.SiapAt, &it.Tambahan); err != nil {
 			return nil, err
 		}
 		out.Items = append(out.Items, it)

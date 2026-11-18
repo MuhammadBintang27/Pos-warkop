@@ -477,7 +477,8 @@ func (s *PesananService) Kirim(actor *utils.JWTPayload, id int64) (*dto.KirimRes
 		for _, i := range out.Items {
 			out.Tambahan[i.TenantID] = sudah[i.TenantID]
 		}
-		if _, err = tx.Exec("UPDATE pesanan_item SET dikirim=1 WHERE klien_id=? AND pesanan_id=?", kid, id); err != nil {
+		if _, err = tx.Exec("UPDATE pesanan_item SET dikirim=1, dikirim_at=?, dikirim_oleh=? WHERE klien_id=? AND pesanan_id=? AND dikirim=0",
+			time.Now(), actor.Nama, kid, id); err != nil {
 			return err
 		}
 		out.Antrean, err = s.cetak.Antrekan(tx, kid, jenisDapur, out)
@@ -746,8 +747,10 @@ func (s *PesananService) Pisah(actor *utils.JWTPayload, id int64, req dto.PisahR
 				_, err = tx.Exec("UPDATE pesanan_item SET pesanan_id=? WHERE id=? AND klien_id=?", newID, x.ItemID, kid)
 			} else if _, err = tx.Exec("UPDATE pesanan_item SET qty=qty-? WHERE id=? AND klien_id=?", x.Qty, x.ItemID, kid); err == nil {
 				var res sql.Result
-				res, err = tx.Exec("INSERT INTO pesanan_item (klien_id,pesanan_id,menu_id,nama,harga,qty,opsi,catatan,dikirim,tenant_id) VALUES (?,?,?,?,?,?,?,?,?,?)",
-					kid, newID, it.MenuID, it.Nama, it.Harga, x.Qty, it.Opsi, it.Catatan, it.Dikirim, it.TenantID)
+				// salin dari baris asal supaya status kirim/siap tenant ikut terbawa
+				res, err = tx.Exec(`INSERT INTO pesanan_item (klien_id,pesanan_id,menu_id,nama,harga,qty,opsi,catatan,dikirim,tenant_id,siap_at,dikirim_at,dikirim_oleh)
+					SELECT klien_id,?,menu_id,nama,harga,?,opsi,catatan,dikirim,tenant_id,siap_at,dikirim_at,dikirim_oleh FROM pesanan_item WHERE id=? AND klien_id=?`,
+					newID, x.Qty, x.ItemID, kid)
 				if err == nil {
 					var baruID int64
 					if baruID, err = res.LastInsertId(); err == nil {

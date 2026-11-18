@@ -9,12 +9,13 @@ const data = ref({ tenant: '', items: [] })
 
 const jam = (d) => new Date(d).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
 
-// satu kartu per bill, supaya item satu meja dikerjakan bersama
+// satu kartu per kali Kirim, sama seperti satu tiket dapur di printer
 function kelompok(items) {
   const map = new Map()
   for (const it of items) {
-    if (!map.has(it.pesananId)) map.set(it.pesananId, { id: it.pesananId, meja: it.mejaNama, atasNama: it.atasNama, at: it.dibuatAt, items: [] })
-    map.get(it.pesananId).items.push(it)
+    const key = `${it.pesananId}|${it.dikirimAt}`
+    if (!map.has(key)) map.set(key, { key, id: it.pesananId, meja: it.mejaNama, atasNama: it.atasNama, at: it.dikirimAt, oleh: it.oleh, tambahan: it.tambahan, items: [] })
+    map.get(key).items.push(it)
   }
   return [...map.values()]
 }
@@ -42,12 +43,16 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
     <h3 class="judul">Antrean <Tag :value="String(antrean.reduce((n, b) => n + b.items.length, 0))" /></h3>
     <p v-if="!antrean.length" class="kosong">Belum ada pesanan yang perlu dibuat.</p>
     <div class="grid">
-      <section v-for="b in antrean" :key="b.id" class="panel kartu">
+      <section v-for="b in antrean" :key="b.key" class="panel kartu" :class="{ tambah: b.tambahan }">
+        <div class="jenis">{{ b.tambahan ? 'Pesanan tambahan' : 'Pesanan baru' }}</div>
         <header>
-          <strong>{{ b.meja || 'Tanpa meja' }}</strong>
-          <span v-if="b.atasNama" class="redup">{{ b.atasNama }}</span>
+          <strong class="meja">{{ b.meja || 'Tanpa meja' }}</strong>
           <small class="redup kanan">#{{ b.id }} · {{ jam(b.at) }}</small>
         </header>
+        <div class="info">
+          <span v-if="b.atasNama"><i class="pi pi-user" /> {{ b.atasNama }}</span>
+          <span v-if="b.oleh"><i class="pi pi-send" /> dikirim oleh <b>{{ b.oleh }}</b></span>
+        </div>
         <div v-for="it in b.items" :key="it.id" class="baris">
           <div>
             <b>{{ it.qty }}×</b> {{ it.nama }}
@@ -62,12 +67,15 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
     <template v-if="siap.length">
       <h3 class="judul">Sudah siap <small class="redup">(3 jam terakhir)</small></h3>
       <div class="grid">
-        <section v-for="b in siap" :key="b.id" class="panel kartu selesai">
+        <section v-for="b in siap" :key="b.key" class="panel kartu selesai">
           <header>
-            <strong>{{ b.meja || 'Tanpa meja' }}</strong>
-            <span v-if="b.atasNama" class="redup">{{ b.atasNama }}</span>
+            <strong class="meja">{{ b.meja || 'Tanpa meja' }}</strong>
             <small class="redup kanan">#{{ b.id }}</small>
           </header>
+          <div class="info">
+            <span v-if="b.atasNama"><i class="pi pi-user" /> {{ b.atasNama }}</span>
+            <span v-if="b.oleh"><i class="pi pi-send" /> {{ b.oleh }}</span>
+          </div>
           <div v-for="it in b.items" :key="it.id" class="baris">
             <div><b>{{ it.qty }}×</b> {{ it.nama }} <small class="redup">· siap {{ jam(it.siapAt) }}</small></div>
             <Button label="Batal" icon="pi pi-undo" size="small" text severity="secondary" @click="tandai(it, false)" />
@@ -111,6 +119,29 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
 }
 .kanan {
   margin-left: auto;
+}
+.kartu {
+  border-top: 4px solid var(--p-primary-color);
+}
+.kartu.tambah {
+  border-top-color: var(--p-orange-500, #f97316);
+}
+.jenis {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+}
+.meja {
+  font-size: 1.2rem;
+}
+.info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 0.9rem;
+  color: var(--p-text-muted-color);
 }
 .baris {
   display: flex;
