@@ -8,6 +8,11 @@ import { tgl } from '@/utils/format'
 const run = useRun()
 const data = ref({ tenant: '', items: [] })
 
+// kartu yang baru masuk (3 menit terakhir) diberi sorotan; now diperbarui supaya sorotannya hilang sendiri
+const BARU_MS = 3 * 60 * 1000
+const now = ref(Date.now())
+const baru = (b) => now.value - new Date(b.at).getTime() < BARU_MS
+let detak
 
 // satu kartu per kali Kirim, sama seperti satu tiket dapur di printer
 function kelompok(items) {
@@ -30,10 +35,14 @@ const tandai = (it, s) => run(async () => {
 
 const offs = []
 onMounted(() => {
+  detak = setInterval(() => (now.value = Date.now()), 15000)
   run(muat)
   offs.push(onEvent('pesanan', muat), onEvent('dapur', muat))
 })
-onBeforeUnmount(() => offs.forEach((off) => off()))
+onBeforeUnmount(() => {
+  clearInterval(detak)
+  offs.forEach((off) => off())
+})
 </script>
 
 <template>
@@ -43,8 +52,11 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
     <h3 class="judul">Antrean <Tag :value="String(antrean.reduce((n, b) => n + b.items.length, 0))" /></h3>
     <p v-if="!antrean.length" class="kosong">Belum ada pesanan yang perlu dibuat.</p>
     <div class="grid">
-      <section v-for="b in antrean" :key="b.key" class="panel kartu" :class="{ tambah: b.tambahan }">
-        <div class="jenis">{{ b.tambahan ? 'Pesanan tambahan' : 'Pesanan baru' }}</div>
+      <section v-for="b in antrean" :key="b.key" class="panel kartu antre" :class="{ tambah: b.tambahan, baru: baru(b) }">
+        <div class="jenis">
+          <span v-if="baru(b)" class="lencana">BARU</span>
+          {{ b.tambahan ? 'Pesanan tambahan' : 'Pesanan baru' }}
+        </div>
         <header>
           <strong class="meja">{{ b.meja || 'Tanpa meja' }}</strong>
           <small class="redup kanan">#{{ b.id }}</small>
@@ -123,11 +135,42 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
 .kanan {
   margin-left: auto;
 }
-.kartu {
-  border-top: 4px solid var(--p-primary-color);
+/* antrean: berwarna dan tegas, supaya beda jelas dengan yang sudah selesai */
+.antre {
+  --warna: var(--p-primary-color);
+  border: 2px solid var(--warna);
+  border-top-width: 6px;
+  background: color-mix(in srgb, var(--warna) 10%, var(--p-content-background));
 }
-.kartu.tambah {
-  border-top-color: var(--p-orange-500, #f97316);
+.antre.tambah {
+  --warna: var(--p-orange-500, #f97316);
+}
+.antre.baru {
+  animation: denyut 1.6s ease-in-out infinite;
+}
+@keyframes denyut {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--warna) 55%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--warna) 0%, transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .antre.baru {
+    animation: none;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--warna) 40%, transparent);
+  }
+}
+.lencana {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--warna);
+  color: #fff;
+  letter-spacing: 0.08em;
 }
 .jenis {
   font-size: 0.75rem;
@@ -159,8 +202,11 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
   font-size: 0.9rem;
   color: var(--accent-text);
 }
+/* selesai: hijau pudar dan tenang */
 .selesai {
-  opacity: 0.75;
+  border-left: 5px solid var(--p-green-500, #22c55e);
+  background: color-mix(in srgb, var(--p-green-500, #22c55e) 6%, var(--p-content-background));
+  opacity: 0.8;
 }
 .selesai-at {
   margin-top: 2px;

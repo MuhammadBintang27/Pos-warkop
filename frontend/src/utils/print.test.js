@@ -10,9 +10,13 @@ describe('gabungItem', () => {
     expect(hasil[0].qty).toBe(8)
   })
 
-  it('tidak menggabung varian, catatan, atau harga yang berbeda', () => {
-    const hasil = gabungItem([item({}), item({ opsi: 'Es' }), item({ catatan: 'tidak pedas' }), item({ harga: 25000 }), item({ menuId: 2 })])
-    expect(hasil).toHaveLength(5)
+  it('tidak menggabung varian, nama, atau harga yang berbeda', () => {
+    const hasil = gabungItem([item({}), item({ opsi: 'Es' }), item({ harga: 25000 }), item({ nama: 'Dimsum Udang' })])
+    expect(hasil).toHaveLength(4)
+  })
+
+  it('catatan tidak membedakan baris struk karena tidak dicetak', () => {
+    expect(gabungItem([item({}), item({ catatan: 'tidak pedas' })])).toHaveLength(1)
   })
 
   it('tidak mengubah data asli', () => {

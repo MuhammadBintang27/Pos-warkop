@@ -26,11 +26,12 @@ function printHtml(body) {
   printIframe(`<!doctype html><html><head><meta charset="utf-8"><style>${CSS}</style></head><body>${body}</body></html>`)
 }
 
-// Baris yang sama (menu, varian, catatan, harga) digabung di struk. Di sistem tetap terpisah per pengiriman agar dapur menerima tiket tambahan.
+// Baris yang tercetak sama (nama, varian, harga) digabung di struk; catatan tidak dicetak di struk jadi tidak membedakan.
+// Di sistem tetap terpisah per pengiriman agar dapur menerima tiket tambahan.
 export function gabungItem(items) {
   const peta = new Map()
   for (const i of items) {
-    const kunci = [i.menuId, i.harga, i.opsi, i.catatan].join('|')
+    const kunci = [i.nama, i.harga, i.opsi].join('|')
     const ada = peta.get(kunci)
     if (ada) ada.qty += i.qty
     else peta.set(kunci, { ...i })

@@ -82,9 +82,10 @@ func TestGabungStruk(t *testing.T) {
 		{MenuID: 1, Nama: "Kopi", Harga: 5000, Qty: 1, Opsi: "Es"},
 		{MenuID: 1, Nama: "Kopi", Harga: 5000, Qty: 2, Opsi: "Es"},
 		{MenuID: 1, Nama: "Kopi", Harga: 5000, Qty: 1, Opsi: "Panas"},
+		{MenuID: 1, Nama: "Kopi", Harga: 5000, Qty: 4, Opsi: "Es", Catatan: "kurang gula"}, // catatan tidak tercetak
 	}
 	got := gabungStruk(items)
-	if len(got) != 2 || got[0].Qty != 3 || got[1].Qty != 1 {
+	if len(got) != 2 || got[0].Qty != 7 || got[1].Qty != 1 {
 		t.Errorf("gabungStruk = %+v", got)
 	}
 }

@@ -113,12 +113,13 @@ func (s *CetakService) printerKasir(kid int64) (usaha *dto.PengaturanRequest, pr
 	return usaha, printerID, lebarMM, err == nil, err
 }
 
-// gabungStruk menyatukan baris yang sama persis (menu, varian, catatan, harga); dapur tetap menerima tiket per pengiriman.
+// gabungStruk menyatukan baris yang tercetak sama (nama, varian, harga). Catatan tidak dicetak di struk,
+// jadi tidak ikut membedakan; dapur tetap menerima tiket per pengiriman.
 func gabungStruk(items []dto.ItemResponse) []dto.StrukItem {
 	var out []dto.StrukItem
 	idx := map[string]int{}
 	for _, i := range items {
-		k := strconv.FormatInt(i.MenuID, 10) + "|" + strconv.Itoa(i.Harga) + "|" + i.Opsi + "|" + i.Catatan
+		k := i.Nama + "|" + strconv.Itoa(i.Harga) + "|" + i.Opsi
 		if n, ada := idx[k]; ada {
 			out[n].Qty += i.Qty
 			continue
