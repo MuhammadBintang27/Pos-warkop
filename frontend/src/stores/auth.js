@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import { post } from '@/api/http'
+import { http, post } from '@/api/http'
 import { load, remove, save } from '@/utils/storage'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -20,7 +20,15 @@ export const useAuthStore = defineStore('auth', () => {
     save('user', res.user)
   }
 
+  // HP tenant yang logout berhenti menerima notifikasi; header dikirim langsung karena token segera dihapus.
+  function lepasPerangkat() {
+    const fcm = load('fcmToken', '')
+    if (role.value !== 'tenant' || !fcm) return
+    http.post('/tenant-saya/perangkat/hapus', { token: fcm }, { headers: { Authorization: `Bearer ${token.value}` } }).catch(() => {})
+  }
+
   function logout() {
+    lepasPerangkat()
     token.value = ''
     user.value = null
     remove('token')

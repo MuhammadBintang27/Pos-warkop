@@ -8,6 +8,15 @@ import '@/assets/main.css'
 import App from './App.vue'
 import router from './router'
 import { bindConfig, initTheme } from '@/composables/useAppTheme'
+import { save } from '@/utils/storage'
+
+// Aplikasi Android membawa token FCM lewat ?fcm=...; disimpan lalu dibuang dari alamat.
+const url = new URL(location.href)
+if (url.searchParams.has('fcm')) {
+  save('fcmToken', url.searchParams.get('fcm'))
+  url.searchParams.delete('fcm')
+  history.replaceState(null, '', url)
+}
 
 const app = createApp(App)
 

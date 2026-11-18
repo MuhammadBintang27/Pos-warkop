@@ -26,3 +26,7 @@ type PesananMasukResponse struct {
 type SiapRequest struct {
 	Siap *bool `json:"siap" validate:"required"`
 }
+
+type PerangkatRequest struct {
+	Token string `json:"token" validate:"required,max=255"`
+}

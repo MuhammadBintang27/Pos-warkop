@@ -419,3 +419,15 @@ CREATE TABLE IF NOT EXISTS closing_tenant_bill (
   FOREIGN KEY (pesanan_id) REFERENCES pesanan(id),
   FOREIGN KEY (klien_id) REFERENCES klien(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- HP akun tenant yang menerima push notifikasi FCM. Satu token = satu HP; dipindah bila HP dipakai akun lain.
+CREATE TABLE IF NOT EXISTS perangkat_push (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  klien_id BIGINT NOT NULL,
+  tenant_id BIGINT NOT NULL,
+  user_id BIGINT NOT NULL,
+  token VARCHAR(255) NOT NULL UNIQUE,
+  dibuat_at DATETIME NOT NULL,
+  INDEX (klien_id, tenant_id),
+  FOREIGN KEY (klien_id) REFERENCES klien(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

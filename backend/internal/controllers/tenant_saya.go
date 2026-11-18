@@ -3,6 +3,7 @@ package controllers
 import (
 	"warkop/internal/dto"
 	"warkop/internal/middleware"
+	"warkop/internal/services"
 	"warkop/internal/utils"
 
 	"github.com/gofiber/fiber/v2"
@@ -33,4 +34,35 @@ func (h *TenantController) SetSiap(c *fiber.Ctx) error {
 		return handleErr(c, err, "SetSiap error")
 	}
 	return utils.SendSuccess(c, fiber.StatusOK, "Status item diperbarui")
+}
+
+type PerangkatController struct {
+	push *services.Pusher
+}
+
+func NewPerangkatController(push *services.Pusher) *PerangkatController {
+	return &PerangkatController{push: push}
+}
+
+func (h *PerangkatController) Simpan(c *fiber.Ctx) error {
+	var req dto.PerangkatRequest
+	if err := middleware.ParseAndValidate(c, &req); err != nil {
+		return err
+	}
+	u := middleware.CurrentUser(c)
+	if err := h.push.SimpanPerangkat(u.KlienID, u.TenantID, u.UserID, req.Token); err != nil {
+		return handleErr(c, err, "SimpanPerangkat error")
+	}
+	return utils.SendSuccess(c, fiber.StatusOK, "Perangkat terdaftar untuk notifikasi")
+}
+
+func (h *PerangkatController) Hapus(c *fiber.Ctx) error {
+	var req dto.PerangkatRequest
+	if err := middleware.ParseAndValidate(c, &req); err != nil {
+		return err
+	}
+	if err := h.push.HapusPerangkat(kid(c), req.Token); err != nil {
+		return handleErr(c, err, "HapusPerangkat error")
+	}
+	return utils.SendSuccess(c, fiber.StatusOK, "Perangkat dilepas")
 }

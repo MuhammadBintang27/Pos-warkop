@@ -167,6 +167,11 @@ func RegisterAdminRoutes(r fiber.Router, h *controllers.KlienController) {
 	r.Put("/admin/klien/:id/users/:uid", authed, super, h.UpdateUser)
 }
 
+func RegisterPerangkatRoutes(r fiber.Router, h *controllers.PerangkatController) {
+	r.Post("/tenant-saya/perangkat", authed, tenantRole, h.Simpan)
+	r.Post("/tenant-saya/perangkat/hapus", authed, tenantRole, h.Hapus)
+}
+
 func RegisterEventRoutes(r fiber.Router, h *controllers.EventController) {
 	r.Get("/events", authed, h.Stream)
 }

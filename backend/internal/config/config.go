@@ -18,6 +18,8 @@ type Config struct {
 	JWTExpiryHours int
 	TZName         string
 	StaticDir      string
+	// FCMServiceAccount: isi JSON service account Firebase; kosong = push notifikasi tenant mati.
+	FCMServiceAccount string
 }
 
 var (
@@ -31,13 +33,14 @@ func Load() *Config {
 	cfgOnce.Do(func() {
 		_ = godotenv.Load()
 		cfg = &Config{
-			Port:           getEnv("PORT", "8080"),
-			AppEnv:         getEnv("APP_ENV", "development"),
-			DBDSN:          os.Getenv("DB_DSN"),
-			JWTSecret:      os.Getenv("JWT_SECRET"),
-			JWTExpiryHours: getEnvInt("JWT_EXPIRY_HOURS", 12),
-			TZName:         getEnv("TZ_NAME", "Asia/Jakarta"),
-			StaticDir:      getEnv("STATIC_DIR", "../frontend/dist"),
+			Port:              getEnv("PORT", "8080"),
+			AppEnv:            getEnv("APP_ENV", "development"),
+			DBDSN:             os.Getenv("DB_DSN"),
+			JWTSecret:         os.Getenv("JWT_SECRET"),
+			JWTExpiryHours:    getEnvInt("JWT_EXPIRY_HOURS", 12),
+			TZName:            getEnv("TZ_NAME", "Asia/Jakarta"),
+			StaticDir:         getEnv("STATIC_DIR", "../frontend/dist"),
+			FCMServiceAccount: os.Getenv("FCM_SERVICE_ACCOUNT"),
 		}
 		if cfg.DBDSN == "" || len(cfg.JWTSecret) < 16 {
 			log.Fatal().Msg("DB_DSN wajib diisi dan JWT_SECRET minimal 16 karakter")

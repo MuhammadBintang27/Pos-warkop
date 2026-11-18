@@ -4,6 +4,8 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { usePengaturanStore } from '@/stores/pengaturan'
 import { connectEvents, disconnectEvents, onEvent } from '@/composables/useEvents'
+import { post } from '@/api/http'
+import { load } from '@/utils/storage'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -21,6 +23,16 @@ onMounted(() => {
 onBeforeUnmount(() => window.removeEventListener('auth:expired', expired))
 
 watch(() => auth.token, (t) => (t ? connectEvents(t) : disconnectEvents()), { immediate: true })
+
+// HP tenant didaftarkan untuk push notifikasi setiap kali aplikasi dibuka atau login
+watch(
+  () => auth.token,
+  (t) => {
+    const fcm = load('fcmToken', '')
+    if (t && auth.role === 'tenant' && fcm) post('/tenant-saya/perangkat', { token: fcm }).catch(() => {})
+  },
+  { immediate: true },
+)
 onEvent('pengaturan', pengaturan.fetch)
 </script>
 

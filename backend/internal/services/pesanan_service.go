@@ -17,6 +17,7 @@ type PesananService struct {
 	db    *sql.DB
 	hub   *EventHub
 	cetak *CetakService
+	push  *Pusher
 }
 
 type querier interface {
@@ -55,8 +56,8 @@ type itemBaru struct {
 	bahan               []bahanPakai // takaran per porsi, disalin ke baris baru
 }
 
-func NewPesananService(db *sql.DB, hub *EventHub, cetak *CetakService) *PesananService {
-	return &PesananService{db: db, hub: hub, cetak: cetak}
+func NewPesananService(db *sql.DB, hub *EventHub, cetak *CetakService, push *Pusher) *PesananService {
+	return &PesananService{db: db, hub: hub, cetak: cetak, push: push}
 }
 
 func loadPesanan(q querier, kid, id int64) (*dto.PesananResponse, error) {
@@ -491,7 +492,40 @@ func (s *PesananService) Kirim(actor *utils.JWTPayload, id int64) (*dto.KirimRes
 	if len(out.Antrean) > 0 {
 		s.hub.Publish(kid, "cetak")
 	}
+	for tid, items := range itemPerTenant(out.Items) {
+		s.push.KeTenant(kid, tid, pesanTiket(out.MejaNama, out.AtasNama, out.Tambahan[tid], items))
+	}
 	return out, nil
+}
+
+func itemPerTenant(items []dto.ItemResponse) map[int64][]dto.ItemResponse {
+	out := map[int64][]dto.ItemResponse{}
+	for _, it := range items {
+		if it.TenantID != 0 {
+			out[it.TenantID] = append(out[it.TenantID], it)
+		}
+	}
+	return out
+}
+
+// pesanTiket: isi notifikasi tenant, ringkasan yang sama dengan tiket dapur.
+func pesanTiket(meja, atasNama string, tambahan bool, items []dto.ItemResponse) PesanPush {
+	judul := "Pesanan baru"
+	if tambahan {
+		judul = "Pesanan tambahan"
+	}
+	if meja == "" {
+		meja = "Tanpa meja"
+	}
+	judul += " · " + meja
+	if atasNama != "" {
+		judul += " (" + atasNama + ")"
+	}
+	isi := make([]string, len(items))
+	for i, it := range items {
+		isi[i] = fmt.Sprintf("%d× %s", it.Qty, it.Nama)
+	}
+	return PesanPush{Judul: judul, Isi: strings.Join(isi, ", ")}
 }
 
 func (s *PesananService) SetDiskon(kid, id int64, req dto.DiskonRequest) (*dto.PesananResponse, error) {

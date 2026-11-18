@@ -35,6 +35,27 @@
       const simpan = localStorage.getItem(KUNCI)
       let batal = false
 
+      // Token FCM diambil di halaman ini (plugin native pasti tersedia di sini), lalu dibawa ke server lewat ?fcm=.
+      // Gagal atau ditolak tetap lanjut membuka server tanpa notifikasi.
+      const tokenPush = new Promise((selesai) => {
+        const push = window.Capacitor?.Plugins?.PushNotifications
+        if (!push) return selesai('')
+        setTimeout(() => selesai(''), 5000)
+        push.addListener('registration', (t) => selesai(t.value))
+        push.addListener('registrationError', () => selesai(''))
+        push
+          .createChannel({ id: 'pesanan', name: 'Pesanan masuk', importance: 5, visibility: 1, vibration: true })
+          .catch(() => {})
+          .then(() => push.requestPermissions())
+          .then((p) => (p.receive === 'granted' ? push.register() : selesai('')))
+          .catch(() => selesai(''))
+      })
+
+      async function buka(origin) {
+        const fcm = await tokenPush
+        location.replace(fcm ? `${origin}/?fcm=${encodeURIComponent(fcm)}` : origin)
+      }
+
       function formulir() {
         batal = true
         $('buka').hidden = true
@@ -46,7 +67,7 @@
         $('buka').hidden = false
         $('tujuan').textContent = simpan
         $('ganti').onclick = formulir
-        setTimeout(() => !batal && location.replace(simpan), 1200)
+        setTimeout(() => !batal && buka(simpan), 1200)
       } else {
         formulir()
       }
@@ -57,7 +78,7 @@
           const url = new URL($('alamat').value.trim())
           if (!['http:', 'https:'].includes(url.protocol)) throw new Error()
           localStorage.setItem(KUNCI, url.origin)
-          location.replace(url.origin)
+          buka(url.origin)
         } catch {
           $('salah').textContent = 'Alamat tidak valid. Awali dengan http:// atau https://'
         }

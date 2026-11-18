@@ -1,6 +1,10 @@
 package services
 
-import "testing"
+import (
+	"testing"
+
+	"warkop/internal/dto"
+)
 
 func TestHargaAkhir(t *testing.T) {
 	tests := []struct {
@@ -20,5 +24,20 @@ func TestHargaAkhir(t *testing.T) {
 		if got := hargaAkhir(tc.dasar, tc.pilihan); got != tc.want {
 			t.Errorf("%s: got %d, want %d", tc.name, got, tc.want)
 		}
+	}
+}
+
+func TestPesanTiket(t *testing.T) {
+	items := []dto.ItemResponse{{Nama: "Gorengan", Qty: 2}, {Nama: "Tahu isi", Qty: 1}}
+	got := pesanTiket("Meja 5", "Andi", false, items)
+	if got.Judul != "Pesanan baru · Meja 5 (Andi)" || got.Isi != "2× Gorengan, 1× Tahu isi" {
+		t.Errorf("pesanTiket = %+v", got)
+	}
+	if got := pesanTiket("", "", true, items[:1]); got.Judul != "Pesanan tambahan · Tanpa meja" {
+		t.Errorf("tambahan tanpa meja = %q", got.Judul)
+	}
+	per := itemPerTenant([]dto.ItemResponse{{TenantID: 1}, {TenantID: 0}, {TenantID: 1}, {TenantID: 2}})
+	if len(per) != 2 || len(per[1]) != 2 || len(per[2]) != 1 {
+		t.Errorf("itemPerTenant harus melewati item tanpa tenant, got %v", per)
 	}
 }

@@ -60,7 +60,8 @@ func New(db *sql.DB) *App {
 	authSvc := services.NewAuthService(db)
 	pengaturanSvc := services.NewPengaturanService(db, hub)
 	cetakSvc := services.NewCetakService(db, hub, pengaturanSvc)
-	pesananSvc := services.NewPesananService(db, hub, cetakSvc)
+	pusher := services.NewPusher(db, cfg.FCMServiceAccount)
+	pesananSvc := services.NewPesananService(db, hub, cetakSvc, pusher)
 	kasirCtrl := controllers.NewKasirController(
 		services.NewPembayaranService(db, hub),
 		services.NewShiftService(db, hub),
@@ -84,6 +85,7 @@ func New(db *sql.DB) *App {
 	routes.RegisterKaryawanRoutes(api, controllers.NewKaryawanController(services.NewKaryawanService(db), services.NewLabaService(db)))
 	routes.RegisterAdminRoutes(api, controllers.NewKlienController(klienSvc, services.NewUserService(db)))
 	routes.RegisterEventRoutes(api, controllers.NewEventController(hub))
+	routes.RegisterPerangkatRoutes(api, controllers.NewPerangkatController(pusher))
 	api.Use(func(c *fiber.Ctx) error {
 		return utils.SendError(c, fiber.StatusNotFound, "Endpoint tidak ditemukan")
 	})
