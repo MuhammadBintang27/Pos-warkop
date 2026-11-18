@@ -240,7 +240,8 @@ onMounted(() => run(muat))
               <label :for="`h${gi}`">Harga ditentukan opsi</label>
             </div>
           </div>
-          <div v-for="(o, oi) in g.opsi" :key="oi" class="inline">
+          <template v-for="(o, oi) in g.opsi" :key="oi">
+          <div class="inline">
             <InputText v-model="o.nama" maxlength="50" placeholder="Opsi, mis. Es" fluid />
             <MoneyInput v-model="o.tambahan" />
             <small class="hasil">{{ g.gantiHarga ? 'harga jadi' : '= ' + rp((form.harga || 0) + (o.tambahan || 0)) }}</small>
@@ -257,6 +258,7 @@ onMounted(() => run(muat))
             </div>
             <Button label="Tambah bahan" icon="pi pi-plus" text size="small" :disabled="!bahan.length" @click="o.bahan.push({ bahanId: null, jumlah: null })" />
           </div>
+          </template>
           <Button label="Tambah opsi" icon="pi pi-plus" text size="small" @click="g.opsi.push({ nama: '', tambahan: 0, bahan: [], buka: false })" />
         </div>
         <Button label="Tambah grup varian" icon="pi pi-plus" severity="secondary" outlined @click="tambahGrup" />
