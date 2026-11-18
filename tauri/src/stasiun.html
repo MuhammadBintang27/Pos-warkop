@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Stasiun cetak</title>
+    <style>
+      body { margin: 0; padding: 20px; font-family: system-ui, sans-serif; background: #f1f5f9; color: #0f172a; }
+      main { max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+      h1 { margin: 0; font-size: 1.2rem; }
+      p, small { margin: 0; color: #64748b; font-size: 0.9rem; }
+      label.cek { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+      input[type='password'], button { font: inherit; padding: 10px 12px; border-radius: 10px; border: 1px solid #cbd5e1; }
+      button { background: #f59e0b; border-color: #f59e0b; font-weight: 700; cursor: pointer; }
+      .status { padding: 10px 12px; border-radius: 10px; background: #fff; border: 1px solid #e2e8f0; }
+      .ok { color: #15803d; font-weight: 700; }
+      .mati { color: #b91c1c; font-weight: 700; }
+      pre { margin: 0; max-height: 220px; overflow: auto; font-size: 0.8rem; white-space: pre-wrap; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Stasiun cetak</h1>
+      <p>Mengambil tiket dari server lalu mencetaknya ke printer di jaringan. Aplikasi tetap berjalan di system tray walau jendelanya ditutup, dan menyala otomatis saat Windows dihidupkan.</p>
+      <label class="cek"><input id="aktif" type="checkbox" /> Aktifkan stasiun cetak di PC ini</label>
+      <input id="token" type="password" placeholder="Token stasiun (dari Master Data › Printer)" autocomplete="off" />
+      <small id="ada"></small>
+      <button id="simpan">Simpan</button>
+      <div class="status">
+        <div>Status: <span id="kondisi">…</span></div>
+        <small id="pesan"></small>
+      </div>
+      <pre id="log"></pre>
+    </main>
+    <script>
+      const { invoke } = window.__TAURI__.core
+      const $ = (id) => document.getElementById(id)
+
+      async function muatConfig() {
+        const c = await invoke('ambil_config')
+        $('aktif').checked = c.aktif
+        $('ada').textContent = c.adaToken ? 'Token sudah tersimpan. Isi lagi hanya untuk menggantinya.' : 'Belum ada token tersimpan.'
+      }
+
+      async function perbarui() {
+        const s = await invoke('status_stasiun')
+        $('kondisi').textContent = !s.aktif ? 'Mati' : s.terhubung ? 'Terhubung' : 'Tidak terhubung'
+        $('kondisi').className = s.aktif && s.terhubung ? 'ok' : 'mati'
+        $('pesan').textContent = s.pesan
+        $('log').textContent = s.log.join('\n')
+      }
+
+      $('simpan').addEventListener('click', async () => {
+        await invoke('simpan_stasiun', { aktif: $('aktif').checked, token: $('token').value.trim() })
+        $('token').value = ''
+        await muatConfig()
+        await perbarui()
+      })
+
+      muatConfig()
+      perbarui()
+      setInterval(perbarui, 1500)
+    </script>
+  </body>
+</html>

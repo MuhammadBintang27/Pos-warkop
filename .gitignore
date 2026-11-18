@@ -1,0 +1,10 @@
+bin/
+tmp/
+*.exe
+.env
+node_modules/
+frontend/dist/
+tauri/src-tauri/target/
+mobile/android/
+.vscode/
+.idea/

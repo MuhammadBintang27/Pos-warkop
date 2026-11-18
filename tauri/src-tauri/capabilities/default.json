@@ -1,0 +1,6 @@
+{
+  "identifier": "default",
+  "description": "Halaman lokal aplikasi (pengaturan). Halaman dari server tidak diberi akses ke perintah native.",
+  "windows": ["main", "stasiun"],
+  "permissions": ["core:default"]
+}

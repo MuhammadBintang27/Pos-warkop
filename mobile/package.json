@@ -1,0 +1,11 @@
+{
+  "name": "pos-warkop-mobile",
+  "version": "1.0.0",
+  "description": "Cangkang Android POS Warkop (Capacitor): membuka server",
+  "private": true,
+  "dependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/cli": "^8.6.0",
+    "@capacitor/core": "^8.6.0"
+  }
+}
