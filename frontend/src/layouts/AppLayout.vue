@@ -10,6 +10,8 @@ import { useRun } from '@/composables/useRun'
 const NAV = [
   { label: 'Klien', icon: 'pi pi-building', to: '/admin', roles: ['superadmin'] },
   { label: 'Pengguna', icon: 'pi pi-users', to: '/admin/pengguna', roles: ['superadmin'] },
+  { label: 'Pesanan Masuk', icon: 'pi pi-inbox', to: '/tenant-saya', roles: ['tenant'] },
+  { label: 'Rekapan', icon: 'pi pi-chart-bar', to: '/tenant-saya/rekap', roles: ['tenant'] },
   { label: 'Kasir', icon: 'pi pi-shopping-cart', to: '/', roles: ['pelayan', 'kasir', 'owner'] },
   { label: 'Denah Meja', icon: 'pi pi-map', to: '/denah', roles: ['pelayan', 'kasir', 'owner'] },
   { label: 'Riwayat', icon: 'pi pi-history', to: '/riwayat', roles: ['pelayan', 'kasir', 'owner'] },

@@ -10,4 +10,5 @@ type User struct {
 	PasswordHash string
 	Role         types.Role
 	Aktif        bool
+	TenantID     int64
 }

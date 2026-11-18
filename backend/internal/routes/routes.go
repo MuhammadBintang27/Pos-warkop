@@ -13,6 +13,8 @@ var (
 	kasir  = middleware.Authorize(types.KasirUp...)
 	owner  = middleware.Authorize(types.RoleOwner)
 	super  = middleware.Authorize(types.RoleSuper)
+	// tenantRole: akun tenant tanpa tenant_id (data rusak) ditolak di service karena tenant 0 tidak pernah ada.
+	tenantRole = middleware.Authorize(types.RoleTenant)
 )
 
 func RegisterAuthRoutes(r fiber.Router, h *controllers.AuthController, loginLimiter fiber.Handler) {
@@ -30,6 +32,9 @@ func RegisterTenantRoutes(r fiber.Router, h *controllers.TenantController) {
 	r.Put("/tenant/:id", authed, owner, h.Update)
 	r.Post("/tenant/:id/buka", authed, kasir, h.Buka)
 	r.Delete("/tenant/:id", authed, owner, h.Delete)
+
+	r.Get("/tenant-saya/pesanan", authed, tenantRole, h.PesananMasuk)
+	r.Post("/tenant-saya/item/:id/siap", authed, tenantRole, h.SetSiap)
 }
 
 func RegisterUserRoutes(r fiber.Router, h *controllers.UserController) {
@@ -113,6 +118,11 @@ func RegisterLaporanTenantRoutes(r fiber.Router, h *controllers.LaporanTenantCon
 	r.Post("/closing", authed, owner, h.Closing)
 	r.Post("/closing/:id/setor", authed, owner, h.Setor)
 	r.Delete("/closing/:id", authed, owner, h.BatalClosing)
+
+	// Rekapan untuk akun tenant: handler yang sama, tenant dipaksa dari token.
+	r.Get("/tenant-saya/laporan/harian", authed, tenantRole, h.Harian)
+	r.Get("/tenant-saya/laporan/detail", authed, tenantRole, h.Detail)
+	r.Get("/tenant-saya/laporan/belum-bayar", authed, tenantRole, h.BelumBayar)
 }
 
 func RegisterRiwayatRoutes(r fiber.Router, h *controllers.RiwayatController) {

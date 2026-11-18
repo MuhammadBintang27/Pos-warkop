@@ -21,7 +21,8 @@ CREATE TABLE IF NOT EXISTS users (
   nama VARCHAR(100) NOT NULL,
   username VARCHAR(50) NOT NULL UNIQUE,
   password_hash VARCHAR(100) NOT NULL,
-  role ENUM('pelayan','kasir','owner') NOT NULL,
+  role ENUM('pelayan','kasir','owner','tenant') NOT NULL,
+  tenant_id BIGINT NULL,        -- hanya untuk role tenant: tenant yang pesanan dan rekapannya boleh dilihat
   aktif TINYINT(1) NOT NULL DEFAULT 1,
   FOREIGN KEY (klien_id) REFERENCES klien(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -147,6 +148,7 @@ CREATE TABLE IF NOT EXISTS pesanan_item (
   dikirim TINYINT(1) NOT NULL DEFAULT 0,
   tenant_id BIGINT NULL,        -- disalin dari menu saat dipesan
   closing_id BIGINT NULL,       -- terisi bila sudah ditalangi di closing tenant sebelum bill dibayar; tidak dihitung lagi saat lunas
+  siap_at DATETIME NULL,        -- ditandai siap oleh akun tenant; hanya catatan tenant
   INDEX (pesanan_id),
   INDEX (closing_id),
   FOREIGN KEY (pesanan_id) REFERENCES pesanan(id),

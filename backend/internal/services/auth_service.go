@@ -23,9 +23,9 @@ func NewAuthService(db *sql.DB) *AuthService {
 
 func (s *AuthService) Login(req dto.LoginRequest) (*dto.LoginResponse, error) {
 	var u models.User
-	err := s.db.QueryRow(`SELECT u.id,u.klien_id,u.nama,u.username,u.password_hash,u.role,u.aktif
+	err := s.db.QueryRow(`SELECT u.id,u.klien_id,u.nama,u.username,u.password_hash,u.role,u.aktif,COALESCE(u.tenant_id,0)
 		FROM users u JOIN klien k ON k.id=u.klien_id WHERE u.username=?`, strings.ToLower(strings.TrimSpace(req.Username))).
-		Scan(&u.ID, &u.KlienID, &u.Nama, &u.Username, &u.PasswordHash, &u.Role, &u.Aktif)
+		Scan(&u.ID, &u.KlienID, &u.Nama, &u.Username, &u.PasswordHash, &u.Role, &u.Aktif, &u.TenantID)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
@@ -38,7 +38,7 @@ func (s *AuthService) Login(req dto.LoginRequest) (*dto.LoginResponse, error) {
 	if !utils.KlienAktif(u.KlienID) {
 		return nil, types.NewHTTPError(http.StatusForbidden, "Akses usaha ini dinonaktifkan. Hubungi penyedia layanan")
 	}
-	token, err := utils.GenerateToken(u.ID, u.KlienID, u.Nama, u.Role)
+	token, err := utils.GenerateToken(u.ID, u.KlienID, u.Nama, u.Role, u.TenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (s *AuthService) loginSuper(req dto.LoginRequest) (*dto.LoginResponse, erro
 	if err == sql.ErrNoRows || bcrypt.CompareHashAndPassword([]byte(hash), []byte(req.Password)) != nil {
 		return nil, types.NewHTTPError(http.StatusUnauthorized, "Username atau password salah")
 	}
-	token, err := utils.GenerateToken(id, 0, username, types.RoleSuper)
+	token, err := utils.GenerateToken(id, 0, username, types.RoleSuper, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -63,5 +63,5 @@ func (s *AuthService) loginSuper(req dto.LoginRequest) (*dto.LoginResponse, erro
 }
 
 func toUserResponse(u models.User) dto.UserResponse {
-	return dto.UserResponse{ID: u.ID, KlienID: u.KlienID, Nama: u.Nama, Username: u.Username, Role: u.Role, Aktif: u.Aktif}
+	return dto.UserResponse{ID: u.ID, KlienID: u.KlienID, Nama: u.Nama, Username: u.Username, Role: u.Role, Aktif: u.Aktif, TenantID: u.TenantID}
 }

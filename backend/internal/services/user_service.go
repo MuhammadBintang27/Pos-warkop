@@ -25,7 +25,7 @@ func NewUserService(db *sql.DB) *UserService {
 }
 
 func (s *UserService) List(kid int64) ([]dto.UserResponse, error) {
-	rows, err := s.db.Query("SELECT id,nama,username,role,aktif FROM users WHERE klien_id=? ORDER BY nama", kid)
+	rows, err := s.db.Query("SELECT id,nama,username,role,aktif,COALESCE(tenant_id,0) FROM users WHERE klien_id=? ORDER BY nama", kid)
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +33,7 @@ func (s *UserService) List(kid int64) ([]dto.UserResponse, error) {
 	out := []dto.UserResponse{}
 	for rows.Next() {
 		var u models.User
-		if err := rows.Scan(&u.ID, &u.Nama, &u.Username, &u.Role, &u.Aktif); err != nil {
+		if err := rows.Scan(&u.ID, &u.Nama, &u.Username, &u.Role, &u.Aktif, &u.TenantID); err != nil {
 			return nil, err
 		}
 		out = append(out, toUserResponse(u))
@@ -47,12 +47,16 @@ func (s *UserService) Create(kid int64, req dto.CreateUserRequest) error {
 	if !reNamaPengguna.MatchString(nama) {
 		return types.BadRequest("Username 3-30 karakter: huruf kecil, angka, titik, garis bawah atau strip, tanpa spasi")
 	}
+	tenantID, err := s.tenantAkun(kid, req.Role, req.TenantID)
+	if err != nil {
+		return err
+	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
-	_, err = s.db.Exec("INSERT INTO users (klien_id,nama,username,password_hash,role) VALUES (?,?,?,?,?)",
-		kid, req.Nama, fmt.Sprintf("%d-%s", kid, nama), string(hash), req.Role)
+	_, err = s.db.Exec("INSERT INTO users (klien_id,nama,username,password_hash,role,tenant_id) VALUES (?,?,?,?,?,?)",
+		kid, req.Nama, fmt.Sprintf("%d-%s", kid, nama), string(hash), req.Role, tenantID)
 	if utils.MySQLErrNo(err) == utils.MySQLDuplicate {
 		return types.BadRequest("Username sudah dipakai")
 	}
@@ -63,7 +67,11 @@ func (s *UserService) Update(kid, actorID, id int64, req dto.UpdateUserRequest) 
 	if id == actorID && (!*req.Aktif || types.Role(req.Role) != types.RoleOwner) {
 		return types.BadRequest("Tidak bisa menonaktifkan atau menurunkan role akun sendiri")
 	}
-	res, err := s.db.Exec("UPDATE users SET nama=?, role=?, aktif=? WHERE id=? AND klien_id=?", req.Nama, req.Role, *req.Aktif, id, kid)
+	tenantID, err := s.tenantAkun(kid, req.Role, req.TenantID)
+	if err != nil {
+		return err
+	}
+	res, err := s.db.Exec("UPDATE users SET nama=?, role=?, aktif=?, tenant_id=? WHERE id=? AND klien_id=?", req.Nama, req.Role, *req.Aktif, tenantID, id, kid)
 	if err != nil {
 		return err
 	}
@@ -82,4 +90,16 @@ func (s *UserService) Update(kid, actorID, id int64, req dto.UpdateUserRequest) 
 	}
 	_, err = s.db.Exec("UPDATE users SET password_hash=? WHERE id=? AND klien_id=?", string(hash), id, kid)
 	return err
+}
+
+// tenantAkun: akun tenant wajib terhubung ke tenant aktif milik klien yang sama; role lain selalu tanpa tenant.
+func (s *UserService) tenantAkun(kid int64, role string, tenantID int64) (sql.NullInt64, error) {
+	if types.Role(role) != types.RoleTenant {
+		return sql.NullInt64{}, nil
+	}
+	var ok int
+	if tenantID <= 0 || s.db.QueryRow("SELECT 1 FROM tenant WHERE id=? AND klien_id=? AND aktif=1", tenantID, kid).Scan(&ok) != nil {
+		return sql.NullInt64{}, types.BadRequest("Pilih tenant untuk akun tenant")
+	}
+	return sql.NullInt64{Int64: tenantID, Valid: true}, nil
 }

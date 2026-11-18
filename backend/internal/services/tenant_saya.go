@@ -1,0 +1,63 @@
+package services
+
+import (
+	"time"
+
+	"warkop/internal/dto"
+	"warkop/internal/types"
+)
+
+// Batas tampilan pesanan masuk: antrean yang terlalu lama dianggap terlupa, yang sudah siap cukup terlihat sebentar.
+const (
+	batasAntreanTenant = 24 * time.Hour
+	batasSiapTenant    = 3 * time.Hour
+)
+
+// PesananMasuk: item tenant yang sudah dikirim ke dapur, belum siap dulu lalu yang baru saja siap.
+func (s *TenantService) PesananMasuk(kid, tenantID int64) (*dto.PesananMasukResponse, error) {
+	out := &dto.PesananMasukResponse{Items: []dto.ItemMasuk{}}
+	if s.db.QueryRow("SELECT nama FROM tenant WHERE id=? AND klien_id=?", tenantID, kid).Scan(&out.Tenant) != nil {
+		return nil, types.NotFound("Tenant")
+	}
+	now := time.Now()
+	rows, err := s.db.Query(`SELECT i.id,i.pesanan_id,COALESCE(m.nama,''),p.atas_nama,i.nama,i.qty,i.opsi,i.catatan,p.dibuat_at,i.siap_at
+		FROM pesanan_item i JOIN pesanan p ON p.id=i.pesanan_id LEFT JOIN meja m ON m.id=p.meja_id
+		WHERE i.klien_id=? AND i.tenant_id=? AND i.dikirim=1 AND p.status<>'batal'
+			AND ((i.siap_at IS NULL AND p.dibuat_at>=?) OR i.siap_at>=?)
+		ORDER BY i.siap_at IS NOT NULL, i.siap_at DESC, i.id`,
+		kid, tenantID, now.Add(-batasAntreanTenant), now.Add(-batasSiapTenant))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var it dto.ItemMasuk
+		if err := rows.Scan(&it.ID, &it.PesananID, &it.MejaNama, &it.AtasNama, &it.Nama, &it.Qty, &it.Opsi, &it.Catatan, &it.DibuatAt, &it.SiapAt); err != nil {
+			return nil, err
+		}
+		out.Items = append(out.Items, it)
+	}
+	return out, rows.Err()
+}
+
+// SetSiap hanya menyentuh item milik tenant itu sendiri.
+func (s *TenantService) SetSiap(kid, tenantID, itemID int64, siap bool) error {
+	var at *time.Time
+	if siap {
+		now := time.Now()
+		at = &now
+	}
+	res, err := s.db.Exec("UPDATE pesanan_item SET siap_at=? WHERE id=? AND klien_id=? AND tenant_id=? AND dikirim=1", at, itemID, kid, tenantID)
+	if err != nil {
+		return err
+	}
+	// 0 baris juga terjadi bila nilainya tidak berubah, jadi pastikan itemnya memang tidak ada.
+	if n, _ := res.RowsAffected(); n == 0 {
+		var ok int
+		if s.db.QueryRow("SELECT 1 FROM pesanan_item WHERE id=? AND klien_id=? AND tenant_id=? AND dikirim=1", itemID, kid, tenantID).Scan(&ok) != nil {
+			return types.NotFound("Item")
+		}
+	}
+	s.hub.Publish(kid, "dapur")
+	return nil
+}

@@ -20,6 +20,7 @@ const (
 	RolePelayan Role = "pelayan"
 	RoleKasir   Role = "kasir"
 	RoleOwner   Role = "owner"
+	RoleTenant  Role = "tenant"     // hanya melihat pesanan masuk dan rekapan tenant miliknya
 	RoleSuper   Role = "superadmin" // bukan peran pengguna klien, jadi tidak termasuk Valid()
 )
 
@@ -45,7 +46,7 @@ const (
 
 func (r Role) Valid() bool {
 	switch r {
-	case RolePelayan, RoleKasir, RoleOwner:
+	case RolePelayan, RoleKasir, RoleOwner, RoleTenant:
 		return true
 	}
 	return false

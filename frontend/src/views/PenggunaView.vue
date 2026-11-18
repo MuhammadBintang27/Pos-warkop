@@ -8,25 +8,32 @@ const ROLES = [
   { label: 'Pelayan', value: 'pelayan' },
   { label: 'Kasir', value: 'kasir' },
   { label: 'Owner', value: 'owner' },
+  { label: 'Tenant', value: 'tenant' },
 ]
-const SEVERITY = { pelayan: 'secondary', kasir: 'info', owner: 'warn' }
+const SEVERITY = { pelayan: 'secondary', kasir: 'info', owner: 'warn', tenant: 'contrast' }
 
 const run = useRun()
 const auth = useAuthStore()
 const users = ref([])
+const tenants = ref([])
 const form = ref(null)
 
-const muat = async () => (users.value = await get('/users'))
+const muat = async () => {
+  ;[users.value, tenants.value] = await Promise.all([get('/users'), get('/tenant')])
+}
+const namaTenant = (id) => tenants.value.find((t) => t.id === id)?.nama ?? '—'
 const valid = () => {
   const f = form.value
+  if (f?.role === 'tenant' && !f.tenantId) return false
   return f?.nama.trim() && (f.id ? !f.password || f.password.length >= 6 : /^[a-z0-9._-]{3,30}$/.test(f.username.trim().toLowerCase()) && f.password.length >= 6)
 }
 
 async function simpan() {
   const { id, nama, username, password, role, aktif } = form.value
+  const tenantId = role === 'tenant' ? form.value.tenantId : 0
   const req = id
-    ? () => put(`/users/${id}`, { nama: nama.trim(), role, aktif, password })
-    : () => post('/users', { nama: nama.trim(), username: username.trim(), password, role })
+    ? () => put(`/users/${id}`, { nama: nama.trim(), role, aktif, password, tenantId })
+    : () => post('/users', { nama: nama.trim(), username: username.trim(), password, role, tenantId })
   if (await run(req, 'Pengguna disimpan')) {
     form.value = null
     await run(muat)
@@ -38,7 +45,7 @@ onMounted(() => run(muat))
 
 <template>
   <div class="stack gap">
-    <PageHeader icon="pi pi-users" title="Pengguna" subtitle="Akun pelayan, kasir, dan owner">
+    <PageHeader icon="pi pi-users" title="Pengguna" subtitle="Akun pelayan, kasir, owner, dan tenant">
       <button class="pill" @click="form = { nama: '', username: '', password: '', role: 'pelayan', aktif: true }">
         <i class="pi pi-plus" /> Tambah pengguna
       </button>
@@ -48,7 +55,12 @@ onMounted(() => run(muat))
       <DataTable :value="users" size="small" empty-message="Belum ada pengguna">
         <Column field="nama" header="Nama" />
         <Column field="username" header="Username" />
-        <Column header="Role"><template #body="{ data }"><Tag :value="data.role" :severity="SEVERITY[data.role]" /></template></Column>
+        <Column header="Role">
+          <template #body="{ data }">
+            <Tag :value="data.role" :severity="SEVERITY[data.role]" />
+            <small v-if="data.role === 'tenant'" class="hint"> {{ namaTenant(data.tenantId) }}</small>
+          </template>
+        </Column>
         <Column header="Status">
           <template #body="{ data }"><Tag :value="data.aktif ? 'Aktif' : 'Nonaktif'" :severity="data.aktif ? 'success' : 'danger'" /></template>
         </Column>
@@ -75,6 +87,11 @@ onMounted(() => run(muat))
         <Password v-model="form.password" input-id="pw" :feedback="false" toggle-mask fluid />
         <label>Role</label>
         <Select v-model="form.role" :options="ROLES" option-label="label" option-value="value" fluid />
+        <template v-if="form.role === 'tenant'">
+          <label for="tenant">Tenant</label>
+          <Select v-model="form.tenantId" input-id="tenant" :options="tenants" option-label="nama" option-value="id" placeholder="Pilih tenant" fluid />
+          <small class="hint">Akun ini hanya bisa melihat pesanan masuk dan rekapan tenant tersebut.</small>
+        </template>
         <div v-if="form.id" class="sw"><ToggleSwitch v-model="form.aktif" input-id="aktif" /><label for="aktif">Akun aktif</label></div>
       </div>
       <template #footer>

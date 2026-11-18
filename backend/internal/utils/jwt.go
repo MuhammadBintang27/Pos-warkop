@@ -15,16 +15,19 @@ type JWTPayload struct {
 	KlienID int64      `json:"kid"`
 	Nama    string     `json:"nama"`
 	Role    types.Role `json:"role"`
+	// TenantID hanya terisi untuk role tenant; perubahan baru berlaku setelah login ulang.
+	TenantID int64 `json:"tid,omitempty"`
 	jwt.RegisteredClaims
 }
 
-func GenerateToken(userID, klienID int64, nama string, role types.Role) (string, error) {
+func GenerateToken(userID, klienID int64, nama string, role types.Role, tenantID int64) (string, error) {
 	cfg := config.Get()
 	claims := JWTPayload{
-		UserID:  userID,
-		KlienID: klienID,
-		Nama:    nama,
-		Role:    role,
+		UserID:   userID,
+		KlienID:  klienID,
+		Nama:     nama,
+		Role:     role,
+		TenantID: tenantID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(cfg.JWTExpiryHours) * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

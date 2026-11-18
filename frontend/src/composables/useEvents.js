@@ -1,4 +1,4 @@
-const NAMES = ['pesanan', 'meja', 'menu', 'pengaturan', 'shift', 'cetak']
+const NAMES = ['pesanan', 'meja', 'menu', 'pengaturan', 'shift', 'cetak', 'dapur']
 const handlers = Object.fromEntries(NAMES.map((n) => [n, new Set()]))
 let source = null
 

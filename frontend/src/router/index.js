@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const owner = { roles: ['owner'] }
+const tenant = { roles: ['tenant'] }
 
 const router = createRouter({
   history: createWebHistory(),
@@ -28,6 +29,8 @@ const router = createRouter({
         { path: 'meja', component: () => import('@/views/MejaView.vue'), meta: owner },
         { path: 'pengguna', component: () => import('@/views/PenggunaView.vue'), meta: owner },
         { path: 'pengaturan', component: () => import('@/views/PengaturanView.vue'), meta: owner },
+        { path: 'tenant-saya', component: () => import('@/views/PesananMasukView.vue'), meta: tenant },
+        { path: 'tenant-saya/rekap', component: () => import('@/views/RekapTenantView.vue'), meta: tenant },
       ],
     },
     { path: '/:pathMatch(.*)*', redirect: '/' },
@@ -39,6 +42,7 @@ router.beforeEach((to) => {
   if (to.meta.public) return auth.isLoggedIn ? '/' : true
   if (!auth.isLoggedIn) return '/login'
   if (auth.role === 'superadmin') return to.path.startsWith('/admin') ? true : '/admin'
+  if (auth.role === 'tenant') return to.meta.roles?.includes('tenant') ? true : '/tenant-saya'
   if (to.meta.roles && !to.meta.roles.includes(auth.role)) return '/'
   return true
 })

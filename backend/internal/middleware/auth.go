@@ -32,6 +32,10 @@ func Authenticate(c *fiber.Ctx) error {
 	if payload.KlienID != 0 && !utils.KlienAktif(payload.KlienID) {
 		return utils.SendError(c, fiber.StatusUnauthorized, "Akses usaha ini dinonaktifkan. Hubungi penyedia layanan")
 	}
+	// Akun tenant hanya boleh ke halaman tenant-nya sendiri, supaya route lain yang cuma "authed" tidak terbuka untuknya.
+	if payload.Role == types.RoleTenant && !bolehTenant(c.Path()) {
+		return utils.SendError(c, fiber.StatusForbidden, "Anda tidak punya akses ke resource ini")
+	}
 	c.Locals(UserContextKey, payload)
 	return c.Next()
 }
@@ -62,4 +66,8 @@ func Authorize(roles ...types.Role) fiber.Handler {
 func CurrentUser(c *fiber.Ctx) *utils.JWTPayload {
 	p, _ := c.Locals(UserContextKey).(*utils.JWTPayload)
 	return p
+}
+
+func bolehTenant(path string) bool {
+	return path == "/api/events" || strings.HasPrefix(path, "/api/tenant-saya/")
 }
