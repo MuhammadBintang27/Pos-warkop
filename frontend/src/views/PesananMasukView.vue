@@ -3,11 +3,11 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { get, post } from '@/api/http'
 import { onEvent } from '@/composables/useEvents'
 import { useRun } from '@/composables/useRun'
+import { tgl } from '@/utils/format'
 
 const run = useRun()
 const data = ref({ tenant: '', items: [] })
 
-const jam = (d) => new Date(d).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
 
 // satu kartu per kali Kirim, sama seperti satu tiket dapur di printer
 function kelompok(items) {
@@ -47,11 +47,11 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
         <div class="jenis">{{ b.tambahan ? 'Pesanan tambahan' : 'Pesanan baru' }}</div>
         <header>
           <strong class="meja">{{ b.meja || 'Tanpa meja' }}</strong>
-          <small class="redup kanan">#{{ b.id }} · {{ jam(b.at) }}</small>
+          <small class="redup kanan">#{{ b.id }}</small>
         </header>
         <div class="info">
           <span v-if="b.atasNama"><i class="pi pi-user" /> {{ b.atasNama }}</span>
-          <span v-if="b.oleh"><i class="pi pi-send" /> dikirim oleh <b>{{ b.oleh }}</b></span>
+          <span><i class="pi pi-send" /> Dikirim {{ tgl(b.at) }}<template v-if="b.oleh"> oleh <b>{{ b.oleh }}</b></template></span>
         </div>
         <div v-for="it in b.items" :key="it.id" class="baris">
           <div>
@@ -59,13 +59,13 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
             <small v-if="it.opsi" class="redup"> · {{ it.opsi }}</small>
             <div v-if="it.catatan" class="catatan"><i class="pi pi-comment" /> {{ it.catatan }}</div>
           </div>
-          <Button label="Siap" icon="pi pi-check" size="small" @click="tandai(it, true)" />
+          <Button label="Selesai" icon="pi pi-check" size="small" @click="tandai(it, true)" />
         </div>
       </section>
     </div>
 
     <template v-if="siap.length">
-      <h3 class="judul">Sudah siap <small class="redup">(3 jam terakhir)</small></h3>
+      <h3 class="judul">Selesai <small class="redup">(3 jam terakhir)</small></h3>
       <div class="grid">
         <section v-for="b in siap" :key="b.key" class="panel kartu selesai">
           <header>
@@ -74,10 +74,13 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
           </header>
           <div class="info">
             <span v-if="b.atasNama"><i class="pi pi-user" /> {{ b.atasNama }}</span>
-            <span v-if="b.oleh"><i class="pi pi-send" /> {{ b.oleh }}</span>
+            <span><i class="pi pi-send" /> Dikirim {{ tgl(b.at) }}<template v-if="b.oleh"> oleh <b>{{ b.oleh }}</b></template></span>
           </div>
           <div v-for="it in b.items" :key="it.id" class="baris">
-            <div><b>{{ it.qty }}×</b> {{ it.nama }} <small class="redup">· siap {{ jam(it.siapAt) }}</small></div>
+            <div>
+              <b>{{ it.qty }}×</b> {{ it.nama }}
+              <div class="selesai-at"><i class="pi pi-check-circle" /> Selesai {{ tgl(it.siapAt) }}</div>
+            </div>
             <Button label="Batal" icon="pi pi-undo" size="small" text severity="secondary" @click="tandai(it, false)" />
           </div>
         </section>
@@ -158,5 +161,10 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
 }
 .selesai {
   opacity: 0.75;
+}
+.selesai-at {
+  margin-top: 2px;
+  font-size: 0.85rem;
+  color: var(--p-green-600, #16a34a);
 }
 </style>
