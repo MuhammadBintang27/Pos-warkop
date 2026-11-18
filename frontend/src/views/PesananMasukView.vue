@@ -1,9 +1,9 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { get, post } from '@/api/http'
 import { onEvent } from '@/composables/useEvents'
 import { useRun } from '@/composables/useRun'
-import { tgl } from '@/utils/format'
+import { hari, tgl, ymd } from '@/utils/format'
 
 const run = useRun()
 const data = ref({ tenant: '', items: [] })
@@ -24,14 +24,27 @@ function kelompok(items) {
   }
   return [...map.values()]
 }
+// kartu panjang ditutup dulu: antrean menampilkan 3 menu, selesai 2 menu, sisanya lewat "Lihat semua"
+const BATAS = { antrean: 3, selesai: 2 }
+const terbuka = reactive({})
+const tampil = (b, jenis) => (terbuka[b.key] ? b.items : b.items.slice(0, BATAS[jenis]))
+const sisa = (b, jenis) => b.items.length - BATAS[jenis]
+
 const antrean = computed(() => kelompok(data.value.items.filter((i) => !i.siapAt)))
 const siap = computed(() => kelompok(data.value.items.filter((i) => i.siapAt)))
+
+// riwayat selesai per hari, dipaginasi per kartu
+const PER_HALAMAN = 12
+const tanggal = ref(hari())
+const first = ref(0)
+const siapHalaman = computed(() => siap.value.slice(first.value, first.value + PER_HALAMAN))
+const hariIni = computed(() => ymd(tanggal.value) === ymd(new Date()))
 
 // Saat halaman terbuka, notifikasi Android tidak muncul; bunyikan chime yang sama untuk kartu antrean yang baru tiba.
 const suara = new Audio('/pesanan.wav')
 let dikenal = null
 async function muat() {
-  data.value = await get('/tenant-saya/pesanan')
+  data.value = await get('/tenant-saya/pesanan', { params: { tanggal: ymd(tanggal.value) } })
   const kunci = new Set(antrean.value.map((b) => b.key))
   if (dikenal && [...kunci].some((k) => !dikenal.has(k))) suara.play().catch(() => {})
   dikenal = kunci
@@ -46,6 +59,11 @@ onMounted(() => {
   detak = setInterval(() => (now.value = Date.now()), 15000)
   run(muat)
   offs.push(onEvent('pesanan', muat), onEvent('dapur', muat))
+})
+watch(tanggal, (t) => {
+  if (!t) return (tanggal.value = hari())
+  first.value = 0
+  run(muat)
 })
 onBeforeUnmount(() => {
   clearInterval(detak)
@@ -73,7 +91,7 @@ onBeforeUnmount(() => {
           <span v-if="b.atasNama"><i class="pi pi-user" /> {{ b.atasNama }}</span>
           <span><i class="pi pi-send" /> Dikirim {{ tgl(b.at) }}<template v-if="b.oleh"> oleh <b>{{ b.oleh }}</b></template></span>
         </div>
-        <div v-for="it in b.items" :key="it.id" class="baris">
+        <div v-for="it in tampil(b, 'antrean')" :key="it.id" class="baris">
           <div>
             <b>{{ it.qty }}×</b> {{ it.nama }}
             <small v-if="it.opsi" class="redup"> · {{ it.opsi }}</small>
@@ -81,13 +99,21 @@ onBeforeUnmount(() => {
           </div>
           <Button label="Selesai" icon="pi pi-check" size="small" @click="tandai(it, true)" />
         </div>
+        <button v-if="sisa(b, 'antrean') > 0" class="lihat" @click="terbuka[b.key] = !terbuka[b.key]">
+          <i :class="terbuka[b.key] ? 'pi pi-chevron-up' : 'pi pi-chevron-down'" />
+          {{ terbuka[b.key] ? 'Sembunyikan' : `Lihat semua (${sisa(b, 'antrean')} lagi)` }}
+        </button>
       </section>
     </div>
 
-    <template v-if="siap.length">
-      <h3 class="judul">Selesai <small class="redup">(3 jam terakhir)</small></h3>
+    <div class="judul selesai-judul">
+      <h3>Selesai <Tag :value="String(siap.reduce((n, b) => n + b.items.length, 0))" severity="success" /></h3>
+      <DatePicker v-model="tanggal" date-format="dd/mm/yy" :max-date="new Date()" :manual-input="false" show-icon class="kanan" />
+    </div>
+    <p v-if="!siap.length" class="kosong">{{ hariIni ? 'Belum ada pesanan yang selesai hari ini.' : 'Tidak ada pesanan selesai di tanggal ini.' }}</p>
+    <template v-else>
       <div class="grid">
-        <section v-for="b in siap" :key="b.key" class="panel kartu selesai">
+        <section v-for="b in siapHalaman" :key="b.key" class="panel kartu selesai">
           <header>
             <strong class="meja">{{ b.meja || 'Tanpa meja' }}</strong>
             <small class="redup kanan">#{{ b.id }}</small>
@@ -96,15 +122,20 @@ onBeforeUnmount(() => {
             <span v-if="b.atasNama"><i class="pi pi-user" /> {{ b.atasNama }}</span>
             <span><i class="pi pi-send" /> Dikirim {{ tgl(b.at) }}<template v-if="b.oleh"> oleh <b>{{ b.oleh }}</b></template></span>
           </div>
-          <div v-for="it in b.items" :key="it.id" class="baris">
+          <div v-for="it in tampil(b, 'selesai')" :key="it.id" class="baris">
             <div>
               <b>{{ it.qty }}×</b> {{ it.nama }}
               <div class="selesai-at"><i class="pi pi-check-circle" /> Selesai {{ tgl(it.siapAt) }}</div>
             </div>
             <Button label="Batal" icon="pi pi-undo" size="small" text severity="secondary" @click="tandai(it, false)" />
           </div>
+          <button v-if="sisa(b, 'selesai') > 0" class="lihat" @click="terbuka[b.key] = !terbuka[b.key]">
+            <i :class="terbuka[b.key] ? 'pi pi-chevron-up' : 'pi pi-chevron-down'" />
+            {{ terbuka[b.key] ? 'Sembunyikan' : `Lihat semua (${sisa(b, 'selesai')} lagi)` }}
+          </button>
         </section>
       </div>
+      <Paginator v-if="siap.length > PER_HALAMAN" v-model:first="first" :rows="PER_HALAMAN" :total-records="siap.length" />
     </template>
   </div>
 </template>
@@ -119,12 +150,23 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
 }
+.selesai-judul {
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.selesai-judul h3 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .kosong,
 .redup {
   color: var(--p-text-muted-color);
 }
 .grid {
   display: grid;
+  align-items: start; /* kartu setinggi isinya sendiri, tidak ikut kartu terpanjang */
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 12px;
 }
@@ -215,6 +257,21 @@ onBeforeUnmount(() => {
   border-left: 5px solid var(--p-green-500, #22c55e);
   background: color-mix(in srgb, var(--p-green-500, #22c55e) 6%, var(--p-content-background));
   opacity: 0.8;
+}
+.lihat {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px;
+  border: 0;
+  border-top: 1px dashed var(--p-content-border-color);
+  background: none;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--accent-text);
+  cursor: pointer;
 }
 .selesai-at {
   margin-top: 2px;

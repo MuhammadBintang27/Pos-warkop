@@ -13,7 +13,7 @@ import (
 
 func (h *TenantController) PesananMasuk(c *fiber.Ctx) error {
 	u := middleware.CurrentUser(c)
-	res, err := h.svc.PesananMasuk(u.KlienID, u.TenantID)
+	res, err := h.svc.PesananMasuk(u.KlienID, u.TenantID, c.Query("tanggal"))
 	if err != nil {
 		return handleErr(c, err, "PesananMasuk error")
 	}
