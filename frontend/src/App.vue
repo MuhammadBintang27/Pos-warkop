@@ -23,6 +23,8 @@ onMounted(() => {
 onBeforeUnmount(() => window.removeEventListener('auth:expired', expired))
 
 watch(() => auth.token, (t) => (t ? connectEvents(t) : disconnectEvents()), { immediate: true })
+// tema milik usaha baru bisa diambil setelah login (sebelumnya yang terambil tema bawaan)
+watch(() => auth.token, (t) => t && pengaturan.fetch())
 
 // HP tenant didaftarkan untuk push notifikasi setiap kali aplikasi dibuka atau login
 watch(

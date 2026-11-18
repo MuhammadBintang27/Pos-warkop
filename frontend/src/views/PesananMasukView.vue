@@ -107,7 +107,7 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="judul selesai-judul">
-      <h3>Selesai <Tag :value="String(siap.reduce((n, b) => n + b.items.length, 0))" severity="success" /></h3>
+      <h3>Selesai <Tag :value="String(siap.reduce((n, b) => n + b.items.length, 0))" severity="secondary" /></h3>
       <DatePicker v-model="tanggal" date-format="dd/mm/yy" :max-date="new Date()" :manual-input="false" show-icon class="kanan" />
     </div>
     <p v-if="!siap.length" class="kosong">{{ hariIni ? 'Belum ada pesanan yang selesai hari ini.' : 'Tidak ada pesanan selesai di tanggal ini.' }}</p>
@@ -193,7 +193,7 @@ onBeforeUnmount(() => {
   background: color-mix(in srgb, var(--warna) 10%, var(--p-content-background));
 }
 .antre.tambah {
-  --warna: var(--p-orange-500, #f97316);
+  --warna: var(--p-primary-700);
 }
 .antre.baru {
   animation: denyut 1.6s ease-in-out infinite;
@@ -219,7 +219,7 @@ onBeforeUnmount(() => {
   padding: 1px 8px;
   border-radius: 999px;
   background: var(--warna);
-  color: #fff;
+  color: var(--p-primary-contrast-color);
   letter-spacing: 0.08em;
 }
 .jenis {
@@ -252,11 +252,11 @@ onBeforeUnmount(() => {
   font-size: 0.9rem;
   color: var(--accent-text);
 }
-/* selesai: hijau pudar dan tenang */
+/* selesai: warna tema yang pudar dan tenang, kontras dengan antrean yang tegas */
 .selesai {
-  border-left: 5px solid var(--p-green-500, #22c55e);
-  background: color-mix(in srgb, var(--p-green-500, #22c55e) 6%, var(--p-content-background));
-  opacity: 0.8;
+  border-left: 5px solid var(--p-primary-200);
+  background: color-mix(in srgb, var(--p-primary-color) 4%, var(--p-content-background));
+  opacity: 0.85;
 }
 .lihat {
   display: flex;
@@ -276,6 +276,6 @@ onBeforeUnmount(() => {
 .selesai-at {
   margin-top: 2px;
   font-size: 0.85rem;
-  color: var(--p-green-600, #16a34a);
+  color: var(--accent-text);
 }
 </style>
