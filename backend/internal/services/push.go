@@ -105,8 +105,9 @@ func (p *Pusher) kirim(token string, pesan PesanPush) error {
 		"token":        token,
 		"notification": map[string]string{"title": pesan.Judul, "body": pesan.Isi},
 		"android": map[string]any{
-			"priority":     "high",
-			"notification": map[string]string{"channel_id": "pesanan", "sound": "default"},
+			"priority": "high",
+			// channel dibuat APK (mobile/www) dengan suara res/raw/pesanan.wav
+			"notification": map[string]string{"channel_id": "pesanan_v2", "sound": "pesanan"},
 		},
 	}})
 	req, _ := http.NewRequest(http.MethodPost, "https://fcm.googleapis.com/v1/projects/"+p.akun.ProjectID+"/messages:send", bytes.NewReader(body))

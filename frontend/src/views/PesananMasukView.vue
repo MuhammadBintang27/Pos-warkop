@@ -27,7 +27,15 @@ function kelompok(items) {
 const antrean = computed(() => kelompok(data.value.items.filter((i) => !i.siapAt)))
 const siap = computed(() => kelompok(data.value.items.filter((i) => i.siapAt)))
 
-const muat = async () => (data.value = await get('/tenant-saya/pesanan'))
+// Saat halaman terbuka, notifikasi Android tidak muncul; bunyikan chime yang sama untuk kartu antrean yang baru tiba.
+const suara = new Audio('/pesanan.wav')
+let dikenal = null
+async function muat() {
+  data.value = await get('/tenant-saya/pesanan')
+  const kunci = new Set(antrean.value.map((b) => b.key))
+  if (dikenal && [...kunci].some((k) => !dikenal.has(k))) suara.play().catch(() => {})
+  dikenal = kunci
+}
 const tandai = (it, s) => run(async () => {
   await post(`/tenant-saya/item/${it.id}/siap`, { siap: s })
   await muat()

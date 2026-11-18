@@ -47,8 +47,10 @@
         setTimeout(() => selesai(''), 5000)
         push.addListener('registration', (t) => selesai(t.value))
         push.addListener('registrationError', () => selesai(''))
+        // Suara channel dikunci Android sejak dibuat, jadi suara baru memakai id channel baru dan yang lama dihapus.
+        push.deleteChannel({ id: 'pesanan' }).catch(() => {})
         push
-          .createChannel({ id: 'pesanan', name: 'Pesanan masuk', importance: 5, visibility: 1, vibration: true })
+          .createChannel({ id: 'pesanan_v2', name: 'Pesanan masuk', importance: 5, visibility: 1, vibration: true, sound: 'pesanan.wav' })
           .catch(() => {})
           .then(() => push.requestPermissions())
           .then((p) => (p.receive === 'granted' ? push.register() : selesai('')))
