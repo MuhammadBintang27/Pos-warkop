@@ -10,7 +10,7 @@ const ROLES = [
   { label: 'Owner', value: 'owner' },
   { label: 'Tenant', value: 'tenant' },
 ]
-const SEVERITY = { pelayan: 'secondary', kasir: 'info', owner: 'warn', tenant: 'contrast' }
+const SEVERITY = { pelayan: 'secondary', kasir: 'info', owner: 'warn' }
 
 const run = useRun()
 const auth = useAuthStore()
@@ -57,8 +57,10 @@ onMounted(() => run(muat))
         <Column field="username" header="Username" />
         <Column header="Role">
           <template #body="{ data }">
-            <Tag :value="data.role" :severity="SEVERITY[data.role]" />
-            <small v-if="data.role === 'tenant'" class="hint"> {{ namaTenant(data.tenantId) }}</small>
+            <div class="role">
+              <Tag :value="data.role" :severity="SEVERITY[data.role]" />
+              <small v-if="data.role === 'tenant'" class="hint"><i class="pi pi-shop" /> {{ namaTenant(data.tenantId) }}</small>
+            </div>
           </template>
         </Column>
         <Column header="Status">
@@ -110,6 +112,15 @@ onMounted(() => run(muat))
 }
 .hint {
   color: var(--p-text-muted-color);
+}
+.role {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.role .pi {
+  font-size: 0.8rem;
 }
 .sw {
   display: flex;
