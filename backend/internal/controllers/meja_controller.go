@@ -84,3 +84,32 @@ func (h *MejaController) Delete(c *fiber.Ctx) error {
 	}
 	return utils.SendSuccess(c, fiber.StatusOK, "Meja berhasil dihapus")
 }
+
+func (h *MejaController) SimpanArea(c *fiber.Ctx) error {
+	var id int64
+	if c.Params("id") != "" {
+		var err error
+		if id, err = utils.ParamID(c, "id"); err != nil {
+			return handleErr(c, err, "")
+		}
+	}
+	var req dto.AreaRequest
+	if err := middleware.ParseAndValidate(c, &req); err != nil {
+		return err
+	}
+	if err := h.svc.SimpanArea(kid(c), id, req); err != nil {
+		return handleErr(c, err, "SimpanArea error")
+	}
+	return utils.SendSuccess(c, fiber.StatusOK, "Area disimpan", nil)
+}
+
+func (h *MejaController) HapusArea(c *fiber.Ctx) error {
+	id, err := utils.ParamID(c, "id")
+	if err != nil {
+		return handleErr(c, err, "")
+	}
+	if err := h.svc.HapusArea(kid(c), id); err != nil {
+		return handleErr(c, err, "HapusArea error")
+	}
+	return utils.SendSuccess(c, fiber.StatusOK, "Area dihapus", nil)
+}

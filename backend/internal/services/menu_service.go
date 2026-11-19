@@ -298,7 +298,8 @@ func (s *MenuService) Delete(kid, id int64) error {
 }
 
 func (s *MenuService) SetStok(kid, id int64, req dto.StokRequest) error {
-	res, err := s.db.Exec("UPDATE menu SET tersedia=?, stok=COALESCE(?,stok) WHERE id=? AND klien_id=? AND aktif=1", req.Tersedia, req.Stok, id, kid)
+	res, err := s.db.Exec("UPDATE menu SET tersedia=?, stok=COALESCE(?,stok), track_stok=COALESCE(?,track_stok) WHERE id=? AND klien_id=? AND aktif=1",
+		req.Tersedia, req.Stok, req.TrackStok, id, kid)
 	if err != nil {
 		return err
 	}

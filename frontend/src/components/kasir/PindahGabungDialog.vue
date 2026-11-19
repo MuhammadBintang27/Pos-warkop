@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import { useArea } from '@/composables/useArea'
 import { useRun } from '@/composables/useRun'
 import { useKasirStore } from '@/stores/kasir'
 import { rp } from '@/utils/format'
@@ -9,9 +10,12 @@ const visible = defineModel('visible')
 const store = useKasirStore()
 const run = useRun()
 
-const kosong = computed(() => store.denah.meja.filter((m) => !m.pesanan.length))
+const { tabs, aktif, pilih, cocok, namaArea } = useArea(computed(() => store.denah), { semua: true, kunci: 'kasir.area' })
+const kosong = computed(() => store.denah.meja.filter((m) => !m.pesanan.length && cocok(m)))
+// nama meja bisa sama di area berbeda, jadi area ikut ditulis bila sudah memakai area
+const lokasi = (m) => (tabs.value.length ? `${m.nama} · ${namaArea(m.areaId)}` : m.nama)
 const bills = computed(() => {
-  const dariMeja = store.denah.meja.flatMap((m) => m.pesanan.map((p) => ({ ...p, lokasi: m.nama })))
+  const dariMeja = store.denah.meja.flatMap((m) => m.pesanan.map((p) => ({ ...p, lokasi: lokasi(m) })))
   const take = store.denah.takeaway.map((p) => ({ ...p, lokasi: 'Bawa pulang' }))
   return [...dariMeja, ...take].filter((p) => p.id !== store.pesanan?.id)
 })
@@ -35,6 +39,16 @@ async function gabung(id) {
   >
     <template v-if="mode === 'pindah'">
       <p class="hint">Pilih meja kosong tujuan.</p>
+      <SelectButton
+        v-if="tabs.length"
+        :model-value="aktif"
+        :options="tabs"
+        option-label="nama"
+        option-value="id"
+        :allow-empty="false"
+        class="area"
+        @update:model-value="pilih = $event"
+      />
       <div class="opts">
         <Button v-for="m in kosong" :key="m.id" :label="m.nama" severity="secondary" outlined @click="pindah(m.id)" />
       </div>
@@ -56,6 +70,10 @@ async function gabung(id) {
 </template>
 
 <style scoped>
+.area {
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
 .hint {
   margin-top: 0;
   color: var(--p-text-muted-color);

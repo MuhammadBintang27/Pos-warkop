@@ -33,8 +33,9 @@ type MenuRequest struct {
 }
 
 type StokRequest struct {
-	Tersedia bool `json:"tersedia"`
-	Stok     *int `json:"stok" validate:"omitempty,gte=0"`
+	Tersedia  bool  `json:"tersedia"`
+	Stok      *int  `json:"stok" validate:"omitempty,gte=0"`
+	TrackStok *bool `json:"trackStok"` // kosong = tidak diubah
 }
 
 type OpsiResponse struct {
@@ -76,13 +77,26 @@ type KategoriResponse struct {
 }
 
 type MejaRequest struct {
-	Nama string `json:"nama" validate:"required,max=50"`
+	Nama   string `json:"nama" validate:"required,max=50"`
+	AreaID *int64 `json:"areaId" validate:"omitempty,gt=0"`
+}
+
+type AreaRequest struct {
+	Nama   string `json:"nama" validate:"required,max=50"`
+	Urutan int    `json:"urutan"`
+}
+
+type AreaResponse struct {
+	ID     int64  `json:"id"`
+	Nama   string `json:"nama"`
+	Urutan int    `json:"urutan"`
 }
 
 type GenerateMejaRequest struct {
 	Awalan string `json:"awalan" validate:"required,max=40"`
 	Mulai  int    `json:"mulai" validate:"required,min=1,max=9999"`
 	Jumlah int    `json:"jumlah" validate:"required,min=1,max=200"`
+	AreaID *int64 `json:"areaId" validate:"omitempty,gt=0"`
 }
 
 type GenerateMejaResponse struct {
@@ -99,6 +113,7 @@ type PesananRingkas struct {
 type MejaResponse struct {
 	ID      int64            `json:"id"`
 	Nama    string           `json:"nama"`
+	AreaID  *int64           `json:"areaId"`
 	PosX    *float64         `json:"posX"`
 	PosY    *float64         `json:"posY"`
 	Pesanan []PesananRingkas `json:"pesanan"`
@@ -115,6 +130,7 @@ type PosisiRequest struct {
 }
 
 type DenahResponse struct {
+	Area     []AreaResponse   `json:"area"`
 	Meja     []*MejaResponse  `json:"meja"`
 	Takeaway []PesananRingkas `json:"takeaway"`
 }

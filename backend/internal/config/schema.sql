@@ -86,10 +86,21 @@ CREATE TABLE IF NOT EXISTS varian_opsi (
   FOREIGN KEY (klien_id) REFERENCES klien(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- area/lantai meja; meja tanpa area (area_id NULL) tampil sebagai "Utama"
+CREATE TABLE IF NOT EXISTS area (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  klien_id BIGINT NOT NULL,
+  nama VARCHAR(50) NOT NULL,
+  urutan INT NOT NULL DEFAULT 0,
+  aktif TINYINT(1) NOT NULL DEFAULT 1,
+  FOREIGN KEY (klien_id) REFERENCES klien(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS meja (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   klien_id BIGINT NOT NULL,
   nama VARCHAR(50) NOT NULL,
+  area_id BIGINT NULL,
   aktif TINYINT(1) NOT NULL DEFAULT 1,
   pos_x DECIMAL(6,2) NULL,
   pos_y DECIMAL(6,2) NULL,

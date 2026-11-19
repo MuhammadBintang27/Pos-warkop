@@ -62,6 +62,9 @@ func RegisterMejaRoutes(r fiber.Router, h *controllers.MejaController) {
 	r.Put("/meja/posisi", authed, owner, h.Posisi)
 	r.Put("/meja/:id", authed, owner, h.Update)
 	r.Delete("/meja/:id", authed, owner, h.Delete)
+	r.Post("/area", authed, owner, h.SimpanArea)
+	r.Put("/area/:id", authed, owner, h.SimpanArea)
+	r.Delete("/area/:id", authed, owner, h.HapusArea)
 }
 
 func RegisterPesananRoutes(r fiber.Router, h *controllers.PesananController, k *controllers.KasirController) {

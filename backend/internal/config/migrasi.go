@@ -13,6 +13,7 @@ var kolomBaru = []struct{ tabel, kolom, definisi string }{
 	{"pesanan_item", "modal", "INT NOT NULL DEFAULT 0 AFTER qty"},
 	{"bahan_log", "biaya", "DECIMAL(14,4) NULL AFTER harga_beli"},
 	{"users", "token_sejak", "DATETIME NULL AFTER aktif"},
+	{"meja", "area_id", "BIGINT NULL AFTER nama"},
 }
 
 func tambahKolom(db *sql.DB) error {

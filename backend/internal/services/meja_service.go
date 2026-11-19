@@ -20,16 +20,30 @@ func NewMejaService(db *sql.DB, hub *EventHub) *MejaService {
 }
 
 func (s *MejaService) Denah(kid int64) (*dto.DenahResponse, error) {
-	out := &dto.DenahResponse{Meja: []*dto.MejaResponse{}, Takeaway: []dto.PesananRingkas{}}
+	out := &dto.DenahResponse{Area: []dto.AreaResponse{}, Meja: []*dto.MejaResponse{}, Takeaway: []dto.PesananRingkas{}}
 	byID := map[int64]*dto.MejaResponse{}
 
-	rows, err := s.db.Query("SELECT id,nama,pos_x,pos_y FROM meja WHERE klien_id=? AND aktif=1 ORDER BY id", kid)
+	rows, err := s.db.Query("SELECT id,nama,urutan FROM area WHERE klien_id=? AND aktif=1 ORDER BY urutan,id", kid)
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var a dto.AreaResponse
+		if err := rows.Scan(&a.ID, &a.Nama, &a.Urutan); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		out.Area = append(out.Area, a)
+	}
+	rows.Close()
+
+	rows, err = s.db.Query("SELECT id,nama,area_id,pos_x,pos_y FROM meja WHERE klien_id=? AND aktif=1 ORDER BY id", kid)
 	if err != nil {
 		return nil, err
 	}
 	for rows.Next() {
 		m := &dto.MejaResponse{Pesanan: []dto.PesananRingkas{}}
-		if err := rows.Scan(&m.ID, &m.Nama, &m.PosX, &m.PosY); err != nil {
+		if err := rows.Scan(&m.ID, &m.Nama, &m.AreaID, &m.PosX, &m.PosY); err != nil {
 			rows.Close()
 			return nil, err
 		}
@@ -59,8 +73,23 @@ func (s *MejaService) Denah(kid int64) (*dto.DenahResponse, error) {
 	return out, rows.Err()
 }
 
+// cekArea memastikan area (bila diisi) milik klien yang sama dan masih aktif.
+func cekArea(q querier, kid int64, areaID *int64) error {
+	if areaID == nil {
+		return nil
+	}
+	var ada int
+	if q.QueryRow("SELECT 1 FROM area WHERE id=? AND klien_id=? AND aktif=1", *areaID, kid).Scan(&ada) != nil {
+		return types.BadRequest("Area tidak ditemukan")
+	}
+	return nil
+}
+
 func (s *MejaService) Create(kid int64, req dto.MejaRequest) error {
-	if _, err := s.db.Exec("INSERT INTO meja (klien_id,nama) VALUES (?,?)", kid, req.Nama); err != nil {
+	if err := cekArea(s.db, kid, req.AreaID); err != nil {
+		return err
+	}
+	if _, err := s.db.Exec("INSERT INTO meja (klien_id,nama,area_id) VALUES (?,?,?)", kid, req.Nama, req.AreaID); err != nil {
 		return err
 	}
 	s.hub.Publish(kid, "meja")
@@ -84,6 +113,9 @@ func (s *MejaService) Generate(kid int64, req dto.GenerateMejaRequest) (*dto.Gen
 	}
 	var baru []string
 	err := utils.WithTx(s.db, func(tx *sql.Tx) error {
+		if err := cekArea(tx, kid, req.AreaID); err != nil {
+			return err
+		}
 		rows, err := tx.Query("SELECT nama FROM meja WHERE klien_id=? AND aktif=1", kid)
 		if err != nil {
 			return err
@@ -101,7 +133,7 @@ func (s *MejaService) Generate(kid int64, req dto.GenerateMejaRequest) (*dto.Gen
 
 		baru = namaMeja(awalan, req.Mulai, req.Jumlah, ada)
 		for _, nama := range baru {
-			if _, err := tx.Exec("INSERT INTO meja (klien_id,nama) VALUES (?,?)", kid, nama); err != nil {
+			if _, err := tx.Exec("INSERT INTO meja (klien_id,nama,area_id) VALUES (?,?,?)", kid, nama, req.AreaID); err != nil {
 				return err
 			}
 		}
@@ -131,7 +163,13 @@ func (s *MejaService) SimpanPosisi(kid int64, req dto.PosisiRequest) error {
 }
 
 func (s *MejaService) Update(kid, id int64, req dto.MejaRequest) error {
-	if _, err := s.db.Exec("UPDATE meja SET nama=? WHERE id=? AND klien_id=?", req.Nama, id, kid); err != nil {
+	if err := cekArea(s.db, kid, req.AreaID); err != nil {
+		return err
+	}
+	// pindah area: posisi lama milik denah area lain, jadi dikosongkan supaya disusun ulang di denah barunya
+	if _, err := s.db.Exec(`UPDATE meja SET nama=?,
+		pos_x=IF(area_id <=> ?, pos_x, NULL), pos_y=IF(area_id <=> ?, pos_y, NULL), area_id=?
+		WHERE id=? AND klien_id=?`, req.Nama, req.AreaID, req.AreaID, req.AreaID, id, kid); err != nil {
 		return err
 	}
 	s.hub.Publish(kid, "meja")
@@ -153,6 +191,50 @@ func (s *MejaService) Delete(kid, id int64) error {
 	}
 	if c, _ := res.RowsAffected(); c == 0 {
 		return types.NotFound("Meja")
+	}
+	s.hub.Publish(kid, "meja")
+	return nil
+}
+
+func (s *MejaService) SimpanArea(kid, id int64, req dto.AreaRequest) error {
+	nama := strings.TrimSpace(req.Nama)
+	if nama == "" {
+		return types.BadRequest("Nama area wajib diisi")
+	}
+	if id == 0 {
+		if _, err := s.db.Exec("INSERT INTO area (klien_id,nama,urutan) VALUES (?,?,?)", kid, nama, req.Urutan); err != nil {
+			return err
+		}
+	} else {
+		res, err := s.db.Exec("UPDATE area SET nama=?, urutan=? WHERE id=? AND klien_id=? AND aktif=1", nama, req.Urutan, id, kid)
+		if err != nil {
+			return err
+		}
+		if n, _ := res.RowsAffected(); n == 0 {
+			if cekArea(s.db, kid, &id) != nil {
+				return types.NotFound("Area")
+			}
+		}
+	}
+	s.hub.Publish(kid, "meja")
+	return nil
+}
+
+// HapusArea hanya untuk area kosong, supaya meja tidak kehilangan areanya diam-diam.
+func (s *MejaService) HapusArea(kid, id int64) error {
+	var n int
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM meja WHERE klien_id=? AND area_id=? AND aktif=1", kid, id).Scan(&n); err != nil {
+		return err
+	}
+	if n > 0 {
+		return types.BadRequest(fmt.Sprintf("Area masih berisi %d meja. Pindahkan atau hapus mejanya dulu", n))
+	}
+	res, err := s.db.Exec("UPDATE area SET aktif=0 WHERE id=? AND klien_id=? AND aktif=1", id, kid)
+	if err != nil {
+		return err
+	}
+	if c, _ := res.RowsAffected(); c == 0 {
+		return types.NotFound("Area")
 	}
 	s.hub.Publish(kid, "meja")
 	return nil

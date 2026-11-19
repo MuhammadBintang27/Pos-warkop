@@ -1,8 +1,9 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { get, put } from '@/api/http'
 import { onEvent } from '@/composables/useEvents'
+import { useArea } from '@/composables/useArea'
 import { useRun } from '@/composables/useRun'
 import { useAuthStore } from '@/stores/auth'
 import { useKasirStore } from '@/stores/kasir'
@@ -19,7 +20,10 @@ const auth = useAuthStore()
 const kasir = useKasirStore()
 const run = useRun()
 
-const meja = ref([])
+const denah = ref({ area: [], meja: [] })
+// tiap area punya denah sendiri: hanya meja area yang dipilih yang tampil dan diatur
+const { tabs, aktif, pilih, cocok } = useArea(denah, { kunci: 'denah.area' })
+const meja = computed(() => denah.value.meja.filter(cocok))
 const posisi = reactive({})
 const edit = ref(false)
 const kanvas = ref()
@@ -39,7 +43,7 @@ function sinkron() {
 }
 
 async function muat() {
-  meja.value = (await get('/meja')).meja
+  denah.value = await get('/meja')
   sinkron()
 }
 
@@ -89,6 +93,8 @@ function batalEdit() {
   run(muat)
 }
 
+watch(aktif, sinkron)
+
 const offs = []
 onMounted(() => {
   run(muat)
@@ -114,6 +120,18 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
         </template>
       </template>
     </PageHeader>
+
+    <SelectButton
+      v-if="tabs.length"
+      :model-value="aktif"
+      :options="tabs"
+      option-label="nama"
+      option-value="id"
+      :allow-empty="false"
+      :disabled="edit"
+      class="area"
+      @update:model-value="pilih = $event"
+    />
 
     <div class="legend">
       <span><i class="sw" /> Kosong</span>
@@ -141,7 +159,7 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
           </button>
         </div>
       </div>
-      <p v-if="!meja.length" class="none">Belum ada meja. Tambahkan di Master Data › Meja.</p>
+      <p v-if="!meja.length" class="none">Belum ada meja{{ tabs.length ? ' di area ini' : '' }}. Tambahkan di Master Data › Meja.</p>
     </section>
   </div>
 </template>
@@ -149,6 +167,10 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
 <style scoped>
 .gap {
   gap: 14px;
+}
+.area {
+  align-self: flex-start;
+  flex-wrap: wrap;
 }
 .legend {
   display: flex;
