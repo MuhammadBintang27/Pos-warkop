@@ -26,6 +26,7 @@ const NAV = [
       { label: 'Kategori, Tenant & Jam', to: '/laporan/waktu' },
       { label: 'Kinerja Karyawan', to: '/laporan/karyawan' },
       { label: 'Kasbon & Stok', to: '/laporan/kasbon' },
+      { label: 'Riwayat Shift', to: '/laporan/shift' },
       { label: 'Tenant', to: '/laporan/tenant' },
       { label: 'Laba Rugi', to: '/laba-rugi' },
     ],

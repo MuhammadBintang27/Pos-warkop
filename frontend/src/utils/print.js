@@ -152,6 +152,28 @@ export function printRekapTenant(p, usaha) {
     <div class="r"><span>(_________)</span><span>(_________)</span></div>`}`)
 }
 
+// Laporan tutup shift (fallback browser untuk cetakShift).
+export function printShift(d, usaha) {
+  const baris = (k, v, cls = '') => `<div class="r ${cls}"><span>${k}</span><span>${v}</span></div>`
+  printHtml(`<h1>${esc(usaha.namaUsaha)}</h1>
+    <div class="judul">LAPORAN SHIFT #${d.id}</div>
+    <div>Buka : ${tgl(d.bukaAt)} ${esc(d.kasir)}</div>
+    <div>Tutup: ${d.tutupAt ? `${tgl(d.tutupAt)} ${esc(d.tutupOleh)}` : 'belum ditutup'}</div><hr>
+    ${baris('Bill lunas', d.bill)}
+    ${d.billBatal ? baris('Bill batal', d.billBatal) : ''}
+    ${d.perMetode.map((m) => baris('&nbsp;&nbsp;' + esc(m.metode), rp(m.total))).join('')}
+    ${baris('Penjualan', rp(d.penjualan), 'b')}<hr>
+    ${baris('Kas awal', rp(d.kasAwal))}
+    ${baris('+ Penjualan tunai', rp(d.penjualanTunai))}
+    ${d.kasbonTunai ? baris('+ Cicilan kasbon tunai', rp(d.kasbonTunai)) : ''}
+    ${baris('- Pengeluaran', rp(d.keluar))}
+    ${d.pengeluaran.map((e) => baris('&nbsp;&nbsp;' + esc(e.keterangan), rp(e.jumlah))).join('')}<hr>
+    ${d.kasSistem != null ? baris('Kas sistem', rp(d.kasSistem), 'b') : ''}
+    ${d.kasHitung != null ? baris('Kas dihitung', rp(d.kasHitung)) : ''}
+    ${d.selisih != null ? baris('SELISIH', rp(d.selisih), 'b') : ''}<hr>
+    <div class="sub">Dicetak ${tgl(new Date())}</div>`)
+}
+
 // Tiket tenant yang sudah diantrekan ke printernya dicetak oleh stasiun cetak; perangkat ini hanya mencetak sisanya.
 export const sisaLokal = (t) => ({ ...t, items: t.items.filter((i) => !t.antrean?.[i.tenantId]) })
 

@@ -109,3 +109,21 @@ func TestEscposRekapTenantMenjumlahkanHari(t *testing.T) {
 		t.Error("rekap milik sendiri tidak boleh punya setoran")
 	}
 }
+
+func TestEscposShiftMemuatPerhitunganKas(t *testing.T) {
+	sistem, hitung, selisih := 330000, 325000, -5000
+	tutup := time.Date(2026, 11, 18, 23, 0, 0, 0, time.Local)
+	d := &dto.ShiftDetail{
+		ShiftResponse: dto.ShiftResponse{ID: 7, Kasir: "Rina", TutupOleh: "Rina", BukaAt: tutup.Add(-16 * time.Hour), TutupAt: &tutup,
+			KasAwal: 200000, KasSistem: &sistem, KasHitung: &hitung, Selisih: &selisih},
+		Bill: 30, Penjualan: 400000, PenjualanTunai: 150000, Keluar: 20000,
+		PerMetode:   []dto.MetodeTotal{{Metode: "tunai", Total: 150000}, {Metode: "qris", Total: 250000}},
+		Pengeluaran: []dto.PengeluaranResponse{{Keterangan: "Galon", Jumlah: 20000}},
+	}
+	b := escposShift("Warkop Maju", d, 58)
+	for _, want := range []string{"LAPORAN SHIFT #7", "18/11/26 23.00", "qris", "Kas awal", "Galon", "Rp 330.000", "SELISIH"} {
+		if !bytes.Contains(b, []byte(want)) {
+			t.Errorf("laporan shift tidak memuat %q", want)
+		}
+	}
+}

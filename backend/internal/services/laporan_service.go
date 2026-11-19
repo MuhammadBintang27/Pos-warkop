@@ -174,7 +174,8 @@ func (s *LaporanService) Get(kid int64, dari, sampai string) (*dto.LaporanRespon
 	}
 	rows.Close()
 
-	rows, err = s.db.Query("SELECT id FROM shift WHERE klien_id=? AND buka_at>=? AND buka_at<? ORDER BY id DESC", kid, from, to)
+	// hanya 10 terakhir: rentang setahun berarti ratusan shift; daftar lengkap ada di Riwayat Shift
+	rows, err = s.db.Query("SELECT id FROM shift WHERE klien_id=? AND buka_at>=? AND buka_at<? ORDER BY id DESC LIMIT 10", kid, from, to)
 	if err != nil {
 		return nil, err
 	}

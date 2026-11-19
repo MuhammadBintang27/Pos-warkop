@@ -87,6 +87,8 @@ func RegisterPesananRoutes(r fiber.Router, h *controllers.PesananController, k *
 
 func RegisterKasirRoutes(r fiber.Router, h *controllers.KasirController) {
 	r.Get("/shift/aktif", authed, kasir, h.ShiftAktif)
+	r.Get("/shift", authed, owner, h.RiwayatShift)
+	r.Get("/shift/:id", authed, owner, h.DetailShift)
 	r.Post("/shift/buka", authed, kasir, middleware.Audit("Buka shift"), h.BukaShift)
 	r.Post("/shift/tutup", authed, kasir, middleware.Audit("Tutup shift"), h.TutupShift)
 	r.Get("/pengeluaran", authed, kasir, h.ListPengeluaran)
@@ -111,6 +113,7 @@ func RegisterCetakRoutes(r fiber.Router, h *controllers.CetakController, stasiun
 	r.Post("/pesanan/:id/cetak-struk", authed, h.CetakStruk)
 	r.Post("/cetak/closing", authed, owner, h.CetakClosing)
 	r.Post("/cetak/rekap-tenant", authed, owner, h.CetakRekapTenant)
+	r.Post("/shift/:id/cetak", authed, owner, h.CetakShift)
 	r.Get("/cetak/status", authed, kasir, h.Status)
 
 	r.Get("/stasiun/jobs", stasiun, h.StasiunJobs)

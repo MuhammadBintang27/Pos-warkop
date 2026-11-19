@@ -199,6 +199,25 @@ func (s *CetakService) CetakRekapTenant(kid int64, p dto.RekapTenantPayload) (bo
 	return true, nil
 }
 
+func (s *CetakService) CetakShift(kid, id int64) (bool, error) {
+	usaha, printerID, lebarMM, ok, err := s.printerKasir(kid)
+	if err != nil || !ok {
+		return false, err
+	}
+	d, err := detailShift(s.db, kid, id)
+	if err != nil {
+		return false, err
+	}
+	err = utils.WithTx(s.db, func(tx *sql.Tx) error {
+		return s.simpanData(tx, kid, printerID, jenisClosing, d, escposShift(usaha.NamaUsaha, d, lebarMM))
+	})
+	if err != nil {
+		return false, err
+	}
+	s.hub.Publish(kid, "cetak")
+	return true, nil
+}
+
 // ---- printer (owner) ----
 
 func (s *CetakService) ListPrinter(kid int64) ([]dto.PrinterResponse, error) {

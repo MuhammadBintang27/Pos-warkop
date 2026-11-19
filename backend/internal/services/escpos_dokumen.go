@@ -286,3 +286,59 @@ func escposRekapTenant(p dto.RekapTenantPayload, lebarMM int) []byte {
 	}
 	return w.akhir()
 }
+
+// escposShift: laporan tutup shift: penjualan per metode lalu perhitungan kas laci.
+func escposShift(usaha string, d *dto.ShiftDetail, lebarMM int) []byte {
+	w := barisPenulis(lebarMM)
+	w.tebal(true)
+	w.ukuran(0x11)
+	w.tengah(usaha, w.lebar/2)
+	w.ukuran(0)
+	w.tengah("LAPORAN SHIFT #"+strconv.FormatInt(d.ID, 10), w.lebar)
+	w.tebal(false)
+	w.baris("Buka : " + d.BukaAt.In(time.Local).Format("02/01/06 15.04") + " " + d.Kasir)
+	if d.TutupAt != nil {
+		w.baris("Tutup: " + d.TutupAt.In(time.Local).Format("02/01/06 15.04") + " " + d.TutupOleh)
+	} else {
+		w.baris("Tutup: belum ditutup")
+	}
+	w.garis()
+	w.kolom("Bill lunas", strconv.Itoa(d.Bill))
+	if d.BillBatal > 0 {
+		w.kolom("Bill batal", strconv.Itoa(d.BillBatal))
+	}
+	for _, m := range d.PerMetode {
+		w.kolom("  "+m.Metode, rupiah(m.Total))
+	}
+	w.kolom("Penjualan", rupiah(d.Penjualan))
+	if d.Diskon > 0 {
+		w.kolom("(sudah dipotong diskon)", rupiah(d.Diskon))
+	}
+	w.garis()
+	w.kolom("Kas awal", rupiah(d.KasAwal))
+	w.kolom("+ Penjualan tunai", rupiah(d.PenjualanTunai))
+	if d.KasbonTunai > 0 {
+		w.kolom("+ Cicilan kasbon tunai", rupiah(d.KasbonTunai))
+	}
+	w.kolom("- Pengeluaran", rupiah(d.Keluar))
+	for _, e := range d.Pengeluaran {
+		w.kolom("  "+e.Keterangan, rupiah(e.Jumlah))
+	}
+	w.garis()
+	if d.KasSistem != nil {
+		w.tebal(true)
+		w.kolom("Kas sistem", rupiah(*d.KasSistem))
+		w.tebal(false)
+	}
+	if d.KasHitung != nil {
+		w.kolom("Kas dihitung", rupiah(*d.KasHitung))
+	}
+	if d.Selisih != nil {
+		w.tebal(true)
+		w.kolom("SELISIH", rupiah(*d.Selisih))
+		w.tebal(false)
+	}
+	w.garis()
+	w.baris("Dicetak " + time.Now().Format("02/01/06 15.04"))
+	return w.akhir()
+}

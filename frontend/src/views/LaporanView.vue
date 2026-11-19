@@ -336,7 +336,10 @@ const { cari: cariStok, hasil: stokTampil } = useCari(computed(() => an.value.st
         </div>
 
         <section class="panel box">
-          <h3>Rekap shift</h3>
+          <div class="judul-link">
+            <h3>Shift terakhir</h3>
+            <RouterLink to="/laporan/shift" class="no-print">Lihat semua shift →</RouterLink>
+          </div>
           <DataTable paginator :rows="10" :rows-per-page-options="[10, 25, 50]" :always-show-paginator="false" :value="data.shift" size="small" empty-message="Tidak ada shift">
             <Column field="kasir" header="Dibuka oleh" />
             <Column header="Buka"><template #body="{ data: s }">{{ tgl(s.bukaAt) }}</template></Column>
@@ -585,5 +588,15 @@ h3 {
   .chart {
     height: 260px;
   }
+}
+.judul-link {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.judul-link a {
+  color: var(--accent-text);
+  font-weight: 600;
 }
 </style>

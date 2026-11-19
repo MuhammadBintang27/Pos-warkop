@@ -19,6 +19,7 @@ const router = createRouter({
         { path: 'riwayat', component: () => import('@/views/RiwayatView.vue') },
         // satu route untuk semua tab laporan supaya halaman (dan data yang sudah dimuat) dipakai ulang saat pindah menu
         { path: 'laporan/:tab(waktu|karyawan|kasbon)?', component: () => import('@/views/LaporanView.vue'), meta: owner },
+        { path: 'laporan/shift', component: () => import('@/views/ShiftView.vue'), meta: owner },
         { path: 'laporan/tenant', component: () => import('@/views/LaporanTenantView.vue'), meta: owner },
         { path: 'laba-rugi', component: () => import('@/views/LabaRugiView.vue'), meta: owner },
         { path: 'karyawan', component: () => import('@/views/KaryawanView.vue'), meta: owner },

@@ -181,3 +181,27 @@ func (h *KasirController) Analitik(c *fiber.Ctx) error {
 	}
 	return utils.SendSuccess(c, fiber.StatusOK, "Analitik berhasil diambil", res)
 }
+
+func (h *KasirController) RiwayatShift(c *fiber.Ctx) error {
+	var q dto.ShiftQuery
+	if err := middleware.ParseQuery(c, &q); err != nil {
+		return err
+	}
+	res, err := h.shift.Riwayat(kid(c), q)
+	if err != nil {
+		return handleErr(c, err, "RiwayatShift error")
+	}
+	return utils.SendSuccess(c, fiber.StatusOK, "Riwayat shift berhasil diambil", res)
+}
+
+func (h *KasirController) DetailShift(c *fiber.Ctx) error {
+	id, err := utils.ParamID(c, "id")
+	if err != nil {
+		return handleErr(c, err, "")
+	}
+	res, err := h.shift.Detail(kid(c), id)
+	if err != nil {
+		return handleErr(c, err, "DetailShift error")
+	}
+	return utils.SendSuccess(c, fiber.StatusOK, "Detail shift berhasil diambil", res)
+}

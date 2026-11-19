@@ -177,3 +177,15 @@ func (h *CetakController) CetakRekapTenant(c *fiber.Ctx) error {
 	}
 	return utils.SendSuccess(c, fiber.StatusOK, "Rekap diproses", dto.CetakHasil{Antre: antre})
 }
+
+func (h *CetakController) CetakShift(c *fiber.Ctx) error {
+	id, err := utils.ParamID(c, "id")
+	if err != nil {
+		return handleErr(c, err, "")
+	}
+	antre, err := h.svc.CetakShift(kid(c), id)
+	if err != nil {
+		return handleErr(c, err, "CetakShift error")
+	}
+	return utils.SendSuccess(c, fiber.StatusOK, "Laporan shift diproses", dto.CetakHasil{Antre: antre})
+}

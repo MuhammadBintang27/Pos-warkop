@@ -82,3 +82,54 @@ type LaporanResponse struct {
 	Terlaris  []MenuTerlaris  `json:"terlaris"`
 	Shift     []ShiftResponse `json:"shift"`
 }
+
+type ShiftQuery struct {
+	Dari    string `query:"dari"`
+	Sampai  string `query:"sampai"`
+	Kasir   int64  `query:"kasir" validate:"gte=0"`
+	Selisih bool   `query:"selisih"` // hanya shift yang kas dihitungnya beda dengan kas sistem
+	Page    int    `query:"page" validate:"gte=0"`
+}
+
+type ShiftRingkas struct {
+	ID        int64      `json:"id"`
+	Kasir     string     `json:"kasir"`
+	TutupOleh string     `json:"tutupOleh"`
+	BukaAt    time.Time  `json:"bukaAt"`
+	TutupAt   *time.Time `json:"tutupAt"`
+	KasAwal   int        `json:"kasAwal"`
+	KasSistem *int       `json:"kasSistem"`
+	KasHitung *int       `json:"kasHitung"`
+	Selisih   *int       `json:"selisih"`
+	Bill      int        `json:"bill"`
+	Penjualan int        `json:"penjualan"` // semua metode, bill lunas
+	Tunai     int        `json:"tunai"`     // tunai masuk laci: penjualan tunai + cicilan kasbon tunai
+	Keluar    int        `json:"keluar"`
+}
+
+type ShiftListResponse struct {
+	Items        []ShiftRingkas `json:"items"`
+	Total        int            `json:"total"`
+	TotalSelisih int            `json:"totalSelisih"`
+}
+
+type KasbonBayarShift struct {
+	Pelanggan string    `json:"pelanggan"`
+	Jumlah    int       `json:"jumlah"`
+	Metode    string    `json:"metode"`
+	At        time.Time `json:"at"`
+}
+
+type ShiftDetail struct {
+	ShiftResponse
+	Bill           int                   `json:"bill"`
+	BillBatal      int                   `json:"billBatal"`
+	Diskon         int                   `json:"diskon"`
+	Penjualan      int                   `json:"penjualan"`
+	PenjualanTunai int                   `json:"penjualanTunai"`
+	KasbonTunai    int                   `json:"kasbonTunai"`
+	Keluar         int                   `json:"keluar"`
+	PerMetode      []MetodeTotal         `json:"perMetode"`
+	Pengeluaran    []PengeluaranResponse `json:"pengeluaran"`
+	Kasbon         []KasbonBayarShift    `json:"kasbon"`
+}
