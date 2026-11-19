@@ -313,6 +313,7 @@ onBeforeUnmount(() => {
   color: var(--p-primary-contrast-color);
 }
 .dot {
+  flex-shrink: 0; /* label panjang tidak boleh menggencet titiknya */
   width: 6px;
   height: 6px;
   border-radius: 50%;
