@@ -101,7 +101,8 @@ func (s *PembayaranService) Bayar(actor *utils.JWTPayload, id int64, req dto.Bay
 	return loadPesanan(s.db, kid, id)
 }
 
-// lockLunas mengunci bill lunas yang belum masuk closing tenant; koreksi setelah closing membuat setoran tenant salah.
+// lockLunas mengunci bill lunas yang belum masuk closing tenant lain; koreksi setelah closing membuat setoran tenant salah.
+// Dapur milik sendiri tidak di-closing, jadi tidak menghalangi.
 func lockLunas(tx *sql.Tx, kid, id int64) (*int64, error) {
 	var status string
 	var mejaID *int64
@@ -116,8 +117,12 @@ func lockLunas(tx *sql.Tx, kid, id int64) (*int64, error) {
 		return nil, types.BadRequest("Hanya bill lunas yang bisa dikoreksi")
 	}
 	var closing bool
-	if err := tx.QueryRow(`SELECT EXISTS(SELECT 1 FROM pesanan_item WHERE pesanan_id=? AND klien_id=? AND closing_id IS NOT NULL)
-		OR EXISTS(SELECT 1 FROM closing_tenant_bill WHERE pesanan_id=? AND klien_id=?)`, id, kid, id, kid).Scan(&closing); err != nil {
+	if err := tx.QueryRow(`SELECT EXISTS(SELECT 1 FROM pesanan_item i JOIN tenant t ON t.id=i.tenant_id AND t.milik_sendiri=0
+			WHERE i.pesanan_id=? AND i.klien_id=? AND i.closing_id IS NOT NULL)
+		OR EXISTS(SELECT 1 FROM pesanan_item i JOIN tenant t ON t.id=i.tenant_id AND t.milik_sendiri=0
+			JOIN pesanan p ON p.id=i.pesanan_id JOIN shift sh ON sh.id=p.shift_id
+			JOIN closing_tenant c ON c.klien_id=i.klien_id AND c.tenant_id=i.tenant_id AND c.tanggal=DATE(sh.buka_at)
+			WHERE i.pesanan_id=? AND i.klien_id=?)`, id, kid, id, kid).Scan(&closing); err != nil {
 		return nil, err
 	}
 	if closing {

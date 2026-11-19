@@ -13,6 +13,7 @@ const STATUS = {
   closing: { label: 'Closing', severity: 'info' },
   disetor: { label: 'Disetor', severity: 'success' },
   berubah: { label: 'Berubah setelah closing', severity: 'danger' },
+  sendiri: { label: 'Tanpa closing', severity: 'secondary' },
 }
 const PRESET = [
   { label: 'Hari ini', range: () => [hari(), hari()] },
@@ -240,7 +241,9 @@ const { cari: cariBaris, hasil: barisTampil } = useCari(baris, 'nama', 'tanggal'
                       title="Lihat transaksi hari ini"
                       @click="$router.push({ path: '/riwayat', query: { tenant: b.tenantId, tanggal: b.tanggal } })"
                     />
-                    <Button v-if="b.status === 'belum'" label="Closing" size="small" icon="pi pi-lock" @click="closing(b)" />
+                    <!-- dapur sendiri: tidak ada setoran, cukup rekap harian yang bisa dicetak -->
+                    <Button v-if="b.status === 'sendiri'" label="Rekap" size="small" icon="pi pi-print" severity="secondary" outlined @click="bukaBill(b)" />
+                    <Button v-else-if="b.status === 'belum'" label="Closing" size="small" icon="pi pi-lock" @click="closing(b)" />
                     <template v-else>
                       <Button icon="pi pi-file" size="small" text severity="secondary" aria-label="Lihat bill closing" @click="bukaBill(b)" />
                       <Button v-if="b.status === 'closing' && !b.milikSendiri" label="Tandai disetor" size="small" outlined @click="setor(b)" />
@@ -329,7 +332,7 @@ const { cari: cariBaris, hasil: barisTampil } = useCari(baris, 'nama', 'tanggal'
     </Tabs>
 
     <ClosingDialog v-model:visible="pilihBuka" :baris="pilihBill.baris" :bills="pilihBill.bills" @submit="submitPilihan" />
-    <BillClosingDialog v-model:visible="billBuka" :baris="bill" :tertunda="tertundaBill" />
+    <BillClosingDialog v-model:visible="billBuka" :baris="bill" :tertunda="bill?.milikSendiri ? null : tertundaBill" />
   </div>
 </template>
 

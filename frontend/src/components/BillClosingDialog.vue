@@ -29,7 +29,7 @@ watch(visible, (v) => {
 </script>
 
 <template>
-  <Dialog v-model:visible="visible" modal header="Bill closing tenant" :style="{ width: '30rem' }" :breakpoints="{ '600px': '96vw' }">
+  <Dialog v-model:visible="visible" modal :header="baris?.milikSendiri ? 'Rekap harian' : 'Bill closing tenant'" :style="{ width: '30rem' }" :breakpoints="{ '600px': '96vw' }">
     <div v-if="baris" class="stack">
       <div class="head">
         <strong>{{ baris.nama }}</strong>
@@ -76,7 +76,7 @@ watch(visible, (v) => {
     </div>
 
     <template #footer>
-      <Button label="Cetak bill" icon="pi pi-print" severity="secondary" outlined :disabled="!detail" @click="run(() => cetakClosing(baris, detail, peng.settings, tertunda))" />
+      <Button :label="baris?.milikSendiri ? 'Cetak rekap' : 'Cetak bill'" icon="pi pi-print" severity="secondary" outlined :disabled="!detail" @click="run(() => cetakClosing(baris, detail, peng.settings, tertunda))" />
       <Button label="Selesai" icon="pi pi-check" @click="visible = false" />
     </template>
   </Dialog>

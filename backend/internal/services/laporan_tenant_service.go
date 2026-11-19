@@ -37,6 +37,8 @@ type closingRow struct {
 const (
 	statusBelum   = "belum"
 	statusClosing = "closing"
+	// dapur milik sendiri tidak di-closing: tidak ada setoran ke pihak lain, laporan dan laba tidak bergantung padanya
+	statusSendiri = "sendiri"
 	statusDisetor = "disetor"
 	statusBerubah = "berubah"
 
@@ -182,10 +184,16 @@ func (s *LaporanTenantService) Harian(kid int64, q dto.HarianQuery) (*dto.Harian
 		}
 		j := jual[k]
 		c, ada := closed[k]
+		if t.sendiri {
+			ada = false // closing lama dapur sendiri (sebelum aturan ini) diabaikan; angka selalu dari data terbaru
+		}
 		b := dto.HarianTenant{
 			TenantID: k.tenantID, Nama: t.nama, Tanggal: k.tanggal, MilikSendiri: t.sendiri,
 			Transaksi: j.transaksi, Kotor: j.kotor, Diskon: j.diskon, KomisiPersen: t.persen,
 			Status: statusPenutupan(ada, c.disetorAt != nil, c.kotor, c.diskon, j.kotor, j.diskon),
+		}
+		if t.sendiri {
+			b.Status = statusSendiri
 		}
 		if ada { // angka yang dibekukan saat closing yang dipakai untuk setoran
 			b.ClosingID, b.DisetorAt, b.DisetorOleh = c.id, c.disetorAt, c.disetorOleh
@@ -223,7 +231,7 @@ func (s *LaporanTenantService) Harian(kid int64, q dto.HarianQuery) (*dto.Harian
 	for _, t := range out.Tertunda {
 		info, ok := tenants[t.TenantID]
 		k := kunciHarian{t.TenantID, out.Sampai}
-		if !ok || ada[k] {
+		if !ok || ada[k] || info.sendiri { // talangan hanya untuk tenant lain
 			continue
 		}
 		ada[k] = true
@@ -345,8 +353,12 @@ func (s *LaporanTenantService) Closing(actor *utils.JWTPayload, req dto.ClosingR
 	}
 	return utils.WithTx(s.db, func(tx *sql.Tx) error {
 		var persen float64
-		if tx.QueryRow("SELECT komisi_persen FROM tenant WHERE id=? AND klien_id=? FOR UPDATE", req.TenantID, kid).Scan(&persen) != nil {
+		var sendiri bool
+		if tx.QueryRow("SELECT komisi_persen,milik_sendiri FROM tenant WHERE id=? AND klien_id=? FOR UPDATE", req.TenantID, kid).Scan(&persen, &sendiri) != nil {
 			return types.NotFound("Tenant")
+		}
+		if sendiri {
+			return types.BadRequest("Dapur milik sendiri tidak perlu closing. Gunakan Cetak rekap")
 		}
 		jual, err := penjualanHarian(tx, kid, from, to)
 		if err != nil {
