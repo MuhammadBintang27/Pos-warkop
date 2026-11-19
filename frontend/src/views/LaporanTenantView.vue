@@ -47,6 +47,14 @@ const tertunda = computed(() =>
     .filter((t) => !filterTenant.value || t.tenantId === filterTenant.value)
     .map((t) => ({ ...t, nama: tenant.value.find((x) => x.id === t.tenantId)?.nama ?? '—' })),
 )
+// closing dan cetak berlaku per tenant per hari, jadi tombol di Detail hanya aktif bila rentangnya satu tanggal
+const hariDetail = computed(() => {
+  const [dari, sampai] = rentang.value
+  return dari && (!sampai || ymd(dari) === ymd(sampai)) ? ymd(dari) : null
+})
+const barisDetail = computed(() =>
+  hariDetail.value ? (harian.value.baris.find((b) => b.tenantId === tenantId.value && b.tanggal === hariDetail.value) ?? null) : null,
+)
 const tertundaBill = computed(() => harian.value.tertunda?.find((t) => t.tenantId === bill.value?.tenantId) ?? null)
 const total = computed(() => ({
   kotor: baris.value.reduce((s, b) => s + b.kotor, 0),
@@ -325,6 +333,29 @@ const { cari: cariBaris, hasil: barisTampil } = useCari(baris, 'nama', 'tanggal'
                   </Column>
                 </DataTable>
               </section>
+
+              <section class="panel box aksi-detail">
+                <template v-if="!hariDetail">
+                  <span class="redup">Closing dan cetak dilakukan per hari. Pilih satu tanggal (mis. "Hari ini" atau "Kemarin") untuk menampilkan tombolnya.</span>
+                </template>
+                <template v-else-if="!barisDetail">
+                  <span class="redup">Tidak ada penjualan tenant ini pada {{ tanggalIndo(hariDetail) }}.</span>
+                </template>
+                <template v-else>
+                  <span>
+                    <strong>{{ tanggalIndo(barisDetail.tanggal) }}</strong>
+                    <Tag :value="STATUS[barisDetail.status].label" :severity="STATUS[barisDetail.status].severity" class="tag" />
+                  </span>
+                  <span class="kanan">
+                    <Button v-if="barisDetail.status === 'sendiri'" label="Lihat & cetak rekap" icon="pi pi-print" @click="bukaBill(barisDetail)" />
+                    <Button v-else-if="barisDetail.status === 'belum'" label="Closing" icon="pi pi-lock" @click="closing(barisDetail)" />
+                    <template v-else>
+                      <Button label="Lihat & cetak bill closing" icon="pi pi-print" severity="secondary" outlined @click="bukaBill(barisDetail)" />
+                      <Button v-if="barisDetail.status === 'closing'" label="Tandai disetor" icon="pi pi-check" @click="setor(barisDetail)" />
+                    </template>
+                  </span>
+                </template>
+              </section>
             </template>
           </div>
         </TabPanel>
@@ -374,5 +405,17 @@ h3 {
 }
 .tt {
   margin-left: 10px;
+}
+.aksi-detail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.aksi-detail .kanan {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 </style>

@@ -12,6 +12,7 @@ type AnalitikResponse struct {
 	Tren             []TrenHari        `json:"tren"`
 	JamRamai         []JamRamai        `json:"jamRamai"`
 	Kategori         []KategoriTotal   `json:"kategori"`
+	Tenant           []TenantTotal     `json:"tenant"`
 	Karyawan         []KinerjaKaryawan `json:"karyawan"`
 	Kasbon           []KasbonUmur      `json:"kasbon"`
 	Stok             []StokNilai       `json:"stok"`
@@ -48,6 +49,13 @@ type JamRamai struct {
 
 type KategoriTotal struct {
 	Nama  string `json:"nama"`
+	Qty   int    `json:"qty"`
+	Total int    `json:"total"` // sebelum diskon bill
+}
+
+type TenantTotal struct {
+	Nama  string `json:"nama"`
+	Bill  int    `json:"bill"`
 	Qty   int    `json:"qty"`
 	Total int    `json:"total"` // sebelum diskon bill
 }

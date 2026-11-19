@@ -1,6 +1,7 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { get, post } from '@/api/http'
+import { load, save } from '@/utils/storage'
 import { onEvent } from '@/composables/useEvents'
 import { useRun } from '@/composables/useRun'
 
@@ -9,11 +10,19 @@ const run = useRun()
 const tenant = ref([])
 const kategori = ref([])
 const q = ref('')
+// pilihan tenant diingat per perangkat; 0 = semua
+const pilihTenant = ref(load('ketersediaan.tenant', 0))
+watch(pilihTenant, (v) => save('ketersediaan.tenant', v))
+// tenant yang diingat bisa sudah dihapus: kembali ke semua supaya daftar tidak kosong
+watch(tenant, (t) => {
+  if (pilihTenant.value && !t.some((x) => x.id === pilihTenant.value)) pilihTenant.value = 0
+})
+const opsiTenant = computed(() => [{ id: 0, nama: 'Semua' }, ...tenant.value])
 
 const kelompok = computed(() => {
   const term = q.value.trim().toLowerCase()
   const semua = kategori.value.flatMap((k) => k.menu.map((m) => ({ ...m, kategori: k.nama })))
-  return tenant.value.map((t) => ({
+  return tenant.value.filter((t) => !pilihTenant.value || t.id === pilihTenant.value).map((t) => ({
     ...t,
     menu: semua.filter((m) => m.tenantId === t.id && (!term || m.nama.toLowerCase().includes(term))),
   }))
@@ -35,6 +44,16 @@ const ubahMenu = (m, tersedia) =>
     await muat()
   })
 
+// ubah stok menu yang dilacak stoknya; stok 0 tidak otomatis mematikan menu, toggle tetap terpisah
+const stokForm = ref(null)
+const simpanStok = () =>
+  run(async () => {
+    const { id, tersedia, stok } = stokForm.value
+    await post(`/menu/${id}/stok`, { tersedia, stok: stok ?? 0 })
+    stokForm.value = null
+    await muat()
+  }, 'Stok disimpan')
+
 const semua = (t, tersedia) =>
   run(async () => {
     await Promise.all(t.menu.filter((m) => m.tersedia !== tersedia).map((m) => post(`/menu/${m.id}/stok`, { tersedia })))
@@ -53,6 +72,15 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
   <div class="stack gap">
     <PageHeader icon="pi pi-power-off" title="Ketersediaan" subtitle="Buka atau tutup tenant, nyalakan atau matikan menu" />
 
+    <SelectButton
+      v-if="tenant.length > 1"
+      v-model="pilihTenant"
+      :options="opsiTenant"
+      option-label="nama"
+      option-value="id"
+      :allow-empty="false"
+      class="pilih-tenant"
+    />
     <IconField>
       <InputIcon class="pi pi-search" />
       <InputText v-model="q" placeholder="Cari menu…" fluid />
@@ -82,12 +110,33 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
             {{ m.nama }}
             <small>{{ m.kategori }}</small>
           </span>
-          <Tag v-if="m.trackStok" :value="`Stok ${m.stok}`" :severity="m.stok > 0 ? 'secondary' : 'danger'" />
+          <Button
+            v-if="m.trackStok"
+            :label="`Stok ${m.stok}`"
+            icon="pi pi-pencil"
+            icon-pos="right"
+            size="small"
+            :severity="m.stok > 0 ? 'secondary' : 'danger'"
+            outlined
+            @click="stokForm = { id: m.id, nama: m.nama, tersedia: m.tersedia, stok: m.stok }"
+          />
           <ToggleSwitch :model-value="m.tersedia" @update:model-value="ubahMenu(m, $event)" />
         </li>
       </ul>
       <p v-if="!t.menu.length" class="info">Tidak ada menu.</p>
     </section>
+
+    <Dialog :visible="!!stokForm" modal :header="`Stok ${stokForm?.nama}`" :style="{ width: '22rem' }" @update:visible="stokForm = null">
+      <div v-if="stokForm" class="stack">
+        <label for="kstok">Stok sekarang</label>
+        <InputNumber id="kstok" v-model="stokForm.stok" :min="0" show-buttons fluid autofocus @keydown.enter="simpanStok" />
+        <div class="cepat">
+          <Button v-for="n in [5, 10, 20]" :key="n" :label="`+${n}`" size="small" severity="secondary" outlined @click="stokForm.stok = (stokForm.stok || 0) + n" />
+          <Button label="Habis (0)" size="small" severity="danger" outlined @click="stokForm.stok = 0" />
+        </div>
+      </div>
+      <template #footer><Button label="Simpan" icon="pi pi-check" @click="simpanStok" /></template>
+    </Dialog>
   </div>
 </template>
 
@@ -153,6 +202,15 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
 .nama small {
   font-weight: 400;
   color: var(--p-text-muted-color);
+}
+.pilih-tenant {
+  align-self: flex-start;
+  flex-wrap: wrap;
+}
+.cepat {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 .tutup .daftar {
   opacity: 0.55;

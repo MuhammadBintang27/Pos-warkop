@@ -1,10 +1,11 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useConfirm } from 'primevue/useconfirm'
 import { del, get, post, put } from '@/api/http'
 import { useRun } from '@/composables/useRun'
 import { konfirmasi } from '@/utils/confirm'
 import { hargaTampil, rp } from '@/utils/format'
+import { load, save } from '@/utils/storage'
 
 const confirm = useConfirm()
 const run = useRun()
@@ -17,6 +18,16 @@ const form = ref(null)
 
 const tenant = ref([])
 const bahan = ref([])
+// filter tenant diingat per perangkat; 0 = semua tenant
+const pilihTenant = ref(load('menu.tenant', 0))
+watch(pilihTenant, (v) => save('menu.tenant', v))
+const opsiTenant = computed(() => [{ id: 0, nama: 'Semua tenant' }, ...tenant.value])
+// tenant yang diingat bisa sudah dihapus: kembali ke semua supaya daftar tidak kosong
+watch(tenant, (t) => {
+  if (pilihTenant.value && !t.some((x) => x.id === pilihTenant.value)) pilihTenant.value = 0
+})
+const milikPilihan = (m) => !pilihTenant.value || m.tenantId === pilihTenant.value
+const jumlahDi = (k) => k.menu.filter(milikPilihan).length
 
 async function muat() {
   ;[kategori.value, tenant.value, bahan.value] = await Promise.all([get('/menu').then((r) => r.kategori), get('/tenant'), get('/bahan')])
@@ -24,12 +35,12 @@ async function muat() {
 
 const satuan = (id) => bahan.value.find((b) => b.id === id)?.satuan ?? ''
 const namaTenant = (id) => tenant.value.find((t) => t.id === id)?.nama ?? '—'
-const total = computed(() => kategori.value.reduce((s, k) => s + k.menu.length, 0))
+const total = computed(() => kategori.value.reduce((s, k) => s + jumlahDi(k), 0))
 const rows = computed(() => {
   const term = q.value.trim().toLowerCase()
   return kategori.value
     .filter((k) => !aktif.value || k.id === aktif.value)
-    .flatMap((k) => k.menu.map((m) => ({ ...m, kategori: k.nama })))
+    .flatMap((k) => k.menu.filter(milikPilihan).map((m) => ({ ...m, kategori: k.nama })))
     .filter((m) => !term || m.nama.toLowerCase().includes(term))
 })
 
@@ -66,7 +77,7 @@ function bukaMenu(m) {
         })),
       }
     : {
-        tenantId: tenant.value[0]?.id ?? null,
+        tenantId: pilihTenant.value || tenant.value[0]?.id || null,
         kategoriId: aktif.value || kategori.value[0]?.id || null,
         nama: '', harga: 0, hargaModal: 0, tersedia: true, trackStok: false, stok: 0, varian: [], resep: [],
       }
@@ -133,7 +144,7 @@ onMounted(() => run(muat))
       <aside class="panel kat">
         <button class="k" :class="{ on: !aktif }" @click="aktif = 0">Semua <small>{{ total }}</small></button>
         <div v-for="k in kategori" :key="k.id" class="krow">
-          <button class="k" :class="{ on: aktif === k.id }" @click="aktif = k.id">{{ k.nama }} <small>{{ k.menu.length }}</small></button>
+          <button class="k" :class="{ on: aktif === k.id }" @click="aktif = k.id">{{ k.nama }} <small>{{ jumlahDi(k) }}</small></button>
           <Button icon="pi pi-pencil" text size="small" severity="secondary" aria-label="Ubah" @click="kat = { id: k.id, nama: k.nama, urutan: k.urutan }" />
           <Button icon="pi pi-trash" text size="small" severity="danger" aria-label="Hapus" @click="hapusKat(k)" />
         </div>
@@ -141,6 +152,15 @@ onMounted(() => run(muat))
       </aside>
 
       <section class="panel tabel">
+        <SelectButton
+          v-if="tenant.length > 1"
+          v-model="pilihTenant"
+          :options="opsiTenant"
+          option-label="nama"
+          option-value="id"
+          :allow-empty="false"
+          class="pilih-tenant"
+        />
         <IconField>
           <InputIcon class="pi pi-search" />
           <InputText v-model="q" placeholder="Cari menu…" fluid />
@@ -377,5 +397,9 @@ h4 {
   .layout {
     grid-template-columns: 1fr;
   }
+}
+.pilih-tenant {
+  flex-wrap: wrap;
+  margin-bottom: 10px;
 }
 </style>

@@ -23,7 +23,7 @@ const NAV = [
     roles: ['owner'],
     children: [
       { label: 'Ringkasan & Tren', to: '/laporan' },
-      { label: 'Jam Ramai & Kategori', to: '/laporan/waktu' },
+      { label: 'Kategori, Tenant & Jam', to: '/laporan/waktu' },
       { label: 'Kinerja Karyawan', to: '/laporan/karyawan' },
       { label: 'Kasbon & Stok', to: '/laporan/kasbon' },
       { label: 'Tenant', to: '/laporan/tenant' },

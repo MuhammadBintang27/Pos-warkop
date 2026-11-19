@@ -16,7 +16,7 @@ const PRESET = [
 ]
 const MODE = [
   { label: 'Ringkasan & Tren', value: 'ringkasan', icon: 'pi pi-chart-line' },
-  { label: 'Jam Ramai & Kategori', value: 'waktu', icon: 'pi pi-clock' },
+  { label: 'Kategori, Tenant & Jam', value: 'waktu', icon: 'pi pi-th-large' },
   { label: 'Kinerja Karyawan', value: 'karyawan', icon: 'pi pi-users' },
   { label: 'Kasbon & Stok', value: 'kasbon', icon: 'pi pi-book' },
 ]
@@ -40,7 +40,7 @@ const subtitle = computed(() => {
 // tiap tab hanya mengambil datanya sendiri, sekali per rentang tanggal; pindah tab berikutnya tidak memanggil server lagi
 const KUNCI = {
   ringkasan: ['tren', 'ringkasan', 'sebelumnya', 'sebelumnyaDari', 'sebelumnyaSampai'],
-  waktu: ['jamRamai', 'kategori'],
+  waktu: ['jamRamai', 'kategori', 'tenant'],
   karyawan: ['karyawan'],
   kasbon: ['kasbon', 'stok'],
 }
@@ -127,8 +127,10 @@ const trenChart = computed(() => {
       labels: t.map((x) => x.tanggal.slice(8) + '/' + x.tanggal.slice(5, 7)),
       datasets: [
         { type: 'bar', label: 'Omzet', data: t.map((x) => x.omzet), backgroundColor: alpha(w.primary, 0.35), borderRadius: 6, order: 3 },
-        { type: 'line', label: 'Laba kotor', data: t.map((x) => x.labaKotor), borderColor: '#f59e0b', backgroundColor: '#f59e0b', tension: 0.35, pointRadius: 2, order: 2 },
-        { type: 'line', label: 'Laba bersih', data: t.map((x) => x.labaBersih), borderColor: '#22c55e', backgroundColor: alpha('#22c55e', 0.12), fill: true, tension: 0.35, pointRadius: 2, order: 1 },
+        // garis lurus (bukan kurva): data per hari, kurva memberi kesan ada nilai di antara hari
+        // laba kotor putus-putus biru supaya tetap terlihat saat sama dengan laba bersih (hari tanpa biaya)
+        { type: 'line', label: 'Laba kotor', data: t.map((x) => x.labaKotor), borderColor: '#3b82f6', backgroundColor: '#3b82f6', borderDash: [6, 4], pointRadius: 3, order: 1 },
+        { type: 'line', label: 'Laba bersih', data: t.map((x) => x.labaBersih), borderColor: '#16a34a', backgroundColor: '#16a34a', borderWidth: 3, pointRadius: 3, order: 2 },
       ],
     },
     options: opsiSumbu(w),
@@ -160,6 +162,20 @@ const kategoriChart = computed(() => {
     }),
   }
 })
+
+const tenantChart = computed(() => {
+  const t = an.value?.tenant ?? []
+  const w = warna()
+  return {
+    data: { labels: t.map((x) => x.nama), datasets: [{ data: t.map((x) => x.total), backgroundColor: PALET, borderWidth: 0 }] },
+    options: {
+      maintainAspectRatio: false,
+      cutout: '62%',
+      plugins: { legend: { position: 'right', labels: { color: w.teks, usePointStyle: true } }, tooltip: { callbacks: { label: (c) => `${c.label}: ${rp(c.parsed)}` } } },
+    },
+  }
+})
+const totalTenant = computed(() => Math.max(1, (an.value?.tenant ?? []).reduce((s, x) => s + x.total, 0)))
 
 // ---------- jam ramai (heatmap hari x jam) ----------
 const heat = computed(() => {
@@ -197,7 +213,7 @@ async function excel() {
   await Promise.all(Object.keys(KUNCI).map(muatTab))
   const d = data.value
   const a = an.value
-  if (!d || !a.tren || !a.jamRamai || !a.karyawan || !a.kasbon) return
+  if (!d || !a.tren || !a.jamRamai || !a.tenant || !a.karyawan || !a.kasbon) return
   run(
     () =>
       unduhExcel(`laporan-${d.dari}_${d.sampai}.xlsx`, [
@@ -224,6 +240,7 @@ async function excel() {
         },
         { nama: 'Metode bayar', kolom: [{ header: 'Metode', key: 'metode' }, uang('Total', 'total')], baris: d.perMetode },
         { nama: 'Menu terlaris', kolom: [{ header: 'Menu', key: 'nama', lebar: 30 }, { header: 'Terjual', key: 'qty' }, uang('Nilai', 'total')], baris: d.terlaris },
+        { nama: 'Tenant', kolom: [{ header: 'Tenant', key: 'nama', lebar: 24 }, { header: 'Bill', key: 'bill' }, { header: 'Item terjual', key: 'qty' }, uang('Penjualan', 'total')], baris: a.tenant },
         { nama: 'Kategori', kolom: [{ header: 'Kategori', key: 'nama', lebar: 24 }, { header: 'Terjual', key: 'qty' }, uang('Penjualan', 'total')], baris: a.kategori },
         {
           nama: 'Jam ramai',
@@ -295,6 +312,10 @@ const { cari: cariStok, hasil: stokTampil } = useCari(computed(() => an.value.st
         <section class="panel box">
           <h3>Tren omzet dan laba</h3>
           <Chart type="bar" :data="trenChart.data" :options="trenChart.options" class="chart" />
+          <small class="none">
+            Batang = omzet. Garis biru putus-putus = laba kotor (setelah HPP). Garis hijau = laba bersih (setelah pengeluaran dan gaji).
+            Bila kedua garis berimpit, hari itu tidak ada pengeluaran. Arahkan kursor ke tanggal untuk melihat angkanya.
+          </small>
         </section>
 
         <div class="two">
@@ -393,6 +414,24 @@ const { cari: cariStok, hasil: stokTampil } = useCari(computed(() => an.value.st
               </Column>
             </DataTable>
             <small class="none">Nilai sebelum diskon bill.</small>
+          </section>
+        </div>
+
+        <div v-if="an.tenant?.length > 1" class="two">
+          <section class="panel box">
+            <h3>Penjualan per tenant</h3>
+            <Chart type="doughnut" :data="tenantChart.data" :options="tenantChart.options" class="chart pendek" />
+          </section>
+          <section class="panel box">
+            <h3>Rincian tenant</h3>
+            <DataTable :value="an.tenant" size="small">
+              <Column field="nama" header="Tenant" />
+              <Column field="bill" header="Bill" sortable />
+              <Column field="qty" header="Item terjual" sortable />
+              <Column field="total" header="Penjualan" sortable><template #body="{ data: t }">{{ rp(t.total) }}</template></Column>
+              <Column header="Porsi"><template #body="{ data: t }">{{ Math.round((t.total / totalTenant) * 100) }}%</template></Column>
+            </DataTable>
+            <small class="none">Nilai sebelum diskon bill. Satu bill bisa berisi menu beberapa tenant, jadi jumlah bill per tenant tidak dijumlahkan. Komisi dan setoran ada di Laporan Tenant.</small>
           </section>
         </div>
       </template>

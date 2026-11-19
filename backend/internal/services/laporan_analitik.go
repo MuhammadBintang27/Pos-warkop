@@ -37,7 +37,7 @@ func (s *LaporanService) Analitik(kid int64, dari, sampai, bagian string) (*dto.
 		}
 		out.Sebelumnya = ringkas(prev)
 	case "waktu":
-		jalan = []langkah{s.jamRamai, s.kategori}
+		jalan = []langkah{s.jamRamai, s.kategori, s.perTenant}
 	case "karyawan":
 		jalan = []langkah{s.karyawan}
 	case "kasbon":
@@ -213,6 +213,24 @@ func (s *LaporanService) kategori(out *dto.AnalitikResponse, kid int64, from, to
 			return err
 		}
 		out.Kategori = append(out.Kategori, k)
+	}
+	return rows.Err()
+}
+
+func (s *LaporanService) perTenant(out *dto.AnalitikResponse, kid int64, from, to time.Time) error {
+	rows, err := s.db.Query(`SELECT COALESCE(t.nama,'Tanpa tenant'), COUNT(DISTINCT i.pesanan_id), SUM(i.qty), SUM(i.harga*i.qty) `+itemLunasSQL+`
+		GROUP BY i.tenant_id, t.nama ORDER BY 4 DESC`, kid, from, to)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	out.Tenant = []dto.TenantTotal{}
+	for rows.Next() {
+		var t dto.TenantTotal
+		if err := rows.Scan(&t.Nama, &t.Bill, &t.Qty, &t.Total); err != nil {
+			return err
+		}
+		out.Tenant = append(out.Tenant, t)
 	}
 	return rows.Err()
 }
