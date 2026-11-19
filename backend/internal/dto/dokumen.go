@@ -72,3 +72,25 @@ type ClosingPayload struct {
 type CetakHasil struct {
 	Antre bool `json:"antre"` // false: printer kasir belum diatur, klien mencetak lewat browser
 }
+
+// RekapTenantPayload: satu struk untuk satu kali setor periode (mis. mingguan). Angka per hari dikirim apa adanya
+// dari laporan harian (angka beku closing bila sudah di-closing); total dihitung server.
+type RekapTenantPayload struct {
+	Usaha        string      `json:"usaha"`
+	Tenant       string      `json:"tenant" validate:"required,max=100"`
+	Dari         string      `json:"dari" validate:"required,len=10"`
+	Sampai       string      `json:"sampai" validate:"required,len=10"`
+	MilikSendiri bool        `json:"milikSendiri"`
+	KomisiPersen float64     `json:"komisiPersen"`
+	Hari         []RekapHari `json:"hari" validate:"required,min=1,max=400,dive"`
+}
+
+type RekapHari struct {
+	Tanggal   string `json:"tanggal" validate:"required,len=10"`
+	Transaksi int    `json:"transaksi"`
+	Kotor     int    `json:"kotor"`
+	Diskon    int    `json:"diskon"`
+	Komisi    int    `json:"komisi"`
+	Setor     int    `json:"setor"`
+	Status    string `json:"status"` // belum | closing | disetor | berubah | sendiri
+}

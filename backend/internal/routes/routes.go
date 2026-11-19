@@ -110,6 +110,7 @@ func RegisterCetakRoutes(r fiber.Router, h *controllers.CetakController, stasiun
 	r.Post("/cetak/:id/ulang", authed, kasir, middleware.Audit("Cetak ulang"), h.Ulang)
 	r.Post("/pesanan/:id/cetak-struk", authed, h.CetakStruk)
 	r.Post("/cetak/closing", authed, owner, h.CetakClosing)
+	r.Post("/cetak/rekap-tenant", authed, owner, h.CetakRekapTenant)
 	r.Get("/cetak/status", authed, kasir, h.Status)
 
 	r.Get("/stasiun/jobs", stasiun, h.StasiunJobs)
@@ -122,6 +123,7 @@ func RegisterLaporanTenantRoutes(r fiber.Router, h *controllers.LaporanTenantCon
 	r.Get("/laporan/tenant/detail", authed, owner, h.Detail)
 	r.Get("/laporan/tenant/belum-bayar", authed, owner, h.BelumBayar)
 	r.Post("/closing", authed, owner, middleware.Audit("Closing tenant"), h.Closing)
+	r.Post("/closing/setor-periode", authed, owner, middleware.Audit("Setor closing periode"), h.SetorPeriode)
 	r.Post("/closing/:id/setor", authed, owner, middleware.Audit("Setor closing"), h.Setor)
 	r.Delete("/closing/:id", authed, owner, middleware.Audit("Batal closing"), h.BatalClosing)
 

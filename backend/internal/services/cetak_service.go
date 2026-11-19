@@ -183,6 +183,22 @@ func (s *CetakService) CetakClosing(kid int64, p dto.ClosingPayload) (bool, erro
 	return true, nil
 }
 
+func (s *CetakService) CetakRekapTenant(kid int64, p dto.RekapTenantPayload) (bool, error) {
+	usaha, printerID, lebarMM, ok, err := s.printerKasir(kid)
+	if err != nil || !ok {
+		return false, err
+	}
+	p.Usaha = usaha.NamaUsaha
+	err = utils.WithTx(s.db, func(tx *sql.Tx) error {
+		return s.simpanData(tx, kid, printerID, jenisClosing, p, escposRekapTenant(p, lebarMM))
+	})
+	if err != nil {
+		return false, err
+	}
+	s.hub.Publish(kid, "cetak")
+	return true, nil
+}
+
 // ---- printer (owner) ----
 
 func (s *CetakService) ListPrinter(kid int64) ([]dto.PrinterResponse, error) {

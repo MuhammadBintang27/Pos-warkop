@@ -1,5 +1,5 @@
 import { post } from '@/api/http'
-import { printClosing, printStruk } from '@/utils/print'
+import { printClosing, printRekapTenant, printStruk } from '@/utils/print'
 
 // Bila printer kasir diatur di Pengaturan, dokumen dicetak server lewat stasiun cetak; bila tidak, lewat dialog cetak browser.
 // Mengembalikan true bila masuk antrean printer.
@@ -39,5 +39,14 @@ export async function cetakClosing(b, detail, usaha, tertunda) {
     if (antre) return true
   }
   printClosing(b, detail, usaha, tertunda)
+  return false
+}
+
+export async function cetakRekapTenant(p, usaha) {
+  if (usaha.printerKasirId) {
+    const { antre } = await post('/cetak/rekap-tenant', p)
+    if (antre) return true
+  }
+  printRekapTenant(p, usaha)
   return false
 }

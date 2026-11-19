@@ -165,3 +165,15 @@ func (h *CetakController) CetakClosing(c *fiber.Ctx) error {
 	}
 	return utils.SendSuccess(c, fiber.StatusOK, "Bill closing diproses", dto.CetakHasil{Antre: antre})
 }
+
+func (h *CetakController) CetakRekapTenant(c *fiber.Ctx) error {
+	var req dto.RekapTenantPayload
+	if err := middleware.ParseAndValidate(c, &req); err != nil {
+		return err
+	}
+	antre, err := h.svc.CetakRekapTenant(kid(c), req)
+	if err != nil {
+		return handleErr(c, err, "CetakRekapTenant error")
+	}
+	return utils.SendSuccess(c, fiber.StatusOK, "Rekap diproses", dto.CetakHasil{Antre: antre})
+}

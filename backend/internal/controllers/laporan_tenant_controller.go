@@ -116,3 +116,15 @@ func saring[T any](xs []T, ok func(T) bool) []T {
 	}
 	return out
 }
+
+func (h *LaporanTenantController) SetorPeriode(c *fiber.Ctx) error {
+	var req dto.SetorPeriodeRequest
+	if err := middleware.ParseAndValidate(c, &req); err != nil {
+		return err
+	}
+	n, err := h.svc.SetorPeriode(middleware.CurrentUser(c), req)
+	if err != nil {
+		return handleErr(c, err, "SetorPeriode error")
+	}
+	return utils.SendSuccess(c, fiber.StatusOK, "Ditandai sudah disetor", fiber.Map{"hari": n})
+}

@@ -7,6 +7,8 @@ import { del, errMsg, get, post } from '@/api/http'
 import { useRun } from '@/composables/useRun'
 import { konfirmasi } from '@/utils/confirm'
 import { hari, rp, tgl, ymd } from '@/utils/format'
+import { cetakRekapTenant } from '@/utils/cetak'
+import { usePengaturanStore } from '@/stores/pengaturan'
 
 const STATUS = {
   belum: { label: 'Belum closing', severity: 'secondary' },
@@ -55,6 +57,52 @@ const hariDetail = computed(() => {
 const barisDetail = computed(() =>
   hariDetail.value ? (harian.value.baris.find((b) => b.tenantId === tenantId.value && b.tanggal === hariDetail.value) ?? null) : null,
 )
+// ---- setor periode (mis. mingguan): satu struk dan satu kali tandai disetor untuk banyak hari ----
+const peng = usePengaturanStore()
+const tenantPilih = computed(() => tenant.value.find((t) => t.id === filterTenant.value) ?? null)
+const multiHari = computed(() => {
+  const [dari, sampai] = rentang.value
+  return !!(dari && sampai && ymd(dari) !== ymd(sampai))
+})
+const barisPeriode = computed(() => (filterTenant.value ? [...baris.value].sort((a, b) => a.tanggal.localeCompare(b.tanggal)) : []))
+const siapSetor = computed(() => barisPeriode.value.filter((b) => b.status === 'closing').length)
+const belumPeriode = computed(() => barisPeriode.value.filter((b) => b.status === 'belum' || b.status === 'berubah').length)
+
+const cetakRekap = () =>
+  run(async () => {
+    const [dari, sampai] = rentang.value
+    const t = tenantPilih.value
+    const antre = await cetakRekapTenant(
+      {
+        tenant: t.nama,
+        dari: ymd(dari),
+        sampai: ymd(sampai),
+        milikSendiri: !!t.milikSendiri,
+        komisiPersen: t.komisiPersen,
+        hari: barisPeriode.value.map((b) => ({
+          tanggal: b.tanggal, transaksi: b.transaksi, kotor: b.kotor, diskon: b.diskon, komisi: b.komisi, setor: b.setor, status: b.status,
+        })),
+      },
+      peng.settings,
+    )
+    if (antre) toast.add({ severity: 'success', summary: 'Rekap dikirim ke printer kasir', life: 2500 })
+  })
+
+function setorPeriode() {
+  const [dari, sampai] = rentang.value
+  const sisa = belumPeriode.value ? ` ${belumPeriode.value} hari yang belum di-closing tidak ikut; closing dulu bila ingin dimasukkan.` : ''
+  konfirmasi(confirm, {
+    header: 'Tandai disetor?',
+    message: `${siapSetor.value} hari closing ${tenantPilih.value.nama} (${tanggalIndo(ymd(dari))} - ${tanggalIndo(ymd(sampai))}) ditandai sudah disetor.${sisa}`,
+    label: 'Tandai disetor',
+    accept: () =>
+      run(async () => {
+        await post('/closing/setor-periode', { tenantId: filterTenant.value, dari: ymd(dari), sampai: ymd(sampai) })
+        await muatHarian()
+      }, 'Ditandai sudah disetor'),
+  })
+}
+
 const tertundaBill = computed(() => harian.value.tertunda?.find((t) => t.tenantId === bill.value?.tenantId) ?? null)
 const total = computed(() => ({
   kotor: baris.value.reduce((s, b) => s + b.kotor, 0),
@@ -212,6 +260,20 @@ const { cari: cariBaris, hasil: barisTampil } = useCari(baris, 'nama', 'tanggal'
                   @click="closingSemua"
                 />
               </div>
+
+              <div v-if="tenantPilih && multiHari && barisPeriode.length" class="periode">
+                <span>
+                  <strong>Setor periode {{ tenantPilih.nama }}</strong>
+                  <small class="redup">
+                    {{ barisPeriode.length }} hari<template v-if="belumPeriode"> · {{ belumPeriode }} belum di-closing</template><template v-if="!tenantPilih.milikSendiri"> · {{ siapSetor }} siap disetor</template>
+                  </small>
+                </span>
+                <span class="kanan">
+                  <Button :label="tenantPilih.milikSendiri ? 'Cetak rekap pendapatan' : 'Cetak rekap periode'" icon="pi pi-print" severity="secondary" outlined @click="cetakRekap" />
+                  <Button v-if="!tenantPilih.milikSendiri" :label="`Tandai disetor (${siapSetor} hari)`" icon="pi pi-check" :disabled="!siapSetor" @click="setorPeriode" />
+                </span>
+              </div>
+              <small v-else-if="tenantPilih && !multiHari" class="redup">Untuk setor mingguan: pilih rentang beberapa hari (mis. 7 hari) agar muncul tombol rekap dan tandai disetor sekaligus.</small>
 
               <CariInput v-model="cariBaris" placeholder="Cari tenant atau tanggal (YYYY-MM-DD)…" />
               <DataTable :value="barisTampil" size="small" paginator :rows="20" empty-message="Belum ada penjualan tenant pada rentang ini">
@@ -413,6 +475,25 @@ h3 {
   gap: 10px;
 }
 .aksi-detail .kanan {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.periode {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin: 8px 0;
+  border: 1px dashed var(--p-content-border-color);
+  border-radius: 10px;
+}
+.periode small {
+  display: block;
+}
+.periode .kanan {
   margin-left: auto;
   display: flex;
   flex-wrap: wrap;

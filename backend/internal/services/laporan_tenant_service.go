@@ -427,6 +427,34 @@ func (s *LaporanTenantService) Setor(actor *utils.JWTPayload, id int64) error {
 	return nil
 }
 
+// SetorPeriode menandai semua closing tenant yang belum disetor dalam rentang tanggal sebagai disetor sekaligus.
+// Hari yang belum di-closing tidak ikut: closing dulu supaya angkanya terkunci.
+func (s *LaporanTenantService) SetorPeriode(actor *utils.JWTPayload, req dto.SetorPeriodeRequest) (int, error) {
+	kid := actor.KlienID
+	from, to, err := parseRange(req.Dari, req.Sampai, time.Now())
+	if err != nil {
+		return 0, err
+	}
+	var sendiri bool
+	if s.db.QueryRow("SELECT milik_sendiri FROM tenant WHERE id=? AND klien_id=?", req.TenantID, kid).Scan(&sendiri) != nil {
+		return 0, types.NotFound("Tenant")
+	}
+	if sendiri {
+		return 0, types.BadRequest("Tenant milik sendiri tidak ada setoran")
+	}
+	res, err := s.db.Exec(`UPDATE closing_tenant SET disetor_at=?, disetor_oleh=?
+		WHERE klien_id=? AND tenant_id=? AND tanggal>=? AND tanggal<? AND disetor_at IS NULL`,
+		time.Now(), actor.UserID, kid, req.TenantID, from.Format(dateLayout), to.Format(dateLayout))
+	if err != nil {
+		return 0, err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return 0, types.BadRequest("Tidak ada closing yang belum disetor pada rentang ini")
+	}
+	return int(n), nil
+}
+
 // BatalClosing menghapus closing yang belum disetor dan melepaskan bill talangannya kembali menjadi tertunda.
 func (s *LaporanTenantService) BatalClosing(kid, id int64) error {
 	return utils.WithTx(s.db, func(tx *sql.Tx) error {

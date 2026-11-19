@@ -89,3 +89,23 @@ func TestGabungStruk(t *testing.T) {
 		t.Errorf("gabungStruk = %+v", got)
 	}
 }
+
+func TestEscposRekapTenantMenjumlahkanHari(t *testing.T) {
+	p := dto.RekapTenantPayload{
+		Usaha: "Warkop Maju", Tenant: "Gorengan", Dari: "2026-11-12", Sampai: "2026-11-13", KomisiPersen: 20,
+		Hari: []dto.RekapHari{
+			{Tanggal: "2026-11-12", Transaksi: 3, Kotor: 50000, Diskon: 0, Komisi: 10000, Setor: 40000, Status: "closing"},
+			{Tanggal: "2026-11-13", Transaksi: 2, Kotor: 30000, Diskon: 5000, Komisi: 5000, Setor: 20000, Status: "belum"},
+		},
+	}
+	b := escposRekapTenant(p, 58)
+	for _, want := range []string{"REKAP SETORAN TENANT", "12/11/2026 - 13/11/2026", "12/11 3 bill", "13/11 2 bill*", "Rp 80.000", "Rp 60.000", "1 hari belum", "(_________)"} {
+		if !bytes.Contains(b, []byte(want)) {
+			t.Errorf("rekap tidak memuat %q", want)
+		}
+	}
+	p.MilikSendiri = true
+	if b = escposRekapTenant(p, 58); bytes.Contains(b, []byte("SETOR TENANT")) || !bytes.Contains(b, []byte("REKAP PENDAPATAN")) {
+		t.Error("rekap milik sendiri tidak boleh punya setoran")
+	}
+}

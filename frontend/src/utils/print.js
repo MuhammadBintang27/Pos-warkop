@@ -124,6 +124,34 @@ export function printClosing(b, detail, usaha, tertunda) {
     <div class="r"><span>(_________)</span><span>(_________)</span></div>`}`)
 }
 
+// Rekap setoran satu periode (fallback browser untuk cetakRekapTenant).
+export function printRekapTenant(p, usaha) {
+  const tglPendek = (s) => s.slice(8) + '/' + s.slice(5, 7)
+  const jumlah = (k) => p.hari.reduce((s, h) => s + h[k], 0)
+  const belum = p.hari.filter((h) => h.status === 'belum' || h.status === 'berubah').length
+  const baris = p.hari
+    .map((h) => `<div class="r"><span>${tglPendek(h.tanggal)} ${h.transaksi} bill${h.status === 'belum' || h.status === 'berubah' ? '*' : ''}</span><span>${rp(h.kotor)}</span></div>`)
+    .join('')
+  const tanggal = (s) => s.split('-').reverse().join('/')
+  printHtml(`<h1>${esc(usaha.namaUsaha)}</h1>
+    <div class="judul">${p.milikSendiri ? 'REKAP PENDAPATAN' : 'REKAP SETORAN TENANT'}</div>
+    <div class="c b">${esc(p.tenant)}</div>
+    <div class="c">${tanggal(p.dari)} - ${tanggal(p.sampai)}</div><hr>
+    ${baris}<hr>
+    <div class="r"><span>Jumlah bill</span><span>${jumlah('transaksi')}</span></div>
+    <div class="r"><span>Penjualan</span><span>${rp(jumlah('kotor'))}</span></div>
+    <div class="r"><span>Diskon</span><span>-${rp(jumlah('diskon'))}</span></div>
+    ${p.milikSendiri
+      ? `<div class="r b"><span>PENDAPATAN</span><span>${rp(jumlah('komisi'))}</span></div>`
+      : `<div class="r"><span>Komisi ${p.komisiPersen}%</span><span>-${rp(jumlah('komisi'))}</span></div>
+    <div class="r b"><span>SETOR TENANT</span><span>${rp(jumlah('setor'))}</span></div>`}
+    ${belum ? `<div class="sub">* ${belum} hari belum di-closing atau berubah setelah closing; angkanya masih bisa berubah</div>` : ''}<hr>
+    <div class="sub">Dicetak ${tgl(new Date())}</div>
+    ${p.milikSendiri ? '' : `<div class="r"><span>Tenant</span><span>Pemilik</span></div>
+    <br><br><br>
+    <div class="r"><span>(_________)</span><span>(_________)</span></div>`}`)
+}
+
 // Tiket tenant yang sudah diantrekan ke printernya dicetak oleh stasiun cetak; perangkat ini hanya mencetak sisanya.
 export const sisaLokal = (t) => ({ ...t, items: t.items.filter((i) => !t.antrean?.[i.tenantId]) })
 

@@ -111,3 +111,9 @@ type DetailTenantResponse struct {
 	BatalNilai int                `json:"batalNilai"`
 	Talangan   []TalanganBill     `json:"talangan"` // bill belum dibayar yang ikut closing pada rentang ini
 }
+
+type SetorPeriodeRequest struct {
+	TenantID int64  `json:"tenantId" validate:"required,gt=0"`
+	Dari     string `json:"dari" validate:"required,len=10"`
+	Sampai   string `json:"sampai" validate:"required,len=10"`
+}

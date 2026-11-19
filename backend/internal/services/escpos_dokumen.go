@@ -231,3 +231,58 @@ func escposClosing(p dto.ClosingPayload, lebarMM int) []byte {
 	}
 	return w.akhir()
 }
+
+// escposRekapTenant: struk bukti setor satu periode, satu baris per hari plus total; ditandatangani tenant dan pemilik.
+func escposRekapTenant(p dto.RekapTenantPayload, lebarMM int) []byte {
+	w := barisPenulis(lebarMM)
+	w.tebal(true)
+	w.ukuran(0x11)
+	w.tengah(p.Usaha, w.lebar/2)
+	w.ukuran(0)
+	judul := "REKAP SETORAN TENANT"
+	if p.MilikSendiri {
+		judul = "REKAP PENDAPATAN"
+	}
+	w.tengah(judul, w.lebar)
+	w.tengah(p.Tenant, w.lebar)
+	w.tebal(false)
+	w.tengah(tanggalIndonesia(p.Dari)+" - "+tanggalIndonesia(p.Sampai), w.lebar)
+	w.garis()
+	var bill, kotor, diskon, komisi, setor, belum int
+	for _, h := range p.Hari {
+		bill, kotor, diskon, komisi, setor = bill+h.Transaksi, kotor+h.Kotor, diskon+h.Diskon, komisi+h.Komisi, setor+h.Setor
+		tanda := ""
+		if h.Status == "belum" || h.Status == "berubah" {
+			tanda, belum = "*", belum+1
+		}
+		w.kolom(tanggalIndonesia(h.Tanggal)[:5]+" "+strconv.Itoa(h.Transaksi)+" bill"+tanda, rupiah(h.Kotor))
+	}
+	w.garis()
+	w.kolom("Jumlah bill", strconv.Itoa(bill))
+	w.kolom("Penjualan", rupiah(kotor))
+	w.kolom("Diskon", "-"+rupiah(diskon))
+	w.tebal(true)
+	if p.MilikSendiri {
+		w.kolom("PENDAPATAN", rupiah(komisi))
+	} else {
+		w.tebal(false)
+		w.kolom("Komisi "+strconv.FormatFloat(p.KomisiPersen, 'f', -1, 64)+"%", "-"+rupiah(komisi))
+		w.tebal(true)
+		w.kolom("SETOR TENANT", rupiah(setor))
+	}
+	w.tebal(false)
+	if belum > 0 {
+		for _, l := range bungkus("* "+strconv.Itoa(belum)+" hari belum di-closing atau berubah setelah closing; angkanya masih bisa berubah", w.lebar, "") {
+			w.baris(l)
+		}
+	}
+	w.garis()
+	w.baris("Dicetak " + time.Now().Format("02/01/06 15.04"))
+	if !p.MilikSendiri {
+		w.kolom("Tenant", "Pemilik")
+		w.baris("")
+		w.baris("")
+		w.kolom("(_________)", "(_________)")
+	}
+	return w.akhir()
+}
