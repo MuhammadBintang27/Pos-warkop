@@ -75,6 +75,11 @@ func (p *Pusher) KeTenant(kid, tenantID int64, pesan PesanPush) {
 		return
 	}
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Error().Interface("panic", r).Msg("push: panic")
+			}
+		}()
 		rows, err := p.db.Query("SELECT token FROM perangkat_push WHERE klien_id=? AND tenant_id=?", kid, tenantID)
 		if err != nil {
 			log.Error().Err(err).Msg("push: gagal membaca perangkat")

@@ -1,5 +1,6 @@
 <script setup>
 import { ref, watch } from 'vue'
+import { useCari } from '@/composables/useCari'
 import { get, post } from '@/api/http'
 import { useRun } from '@/composables/useRun'
 import { useKasirStore } from '@/stores/kasir'
@@ -48,6 +49,7 @@ async function bayar() {
     await muat()
   }, 'Pelunasan dicatat')) lunasi.value = null
 }
+const { cari: cariPelanggan, hasil: daftarTampil } = useCari(daftar, 'nama', 'telp')
 </script>
 
 <template>
@@ -58,7 +60,8 @@ async function bayar() {
       <Button label="Tambah" icon="pi pi-plus" :disabled="!nama.trim()" @click="tambah" />
     </div>
 
-    <DataTable :value="daftar" size="small" class="tabel" empty-message="Belum ada pelanggan">
+    <CariInput v-model="cariPelanggan" placeholder="Cari pelanggan atau no. telp…" />
+    <DataTable paginator :rows="10" :rows-per-page-options="[10, 25, 50]" :always-show-paginator="false" :value="daftarTampil" size="small" class="tabel" empty-message="Belum ada pelanggan">
       <Column field="nama" header="Nama" />
       <Column field="telp" header="HP" />
       <Column header="Sisa utang">

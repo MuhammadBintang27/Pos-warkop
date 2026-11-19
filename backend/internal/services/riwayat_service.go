@@ -31,6 +31,10 @@ func riwayatFilter(actor *utils.JWTPayload, q dto.RiwayatQuery, from, to time.Ti
 	where := "WHERE p.klien_id=? AND EXISTS (SELECT 1 FROM pesanan_item WHERE pesanan_id=p.id) AND " + waktuPesanan + ">=? AND " + waktuPesanan + "<?"
 	args := []any{actor.KlienID, from, to}
 
+	if q.Tenant > 0 {
+		where += " AND EXISTS (SELECT 1 FROM pesanan_item ti WHERE ti.pesanan_id=p.id AND ti.tenant_id=?)"
+		args = append(args, q.Tenant)
+	}
 	if q.Status != "" {
 		where += " AND p.status=?"
 		args = append(args, q.Status)
@@ -76,8 +80,14 @@ func (s *RiwayatService) List(actor *utils.JWTPayload, q dto.RiwayatQuery) (*dto
 		return nil, err
 	}
 
-	listArgs := append(append([]any{}, args...), limit, (page-1)*limit)
-	rows, err := s.db.Query(`SELECT p.id, COALESCE(m.nama,''), p.atas_nama, p.status, p.dibuat_at, p.lunas_at, u.nama,
+	nilaiTenant := "0"
+	listArgs := []any{}
+	if q.Tenant > 0 {
+		nilaiTenant = "(SELECT COALESCE(SUM(harga*qty),0) FROM pesanan_item WHERE pesanan_id=p.id AND tenant_id=?)"
+		listArgs = append(listArgs, q.Tenant)
+	}
+	listArgs = append(append(listArgs, args...), limit, (page-1)*limit)
+	rows, err := s.db.Query(`SELECT `+nilaiTenant+`, p.id, COALESCE(m.nama,''), p.atas_nama, p.status, p.dibuat_at, p.lunas_at, u.nama,
 		COALESCE((SELECT k.nama FROM pembayaran b JOIN users k ON k.id=b.diterima_oleh WHERE b.pesanan_id=p.id LIMIT 1),''),
 		(SELECT COALESCE(SUM(harga*qty),0) FROM pesanan_item WHERE pesanan_id=p.id) - p.diskon,
 		(SELECT COALESCE(SUM(qty),0) FROM pesanan_item WHERE pesanan_id=p.id),
@@ -90,7 +100,7 @@ func (s *RiwayatService) List(actor *utils.JWTPayload, q dto.RiwayatQuery) (*dto
 	for rows.Next() {
 		var it dto.RiwayatItem
 		var metode sql.NullString
-		if err := rows.Scan(&it.ID, &it.MejaNama, &it.AtasNama, &it.Status, &it.DibuatAt, &it.LunasAt,
+		if err := rows.Scan(&it.NilaiTenant, &it.ID, &it.MejaNama, &it.AtasNama, &it.Status, &it.DibuatAt, &it.LunasAt,
 			&it.Pembuat, &it.Kasir, &it.Total, &it.JumlahItem, &metode); err != nil {
 			return nil, err
 		}

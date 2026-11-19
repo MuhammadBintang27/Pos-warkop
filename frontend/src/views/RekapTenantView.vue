@@ -55,7 +55,7 @@ onMounted(() => run(muat))
 
     <section class="panel box">
       <h3>Per hari</h3>
-      <DataTable :value="harian.baris" size="small" empty-message="Belum ada penjualan di rentang ini">
+      <DataTable paginator :rows="10" :rows-per-page-options="[10, 25, 50]" :always-show-paginator="false" :value="harian.baris" size="small" empty-message="Belum ada penjualan di rentang ini">
         <Column header="Tanggal"><template #body="{ data: b }">{{ tanggalIndo(b.tanggal) }}</template></Column>
         <Column field="transaksi" header="Bill" />
         <Column header="Penjualan"><template #body="{ data: b }">{{ rp(b.kotor) }}</template></Column>
@@ -70,7 +70,7 @@ onMounted(() => run(muat))
 
     <section v-if="detail" class="panel box">
       <h3>Per menu</h3>
-      <DataTable :value="detail.menu" size="small" empty-message="Belum ada menu terjual">
+      <DataTable paginator :rows="10" :rows-per-page-options="[10, 25, 50]" :always-show-paginator="false" :value="detail.menu" size="small" empty-message="Belum ada menu terjual">
         <Column field="nama" header="Menu" />
         <Column field="qty" header="Terjual" />
         <Column header="Nilai"><template #body="{ data: m }">{{ rp(m.nilai) }}</template></Column>

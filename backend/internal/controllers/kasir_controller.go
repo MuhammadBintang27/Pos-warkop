@@ -141,3 +141,43 @@ func (h *KasirController) Laporan(c *fiber.Ctx) error {
 	}
 	return utils.SendSuccess(c, fiber.StatusOK, "Laporan berhasil diambil", res)
 }
+
+func (h *KasirController) BukaUlang(c *fiber.Ctx) error {
+	id, err := utils.ParamID(c, "id")
+	if err != nil {
+		return handleErr(c, err, "")
+	}
+	var req dto.KoreksiRequest // alasan wajib; tercatat di log aktivitas
+	if err := middleware.ParseAndValidate(c, &req); err != nil {
+		return err
+	}
+	p, err := h.pembayaran.BukaUlang(middleware.CurrentUser(c), id)
+	if err != nil {
+		return handleErr(c, err, "BukaUlang error")
+	}
+	return utils.SendSuccess(c, fiber.StatusOK, "Bill dibuka ulang", p)
+}
+
+func (h *KasirController) Refund(c *fiber.Ctx) error {
+	id, err := utils.ParamID(c, "id")
+	if err != nil {
+		return handleErr(c, err, "")
+	}
+	var req dto.KoreksiRequest
+	if err := middleware.ParseAndValidate(c, &req); err != nil {
+		return err
+	}
+	p, err := h.pembayaran.Refund(middleware.CurrentUser(c), id, req)
+	if err != nil {
+		return handleErr(c, err, "Refund error")
+	}
+	return utils.SendSuccess(c, fiber.StatusOK, "Bill direfund", p)
+}
+
+func (h *KasirController) Analitik(c *fiber.Ctx) error {
+	res, err := h.laporan.Analitik(kid(c), c.Query("dari"), c.Query("sampai"), c.Query("bagian"))
+	if err != nil {
+		return handleErr(c, err, "Analitik error")
+	}
+	return utils.SendSuccess(c, fiber.StatusOK, "Analitik berhasil diambil", res)
+}

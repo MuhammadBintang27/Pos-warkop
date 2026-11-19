@@ -17,6 +17,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/helmet"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 )
 
 type App struct {
@@ -33,6 +34,8 @@ func New(db *sql.DB) *App {
 	}
 	f := fiber.New(fcfg)
 
+	// panic di satu request jangan sampai mematikan server untuk semua klien
+	f.Use(recover.New(recover.Config{EnableStackTrace: true}))
 	f.Use(middleware.RequestLogger)
 	if !cfg.IsProduction() {
 		f.Use(cors.New(cors.Config{AllowOrigins: "*"}))
@@ -84,6 +87,7 @@ func New(db *sql.DB) *App {
 	routes.RegisterBahanRoutes(api, controllers.NewBahanController(services.NewBahanService(db, hub)))
 	routes.RegisterKaryawanRoutes(api, controllers.NewKaryawanController(services.NewKaryawanService(db), services.NewLabaService(db)))
 	routes.RegisterAdminRoutes(api, controllers.NewKlienController(klienSvc, services.NewUserService(db)))
+	routes.RegisterAuditRoutes(api, controllers.NewAuditController(services.NewAuditService(db)))
 	routes.RegisterEventRoutes(api, controllers.NewEventController(hub))
 	routes.RegisterPerangkatRoutes(api, controllers.NewPerangkatController(pusher))
 	api.Use(func(c *fiber.Ctx) error {

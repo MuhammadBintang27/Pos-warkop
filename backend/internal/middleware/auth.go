@@ -32,6 +32,9 @@ func Authenticate(c *fiber.Ctx) error {
 	if payload.KlienID != 0 && !utils.KlienAktif(payload.KlienID) {
 		return utils.SendError(c, fiber.StatusUnauthorized, "Akses usaha ini dinonaktifkan. Hubungi penyedia layanan")
 	}
+	if payload.KlienID != 0 && payload.IssuedAt != nil && !utils.TokenBerlaku(payload.UserID, payload.IssuedAt.Time) {
+		return utils.SendError(c, fiber.StatusUnauthorized, "Sesi berakhir karena akun diubah, silakan login lagi")
+	}
 	// Akun tenant hanya boleh ke halaman tenant-nya sendiri, supaya route lain yang cuma "authed" tidak terbuka untuknya.
 	if payload.Role == types.RoleTenant && !bolehTenant(c.Path()) {
 		return utils.SendError(c, fiber.StatusForbidden, "Anda tidak punya akses ke resource ini")

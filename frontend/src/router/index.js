@@ -17,7 +17,8 @@ const router = createRouter({
         { path: 'admin/pengguna', component: () => import('@/views/AdminPenggunaView.vue'), meta: { roles: ['superadmin'] } },
         { path: 'denah', component: () => import('@/views/DenahView.vue') },
         { path: 'riwayat', component: () => import('@/views/RiwayatView.vue') },
-        { path: 'laporan', component: () => import('@/views/LaporanView.vue'), meta: owner },
+        // satu route untuk semua tab laporan supaya halaman (dan data yang sudah dimuat) dipakai ulang saat pindah menu
+        { path: 'laporan/:tab(waktu|karyawan|kasbon)?', component: () => import('@/views/LaporanView.vue'), meta: owner },
         { path: 'laporan/tenant', component: () => import('@/views/LaporanTenantView.vue'), meta: owner },
         { path: 'laba-rugi', component: () => import('@/views/LabaRugiView.vue'), meta: owner },
         { path: 'karyawan', component: () => import('@/views/KaryawanView.vue'), meta: owner },
@@ -29,6 +30,7 @@ const router = createRouter({
         { path: 'meja', component: () => import('@/views/MejaView.vue'), meta: owner },
         { path: 'pengguna', component: () => import('@/views/PenggunaView.vue'), meta: owner },
         { path: 'pengaturan', component: () => import('@/views/PengaturanView.vue'), meta: owner },
+        { path: 'audit', component: () => import('@/views/AuditView.vue'), meta: owner },
         { path: 'tenant-saya', component: () => import('@/views/PesananMasukView.vue'), meta: tenant },
         { path: 'tenant-saya/rekap', component: () => import('@/views/RekapTenantView.vue'), meta: tenant },
       ],

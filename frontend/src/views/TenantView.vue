@@ -1,5 +1,6 @@
 <script setup>
 import { onMounted, ref } from 'vue'
+import { useCari } from '@/composables/useCari'
 import { useConfirm } from 'primevue/useconfirm'
 import { del, get, post, put } from '@/api/http'
 import { useRun } from '@/composables/useRun'
@@ -37,6 +38,7 @@ function hapus(t) {
 }
 
 onMounted(() => run(muat))
+const { cari: cariTenant, hasil: tenantTampil } = useCari(tenant, 'nama')
 </script>
 
 <template>
@@ -46,7 +48,8 @@ onMounted(() => run(muat))
     </PageHeader>
 
     <section class="panel box">
-      <DataTable :value="tenant" size="small" empty-message="Belum ada tenant">
+      <CariInput v-model="cariTenant" placeholder="Cari tenant…" />
+      <DataTable paginator :rows="10" :rows-per-page-options="[10, 25, 50]" :always-show-paginator="false" :value="tenantTampil" size="small" empty-message="Belum ada tenant">
         <Column field="nama" header="Nama" />
         <Column header="Printer">
           <template #body="{ data }">{{ namaPrinter(data.printerId) ?? 'Kasir' }}</template>

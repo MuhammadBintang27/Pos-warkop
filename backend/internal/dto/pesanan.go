@@ -131,3 +131,8 @@ type KirimResponse struct {
 	// Antrean: tenantId -> true bila tiketnya sudah diantrekan ke printer tenant; klien tidak perlu mencetaknya lagi.
 	Antrean map[int64]bool `json:"antrean"`
 }
+
+type KoreksiRequest struct {
+	Alasan      string `json:"alasan" validate:"required,max=100"`
+	SudahDibuat bool   `json:"sudahDibuat"` // refund: stok tidak dikembalikan bila makanan sudah dibuat
+}

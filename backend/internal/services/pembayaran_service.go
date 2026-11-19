@@ -3,6 +3,7 @@ package services
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"warkop/internal/dto"
@@ -97,5 +98,129 @@ func (s *PembayaranService) Bayar(actor *utils.JWTPayload, id int64, req dto.Bay
 		return nil, err
 	}
 	s.hub.Publish(kid, "pesanan", "meja")
+	return loadPesanan(s.db, kid, id)
+}
+
+// lockLunas mengunci bill lunas yang belum masuk closing tenant; koreksi setelah closing membuat setoran tenant salah.
+func lockLunas(tx *sql.Tx, kid, id int64) (*int64, error) {
+	var status string
+	var mejaID *int64
+	err := tx.QueryRow("SELECT status,meja_id FROM pesanan WHERE id=? AND klien_id=? FOR UPDATE", id, kid).Scan(&status, &mejaID)
+	if err == sql.ErrNoRows {
+		return nil, types.NotFound("Pesanan")
+	}
+	if err != nil {
+		return nil, err
+	}
+	if status != string(types.StatusLunas) {
+		return nil, types.BadRequest("Hanya bill lunas yang bisa dikoreksi")
+	}
+	var closing bool
+	if err := tx.QueryRow(`SELECT EXISTS(SELECT 1 FROM pesanan_item WHERE pesanan_id=? AND klien_id=? AND closing_id IS NOT NULL)
+		OR EXISTS(SELECT 1 FROM closing_tenant_bill WHERE pesanan_id=? AND klien_id=?)`, id, kid, id, kid).Scan(&closing); err != nil {
+		return nil, err
+	}
+	if closing {
+		return nil, types.BadRequest("Bill ini sudah masuk closing tenant. Batalkan closing-nya dulu")
+	}
+	return mejaID, nil
+}
+
+// BukaUlang mengembalikan bill lunas ke open untuk dikoreksi lalu dibayar ulang. Hanya untuk pembayaran di shift
+// yang masih buka, supaya kas shift yang sudah ditutup tidak berubah; selebihnya pakai Refund.
+func (s *PembayaranService) BukaUlang(actor *utils.JWTPayload, id int64) (*dto.PesananResponse, error) {
+	kid := actor.KlienID
+	err := utils.WithTx(s.db, func(tx *sql.Tx) error {
+		mejaID, err := lockLunas(tx, kid, id)
+		if err != nil {
+			return err
+		}
+		shiftID, err := activeShiftID(tx, kid)
+		if _, ok := utils.AsHTTPError(err); ok {
+			return types.BadRequest("Tidak ada shift yang buka. Gunakan Refund untuk bill dari shift yang sudah ditutup")
+		} else if err != nil {
+			return err
+		}
+		var lain int
+		if err := tx.QueryRow("SELECT COUNT(*) FROM pembayaran WHERE pesanan_id=? AND klien_id=? AND shift_id<>?", id, kid, shiftID).Scan(&lain); err != nil {
+			return err
+		}
+		if lain > 0 {
+			return types.BadRequest("Bill ini dibayar di shift yang sudah ditutup. Gunakan Refund")
+		}
+		if mejaID != nil {
+			var dipakai int
+			if err := tx.QueryRow("SELECT COUNT(*) FROM pesanan WHERE klien_id=? AND meja_id=? AND status='open'", kid, *mejaID).Scan(&dipakai); err != nil {
+				return err
+			}
+			if dipakai > 0 {
+				return types.BadRequest("Mejanya sudah dipakai bill lain. Selesaikan atau pindahkan bill itu dulu")
+			}
+		}
+		if _, err := tx.Exec("DELETE FROM pembayaran WHERE pesanan_id=? AND klien_id=?", id, kid); err != nil {
+			return err
+		}
+		_, err = tx.Exec("UPDATE pesanan SET status='open', lunas_at=NULL WHERE id=? AND klien_id=?", id, kid)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	s.hub.Publish(kid, "pesanan", "meja")
+	return loadPesanan(s.db, kid, id)
+}
+
+// Refund membatalkan bill lunas. Bagian tunai dicatat sebagai pengeluaran 'refund' di shift aktif (uang keluar dari laci),
+// bagian kasbon dihapus dari utang pelanggan, QRIS/transfer dikembalikan di luar sistem.
+func (s *PembayaranService) Refund(actor *utils.JWTPayload, id int64, req dto.KoreksiRequest) (*dto.PesananResponse, error) {
+	kid := actor.KlienID
+	alasan := strings.TrimSpace(req.Alasan)
+	err := utils.WithTx(s.db, func(tx *sql.Tx) error {
+		if _, err := lockLunas(tx, kid, id); err != nil {
+			return err
+		}
+		var tunai int
+		if err := tx.QueryRow("SELECT COALESCE(SUM(jumlah),0) FROM pembayaran WHERE pesanan_id=? AND klien_id=? AND metode='tunai'", id, kid).Scan(&tunai); err != nil {
+			return err
+		}
+		if tunai > 0 {
+			shiftID, err := activeShiftID(tx, kid)
+			if _, ok := utils.AsHTTPError(err); ok {
+				return types.BadRequest("Buka shift dulu: uang tunai refund diambil dari kas laci")
+			} else if err != nil {
+				return err
+			}
+			if _, err := tx.Exec("INSERT INTO pengeluaran (klien_id,shift_id,keterangan,jumlah,kategori,dicatat_oleh,at) VALUES (?,?,?,?,'refund',?,?)",
+				kid, shiftID, fmt.Sprintf("Refund bill #%d: %s", id, alasan), tunai, actor.UserID, time.Now()); err != nil {
+				return err
+			}
+		}
+		if _, err := tx.Exec("DELETE FROM pembayaran WHERE pesanan_id=? AND klien_id=? AND metode='kasbon'", id, kid); err != nil {
+			return err
+		}
+		p, err := loadPesanan(tx, kid, id)
+		if err != nil {
+			return err
+		}
+		for _, i := range p.Items {
+			if !req.SudahDibuat {
+				if err := adjustStok(tx, kid, i.MenuID, i.Qty); err != nil {
+					return err
+				}
+				if err := pakaiBahan(tx, kid, i.ID, -i.Qty); err != nil {
+					return err
+				}
+			}
+			if err := catatBatal(tx, kid, id, i, i.Qty, "Refund: "+alasan, req.SudahDibuat, actor.UserID); err != nil {
+				return err
+			}
+		}
+		_, err = tx.Exec("UPDATE pesanan SET status='batal' WHERE id=? AND klien_id=?", id, kid)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	s.hub.Publish(kid, "pesanan", "meja", "menu", "shift")
 	return loadPesanan(s.db, kid, id)
 }

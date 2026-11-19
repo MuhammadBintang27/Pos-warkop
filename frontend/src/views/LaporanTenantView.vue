@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
+import { useCari } from '@/composables/useCari'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import { del, errMsg, get, post } from '@/api/http'
@@ -154,6 +155,7 @@ onMounted(async () => {
   })
   tenantId.value = tenant.value[0]?.id ?? null
 })
+const { cari: cariBaris, hasil: barisTampil } = useCari(baris, 'nama', 'tanggal')
 </script>
 
 <template>
@@ -202,7 +204,8 @@ onMounted(async () => {
                 />
               </div>
 
-              <DataTable :value="baris" size="small" paginator :rows="20" empty-message="Belum ada penjualan tenant pada rentang ini">
+              <CariInput v-model="cariBaris" placeholder="Cari tenant atau tanggal (YYYY-MM-DD)…" />
+              <DataTable :value="barisTampil" size="small" paginator :rows="20" empty-message="Belum ada penjualan tenant pada rentang ini">
                 <Column header="Tanggal"><template #body="{ data: b }">{{ tanggalIndo(b.tanggal) }}</template></Column>
                 <Column field="nama" header="Tenant" />
                 <Column field="transaksi" header="Bill" />
@@ -228,6 +231,15 @@ onMounted(async () => {
                 </Column>
                 <Column>
                   <template #body="{ data: b }">
+                    <Button
+                      icon="pi pi-list"
+                      size="small"
+                      text
+                      severity="secondary"
+                      aria-label="Lihat transaksi"
+                      title="Lihat transaksi hari ini"
+                      @click="$router.push({ path: '/riwayat', query: { tenant: b.tenantId, tanggal: b.tanggal } })"
+                    />
                     <Button v-if="b.status === 'belum'" label="Closing" size="small" icon="pi pi-lock" @click="closing(b)" />
                     <template v-else>
                       <Button icon="pi pi-file" size="small" text severity="secondary" aria-label="Lihat bill closing" @click="bukaBill(b)" />
@@ -276,7 +288,7 @@ onMounted(async () => {
 
               <section class="panel box">
                 <h3>Penjualan per menu</h3>
-                <DataTable :value="detail.menu" size="small" empty-message="Belum ada penjualan">
+                <DataTable paginator :rows="10" :rows-per-page-options="[10, 25, 50]" :always-show-paginator="false" :value="detail.menu" size="small" empty-message="Belum ada penjualan">
                   <Column field="nama" header="Menu" />
                   <Column field="qty" header="Terjual" />
                   <Column header="Nilai"><template #body="{ data: m }">{{ rp(m.nilai) }}</template></Column>
@@ -292,7 +304,7 @@ onMounted(async () => {
 
               <section class="panel box">
                 <h3>Pembatalan</h3>
-                <DataTable :value="detail.batal" size="small" empty-message="Tidak ada pembatalan pada rentang ini">
+                <DataTable paginator :rows="10" :rows-per-page-options="[10, 25, 50]" :always-show-paginator="false" :value="detail.batal" size="small" empty-message="Tidak ada pembatalan pada rentang ini">
                   <Column header="Waktu"><template #body="{ data: b }">{{ tgl(b.at) }}</template></Column>
                   <Column header="Bill"><template #body="{ data: b }">#{{ b.pesananId }}</template></Column>
                   <Column header="Menu">

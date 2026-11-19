@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
+import { useCari } from '@/composables/useCari'
 import { useRouter } from 'vue-router'
 import { get, post, put } from '@/api/http'
 import { useRun } from '@/composables/useRun'
@@ -128,6 +129,7 @@ function bukaMenu(e, k) {
 }
 
 onMounted(() => run(muat))
+const { cari: cariKlien, hasil: klienTampil } = useCari(list, 'nama', 'kode', 'id')
 </script>
 
 <template>
@@ -143,7 +145,8 @@ onMounted(() => run(muat))
     </div>
 
     <section class="panel box">
-      <DataTable :value="list" size="small" empty-message="Belum ada klien">
+      <CariInput v-model="cariKlien" placeholder="Cari nama, kode, atau ID klien…" />
+      <DataTable paginator :rows="10" :rows-per-page-options="[10, 25, 50]" :always-show-paginator="false" :value="klienTampil" size="small" empty-message="Belum ada klien">
         <Column header="#"><template #body="{ index }">{{ index + 1 }}</template></Column>
         <Column field="id" header="ID Klien" />
         <Column header="Nama usaha">

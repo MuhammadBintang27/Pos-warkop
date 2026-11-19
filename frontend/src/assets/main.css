@@ -84,3 +84,25 @@ a {
 .stack > label {
   font-weight: 600;
 }
+
+/* Cetak / simpan PDF laporan: hanya isi halaman, tanpa menu dan tombol */
+@media print {
+  .side,
+  .top,
+  .no-print,
+  .p-paginator {
+    display: none !important;
+  }
+  .main,
+  .content {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  body {
+    background: #fff !important;
+  }
+  .panel {
+    break-inside: avoid;
+    box-shadow: none !important;
+  }
+}

@@ -1,5 +1,9 @@
 <script setup>
-defineProps({ icon: String, label: String, value: String })
+import { computed } from 'vue'
+
+// delta: perubahan % dibanding periode sebelumnya (null = tidak ditampilkan); turunBaik untuk angka yang lebih baik bila turun
+const props = defineProps({ icon: String, label: String, value: String, delta: { type: Number, default: null }, turunBaik: Boolean })
+const baik = computed(() => (props.delta > 0) !== props.turunBaik)
 </script>
 
 <template>
@@ -8,6 +12,10 @@ defineProps({ icon: String, label: String, value: String })
     <div>
       <small>{{ label }}</small>
       <strong>{{ value }}</strong>
+      <span v-if="delta !== null" class="delta" :class="delta === 0 ? 'datar' : baik ? 'naik' : 'turun'">
+        <i :class="delta > 0 ? 'pi pi-arrow-up' : delta < 0 ? 'pi pi-arrow-down' : 'pi pi-minus'" />
+        {{ Math.abs(delta) }}% <span class="vs">vs periode lalu</span>
+      </span>
     </div>
   </div>
 </template>
@@ -35,5 +43,24 @@ small {
 }
 strong {
   font-size: 1.25rem;
+}
+.delta {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.delta i {
+  font-size: 0.7rem;
+}
+.naik {
+  color: var(--p-green-500, #22c55e);
+}
+.turun {
+  color: var(--p-red-500, #ef4444);
+}
+.datar,
+.vs {
+  color: var(--p-text-muted-color);
+  font-weight: 400;
 }
 </style>

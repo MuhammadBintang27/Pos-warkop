@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
+import { useCari } from '@/composables/useCari'
 import { useConfirm } from 'primevue/useconfirm'
 import { del, get, post, put } from '@/api/http'
 import { useRun } from '@/composables/useRun'
@@ -127,6 +128,8 @@ function hapusSlip(s) {
 watch(rentang, (r) => r[1] !== null && muatSlip())
 watch(mode, (m) => m === 'slip' && muatSlip())
 onMounted(() => run(muat))
+const { cari: cariKaryawan, hasil: karyawanTampil } = useCari(list, 'nama', 'jabatan')
+const { cari: cariSlip, hasil: slipTampil } = useCari(slips, 'karyawan', 'jabatan')
 </script>
 
 <template>
@@ -144,7 +147,8 @@ onMounted(() => run(muat))
     <SelectButton v-model="mode" :options="MODE" option-label="label" option-value="value" :allow-empty="false" />
 
     <section v-if="mode === 'karyawan'" class="panel box">
-      <DataTable :value="list" size="small" empty-message="Belum ada karyawan">
+      <CariInput v-model="cariKaryawan" placeholder="Cari karyawan atau jabatan…" />
+      <DataTable paginator :rows="10" :rows-per-page-options="[10, 25, 50]" :always-show-paginator="false" :value="karyawanTampil" size="small" empty-message="Belum ada karyawan">
         <Column field="nama" header="Nama" sortable />
         <Column field="jabatan" header="Jabatan" />
         <Column header="Gaji">
@@ -170,7 +174,8 @@ onMounted(() => run(muat))
         <small class="hint">Menampilkan slip yang periodenya berakhir dalam rentang ini.</small>
       </section>
       <section class="panel box">
-        <DataTable :value="slips" size="small" empty-message="Belum ada slip gaji pada rentang ini">
+        <CariInput v-model="cariSlip" placeholder="Cari karyawan…" />
+        <DataTable paginator :rows="10" :rows-per-page-options="[10, 25, 50]" :always-show-paginator="false" :value="slipTampil" size="small" empty-message="Belum ada slip gaji pada rentang ini">
           <Column header="Periode"><template #body="{ data }">{{ data.periodeAwal }} s/d {{ data.periodeAkhir }}</template></Column>
           <Column header="Karyawan">
             <template #body="{ data }">
@@ -221,7 +226,7 @@ onMounted(() => run(muat))
         <MoneyInput v-model="bon.jumlah" />
         <InputText v-model="bon.keterangan" maxlength="255" placeholder="Keterangan, mis. keperluan keluarga" fluid />
         <Button label="Catat bon" icon="pi pi-plus" :disabled="!bon.jumlah" @click="simpanBon" />
-        <DataTable :value="bon.log" size="small" empty-message="Belum ada catatan bon">
+        <DataTable paginator :rows="10" :rows-per-page-options="[10, 25, 50]" :always-show-paginator="false" :value="bon.log" size="small" empty-message="Belum ada catatan bon">
           <Column field="tanggal" header="Tanggal" />
           <Column header="Jumlah"><template #body="{ data }"><span :class="{ minus: data.jumlah < 0 }">{{ data.jumlah < 0 ? '-' : '' }}{{ rp(Math.abs(data.jumlah)) }}</span></template></Column>
           <Column field="keterangan" header="Keterangan" />

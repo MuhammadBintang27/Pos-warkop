@@ -219,7 +219,8 @@ onMounted(() => run(muat))
           <Button icon="pi pi-times" text severity="secondary" aria-label="Hapus bahan" @click="form.resep.splice(ri, 1)" />
         </div>
         <Button label="Tambah bahan ke resep" icon="pi pi-plus" severity="secondary" outlined :disabled="!bahan.length" @click="form.resep.push({ bahanId: null, jumlah: null })" />
-        <template v-if="!form.resep.some((r) => r.bahanId && r.jumlah > 0)">
+        <!-- tenant lain: warkop hanya dapat komisi, HPP-nya tidak dihitung di laba rugi -->
+        <template v-if="tenant.find((t) => t.id === form.tenantId)?.milikSendiri !== false && !form.resep.some((r) => r.bahanId && r.jumlah > 0)">
           <label>Harga modal per porsi</label>
           <MoneyInput v-model="form.hargaModal" />
           <small class="hasil">Untuk barang jadi tanpa resep (rokok, kerupuk, minuman botol): harga beli per item, dipakai sebagai HPP di laba rugi.</small>

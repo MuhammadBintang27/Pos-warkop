@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS users (
   role ENUM('pelayan','kasir','owner','tenant') NOT NULL,
   tenant_id BIGINT NULL,        -- hanya untuk role tenant: tenant yang pesanan dan rekapannya boleh dilihat
   aktif TINYINT(1) NOT NULL DEFAULT 1,
+  token_sejak DATETIME NULL,    -- token login yang terbit sebelum ini ditolak (nonaktif, ganti role, ganti password)
   FOREIGN KEY (klien_id) REFERENCES klien(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -432,5 +433,16 @@ CREATE TABLE IF NOT EXISTS perangkat_push (
   token VARCHAR(255) NOT NULL UNIQUE,
   dibuat_at DATETIME NOT NULL,
   INDEX (klien_id, tenant_id),
+  FOREIGN KEY (klien_id) REFERENCES klien(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS audit_log (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  klien_id BIGINT NOT NULL,
+  user_id BIGINT NOT NULL,
+  aksi VARCHAR(50) NOT NULL,
+  detail VARCHAR(1000) NOT NULL DEFAULT '',  -- method, path, dan isi permintaan tanpa password, dipotong
+  at DATETIME NOT NULL,
+  INDEX (klien_id, at),
   FOREIGN KEY (klien_id) REFERENCES klien(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

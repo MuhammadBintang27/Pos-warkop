@@ -100,7 +100,8 @@ func (s *LabaService) LabaRugi(kid int64, dari, sampai string) (*dto.LabaRugiRes
 			return nil, err
 		}
 		k.DalamHPP = k.Kategori == "bahan"
-		if !k.DalamHPP {
+		// refund sudah mengurangi pendapatan karena bill-nya batal; jangan dikurangkan dua kali
+		if !k.DalamHPP && k.Kategori != "refund" {
 			out.TotalPengeluaran += k.Total
 		}
 		out.Pengeluaran = append(out.Pengeluaran, k)

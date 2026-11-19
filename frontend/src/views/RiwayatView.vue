@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
-import { get } from '@/api/http'
+import { useRoute, useRouter } from 'vue-router'
+import { get, post } from '@/api/http'
 import { onEvent } from '@/composables/useEvents'
 import { useRun } from '@/composables/useRun'
 import { useAuthStore } from '@/stores/auth'
@@ -33,7 +33,13 @@ const kasir = useKasirStore()
 const peng = usePengaturanStore()
 const run = useRun()
 
-const rentang = ref([hari(), hari()])
+const route = useRoute()
+// dibuka dari Laporan Tenant: ?tenant=<id>&tanggal=YYYY-MM-DD
+const tglAwal = route.query.tanggal ? new Date(`${route.query.tanggal}T00:00:00`) : null
+const rentang = ref(tglAwal && !isNaN(tglAwal) ? [tglAwal, tglAwal] : [hari(), hari()])
+const tenant = ref(Number(route.query.tenant) || null)
+const tenants = ref([])
+const namaTenant = computed(() => tenants.value.find((t) => t.id === tenant.value)?.nama)
 const status = ref('')
 const q = ref('')
 const oleh = ref(null)
@@ -55,6 +61,7 @@ async function muat() {
   loading.value = true
   const params = { dari: ymd(dari), sampai: ymd(sampai || dari), status: status.value, q: q.value.trim(), page: page.value, limit: limit.value }
   if (oleh.value) params.oleh = oleh.value
+  if (tenant.value) params.tenant = tenant.value
   await run(async () => (data.value = await get('/riwayat', { params })))
   loading.value = false
 }
@@ -70,7 +77,7 @@ watch(q, () => {
   clearTimeout(timer)
   timer = setTimeout(ulang, 350)
 })
-watch([rentang, status, oleh], ulang)
+watch([rentang, status, oleh, tenant], ulang)
 
 function ganti(e) {
   page.value = e.page + 1
@@ -91,10 +98,25 @@ function lanjutkan() {
   })
 }
 
+// koreksi bill lunas oleh owner: 'buka-ulang' (salah input, bayar ulang) atau 'refund' (bill dibatalkan, uang kembali)
+const koreksi = ref(null)
+const tunaiDetail = computed(() => (detail.value?.pembayaran ?? []).filter((b) => b.metode === 'tunai').reduce((s, b) => s + b.jumlah, 0))
+
+async function simpanKoreksi() {
+  const { jenis, alasan, sudahDibuat } = koreksi.value
+  const ok = await run(async () => {
+    detail.value = await post(`/pesanan/${detail.value.id}/${jenis}`, { alasan: alasan.trim(), sudahDibuat })
+  }, jenis === 'refund' ? 'Bill direfund' : 'Bill dibuka ulang')
+  if (!ok) return
+  koreksi.value = null
+  if (jenis === 'buka-ulang') lanjutkan()
+}
+
 const offs = []
 onMounted(() => {
   muat()
   if (auth.isOwner) run(async () => (users.value = await get('/users')))
+  run(async () => (tenants.value = await get('/tenant')))
   offs.push(onEvent('pesanan', () => muat()))
 })
 onBeforeUnmount(() => {
@@ -132,6 +154,16 @@ onBeforeUnmount(() => {
           show-clear
           class="oleh"
         />
+        <Select
+          v-if="tenants.length > 1"
+          v-model="tenant"
+          :options="tenants"
+          option-label="nama"
+          option-value="id"
+          placeholder="Semua tenant"
+          show-clear
+          class="oleh"
+        />
       </div>
 
       <DataTable
@@ -156,6 +188,9 @@ onBeforeUnmount(() => {
         </Column>
         <Column field="jumlahItem" header="Item" />
         <Column header="Total"><template #body="{ data: r }"><strong>{{ rp(r.total) }}</strong></template></Column>
+        <Column v-if="tenant" :header="`Item ${namaTenant ?? 'tenant'}`">
+          <template #body="{ data: r }">{{ rp(r.nilaiTenant) }}</template>
+        </Column>
         <Column header="Bayar">
           <template #body="{ data: r }">
             <Tag v-for="m in r.metode ? r.metode.split(',') : []" :key="m" :value="m" severity="secondary" class="metode" />
@@ -219,8 +254,35 @@ onBeforeUnmount(() => {
         </template>
       </div>
       <template #footer>
+        <template v-if="detail?.status === 'lunas' && auth.isOwner">
+          <Button label="Refund" icon="pi pi-replay" severity="danger" text @click="koreksi = { jenis: 'refund', alasan: '', sudahDibuat: true }" />
+          <Button label="Buka ulang" icon="pi pi-pencil" severity="secondary" text @click="koreksi = { jenis: 'buka-ulang', alasan: '', sudahDibuat: false }" />
+        </template>
         <Button v-if="detail?.status === 'lunas'" label="Cetak ulang struk" icon="pi pi-print" severity="secondary" outlined @click="run(() => cetakStruk(detail, peng.settings))" />
         <Button v-if="detail?.status === 'open'" label="Lanjutkan di kasir" icon="pi pi-arrow-right" icon-pos="right" @click="lanjutkan" />
+      </template>
+    </Dialog>
+
+    <Dialog :visible="!!koreksi" modal :header="koreksi?.jenis === 'refund' ? 'Refund bill' : 'Buka ulang bill'" :style="{ width: '26rem' }" :breakpoints="{ '600px': '96vw' }" @update:visible="koreksi = null">
+      <div v-if="koreksi" class="stack">
+        <small v-if="koreksi.jenis === 'buka-ulang'" class="sub">
+          Pembayaran bill ini dihapus dan bill kembali berjalan, lalu dibuka di kasir untuk dikoreksi dan dibayar ulang.
+          Hanya untuk bill yang dibayar di shift yang sedang buka.
+        </small>
+        <small v-else class="sub">
+          Bill dibatalkan dan tidak dihitung sebagai penjualan.
+          <template v-if="tunaiDetail"> Uang tunai {{ rp(tunaiDetail) }} dicatat keluar dari kas laci shift ini.</template>
+          Utang kasbon dari bill ini dihapus; QRIS/transfer dikembalikan manual.
+        </small>
+        <label for="kalasan">Alasan</label>
+        <InputText id="kalasan" v-model="koreksi.alasan" maxlength="100" placeholder="mis. salah metode bayar" fluid autofocus />
+        <div v-if="koreksi.jenis === 'refund'" class="cek">
+          <Checkbox v-model="koreksi.sudahDibuat" input-id="kdibuat" binary />
+          <label for="kdibuat">Sudah dibuat/disajikan (stok tidak dikembalikan)</label>
+        </div>
+      </div>
+      <template #footer>
+        <Button :label="koreksi?.jenis === 'refund' ? 'Refund' : 'Buka ulang'" :severity="koreksi?.jenis === 'refund' ? 'danger' : undefined" icon="pi pi-check" :disabled="!koreksi?.alasan.trim()" @click="simpanKoreksi" />
       </template>
     </Dialog>
   </div>
@@ -293,5 +355,10 @@ onBeforeUnmount(() => {
 }
 .cap {
   text-transform: capitalize;
+}
+.cek {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 </style>

@@ -1,0 +1,33 @@
+package config
+
+import (
+	"database/sql"
+	"fmt"
+)
+
+// kolomBaru: kolom yang ditambahkan setelah tabelnya sudah ada di DB klien. schema.sql hanya membuat tabel baru,
+// jadi kolom baru juga harus didaftarkan di sini; dijalankan setiap start dan dilewati bila kolom sudah ada.
+// shortcut: hanya ADD COLUMN; ubah tipe/hapus kolom/index baru masih perlu ALTER manual atau migrasi bernomor.
+var kolomBaru = []struct{ tabel, kolom, definisi string }{
+	{"menu", "harga_modal", "INT NOT NULL DEFAULT 0 AFTER harga"},
+	{"pesanan_item", "modal", "INT NOT NULL DEFAULT 0 AFTER qty"},
+	{"bahan_log", "biaya", "DECIMAL(14,4) NULL AFTER harga_beli"},
+	{"users", "token_sejak", "DATETIME NULL AFTER aktif"},
+}
+
+func tambahKolom(db *sql.DB) error {
+	for _, k := range kolomBaru {
+		var ada int
+		if err := db.QueryRow(`SELECT COUNT(*) FROM information_schema.COLUMNS
+			WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME=?`, k.tabel, k.kolom).Scan(&ada); err != nil {
+			return err
+		}
+		if ada > 0 {
+			continue
+		}
+		if _, err := db.Exec(fmt.Sprintf("ALTER TABLE `%s` ADD COLUMN `%s` %s", k.tabel, k.kolom, k.definisi)); err != nil {
+			return fmt.Errorf("tambah kolom %s.%s: %w", k.tabel, k.kolom, err)
+		}
+	}
+	return nil
+}

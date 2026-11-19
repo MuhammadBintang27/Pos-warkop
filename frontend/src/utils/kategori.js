@@ -7,4 +7,5 @@ export const KATEGORI_PENGELUARAN = [
   { value: 'lainnya', label: 'Lainnya' },
 ]
 
-export const labelKategori = (v) => KATEGORI_PENGELUARAN.find((k) => k.value === v)?.label ?? v
+// 'refund' dicatat otomatis oleh refund bill, jadi tidak ada di pilihan input manual
+export const labelKategori = (v) => KATEGORI_PENGELUARAN.find((k) => k.value === v)?.label ?? (v === 'refund' ? 'Refund bill' : v)

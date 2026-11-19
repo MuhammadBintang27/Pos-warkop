@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
+import { useCari } from '@/composables/useCari'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import { del, get, post, put } from '@/api/http'
@@ -58,6 +59,7 @@ function hapus(m) {
 }
 
 onMounted(() => run(muat))
+const { cari: cariMeja, hasil: mejaTampil } = useCari(meja, 'nama')
 </script>
 
 <template>
@@ -68,7 +70,8 @@ onMounted(() => run(muat))
     </PageHeader>
 
     <section class="panel box">
-      <DataTable :value="meja" size="small" paginator :rows="20" empty-message="Belum ada meja">
+      <CariInput v-model="cariMeja" placeholder="Cari meja…" />
+      <DataTable :value="mejaTampil" size="small" paginator :rows="20" empty-message="Belum ada meja">
         <Column field="nama" header="Nama" />
         <Column header="Status">
           <template #body="{ data }">

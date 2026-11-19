@@ -36,8 +36,8 @@ func ConnectDB() error {
 		return fmt.Errorf("gagal ping mysql: %w", err)
 	}
 
-	// Skema dijalankan apa adanya (CREATE TABLE IF NOT EXISTS). Tidak ada migrasi bertahap:
-	// bila skema berubah, buat ulang database. multiStatements hanya dipakai di sini.
+	// Skema dijalankan apa adanya (CREATE TABLE IF NOT EXISTS), lalu kolom baru ditambahkan lewat tambahKolom.
+	// multiStatements hanya dipakai di sini.
 	migrate := *dsn
 	migrate.MultiStatements = true
 	mdb, err := sql.Open("mysql", migrate.FormatDSN())
@@ -46,6 +46,9 @@ func ConnectDB() error {
 	}
 	defer mdb.Close()
 	if _, err := mdb.Exec(schemaSQL); err != nil {
+		return fmt.Errorf("migrasi gagal: %w", err)
+	}
+	if err := tambahKolom(db); err != nil {
 		return fmt.Errorf("migrasi gagal: %w", err)
 	}
 

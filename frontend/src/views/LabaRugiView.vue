@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
+import { useCari } from '@/composables/useCari'
 import { get } from '@/api/http'
 import { useRun } from '@/composables/useRun'
 import { hari, rp, ymd } from '@/utils/format'
@@ -37,6 +38,7 @@ async function muat() {
 
 watch(rentang, (r) => r[1] !== null && muat())
 onMounted(muat)
+const { cari: cariMargin, hasil: marginDicari } = useCari(margins, 'nama')
 </script>
 
 <template>
@@ -67,7 +69,7 @@ onMounted(muat)
         <div class="baris"><span>HPP (bahan terpakai dan harga modal)</span><span>-{{ rp(data.hpp) }}</span></div>
         <div v-if="data.susut" class="baris"><span>Bahan susut (selisih opname)</span><span>{{ data.susut > 0 ? '-' : '+' }}{{ rp(Math.abs(data.susut)) }}</span></div>
         <div class="baris total"><span>Laba kotor</span><span>{{ rp(data.labaKotor) }}</span></div>
-        <template v-for="k in data.pengeluaran.filter((x) => !x.dalamHpp)" :key="k.kategori">
+        <template v-for="k in data.pengeluaran.filter((x) => !x.dalamHpp && x.kategori !== 'refund')" :key="k.kategori">
           <div class="baris"><span>{{ labelKategori(k.kategori) }}</span><span>-{{ rp(k.total) }}</span></div>
         </template>
         <div class="baris"><span>Gaji karyawan (yang dibayar)</span><span>-{{ rp(data.gaji) }}</span></div>
@@ -79,7 +81,8 @@ onMounted(muat)
       </section>
 
       <section v-else-if="mode === 'margin'" class="panel box">
-        <DataTable :value="margins" size="small" paginator :rows="15" empty-message="Belum ada penjualan pada rentang ini">
+        <CariInput v-model="cariMargin" placeholder="Cari menu…" />
+        <DataTable :value="marginDicari" size="small" paginator :rows="15" empty-message="Belum ada penjualan pada rentang ini">
           <Column field="nama" header="Menu" sortable />
           <Column field="terjual" header="Terjual" sortable />
           <Column header="Penjualan" field="penjualan" sortable><template #body="{ data: d }">{{ rp(d.penjualan) }}</template></Column>
@@ -99,7 +102,7 @@ onMounted(muat)
         <p v-if="!data.pengeluaran.length" class="hint">Belum ada pengeluaran pada rentang ini.</p>
         <div v-for="k in data.pengeluaran" :key="k.kategori" class="kat">
           <div class="baris">
-            <span>{{ labelKategori(k.kategori) }} <Tag v-if="k.dalamHpp" value="masuk HPP" severity="secondary" /></span>
+            <span>{{ labelKategori(k.kategori) }} <Tag v-if="k.dalamHpp" value="masuk HPP" severity="secondary" /><Tag v-if="k.kategori === 'refund'" value="sudah mengurangi penjualan" severity="secondary" /></span>
             <span>{{ rp(k.total) }} · {{ persen(k.total) }}%</span>
           </div>
           <div class="bar"><div :style="{ width: persen(k.total) + '%' }" /></div>

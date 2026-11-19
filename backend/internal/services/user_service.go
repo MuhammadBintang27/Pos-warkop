@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"warkop/internal/dto"
 	"warkop/internal/models"
@@ -71,25 +72,39 @@ func (s *UserService) Update(kid, actorID, id int64, req dto.UpdateUserRequest) 
 	if err != nil {
 		return err
 	}
-	res, err := s.db.Exec("UPDATE users SET nama=?, role=?, aktif=?, tenant_id=? WHERE id=? AND klien_id=?", req.Nama, req.Role, *req.Aktif, tenantID, id, kid)
-	if err != nil {
+	var roleLama string
+	var aktifLama bool
+	var tenantLama int64
+	if s.db.QueryRow("SELECT role,aktif,COALESCE(tenant_id,0) FROM users WHERE id=? AND klien_id=?", id, kid).Scan(&roleLama, &aktifLama, &tenantLama) != nil {
+		return types.NotFound("User")
+	}
+	if _, err := s.db.Exec("UPDATE users SET nama=?, role=?, aktif=?, tenant_id=? WHERE id=? AND klien_id=?", req.Nama, req.Role, *req.Aktif, tenantID, id, kid); err != nil {
 		return err
 	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		var exists int
-		if s.db.QueryRow("SELECT 1 FROM users WHERE id=? AND klien_id=?", id, kid).Scan(&exists) != nil {
-			return types.NotFound("User")
+	if req.Password != "" {
+		hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return err
+		}
+		if _, err := s.db.Exec("UPDATE users SET password_hash=? WHERE id=? AND klien_id=?", string(hash), id, kid); err != nil {
+			return err
 		}
 	}
-	if req.Password == "" {
-		return nil
+	// ganti nama saja tidak perlu memaksa login ulang
+	if req.Password != "" || roleLama != req.Role || aktifLama != *req.Aktif || tenantLama != tenantID.Int64 {
+		return cabutToken(s.db, id)
 	}
-	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
-	if err != nil {
+	return nil
+}
+
+// cabutToken membuat semua token user yang sudah terbit tidak berlaku lagi.
+func cabutToken(db *sql.DB, uid int64) error {
+	sejak := time.Now().Truncate(time.Second) // iat JWT berpresisi detik
+	if _, err := db.Exec("UPDATE users SET token_sejak=? WHERE id=?", sejak, uid); err != nil {
 		return err
 	}
-	_, err = s.db.Exec("UPDATE users SET password_hash=? WHERE id=? AND klien_id=?", string(hash), id, kid)
-	return err
+	utils.CabutToken(uid, sejak)
+	return nil
 }
 
 // tenantAkun: akun tenant wajib terhubung ke tenant aktif milik klien yang sama; role lain selalu tanpa tenant.

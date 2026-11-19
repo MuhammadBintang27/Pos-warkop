@@ -1,5 +1,6 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useCari } from '@/composables/useCari'
 import { useConfirm } from 'primevue/useconfirm'
 import { del, get, post, put } from '@/api/http'
 import { useRun } from '@/composables/useRun'
@@ -94,6 +95,8 @@ function hapus(b) {
 watch(rentang, (r) => r[1] !== null && muatPemakaian())
 watch(mode, (m) => m === 'pemakaian' && muatPemakaian())
 onMounted(() => run(muat))
+const { cari: cariBahan, hasil: bahanTampil } = useCari(list, 'nama')
+const { cari: cariPakai, hasil: pemakaianTampil } = useCari(pemakaian, 'nama')
 </script>
 
 <template>
@@ -111,7 +114,8 @@ onMounted(() => run(muat))
     <SelectButton v-model="mode" :options="MODE" option-label="label" option-value="value" :allow-empty="false" />
 
     <section v-if="mode === 'stok'" class="panel box">
-      <DataTable :value="list" size="small" empty-message="Belum ada bahan">
+      <CariInput v-model="cariBahan" placeholder="Cari bahan…" />
+      <DataTable paginator :rows="10" :rows-per-page-options="[10, 25, 50]" :always-show-paginator="false" :value="bahanTampil" size="small" empty-message="Belum ada bahan">
         <Column field="nama" header="Bahan" sortable />
         <Column header="Stok" sortable field="stok">
           <template #body="{ data }">{{ n(data.stok) }} {{ data.satuan }}</template>
@@ -147,7 +151,8 @@ onMounted(() => run(muat))
         <DatePicker v-model="rentang" selection-mode="range" date-format="dd/mm/yy" :manual-input="false" show-icon placeholder="Pilih tanggal" />
       </section>
       <section class="panel box">
-        <DataTable :value="pemakaian" size="small" empty-message="Belum ada bahan">
+        <CariInput v-model="cariPakai" placeholder="Cari bahan…" />
+        <DataTable paginator :rows="10" :rows-per-page-options="[10, 25, 50]" :always-show-paginator="false" :value="pemakaianTampil" size="small" empty-message="Belum ada bahan">
           <Column field="nama" header="Bahan" sortable />
           <Column header="Terpakai" sortable field="dipakai"><template #body="{ data }">{{ n(data.dipakai) }} {{ data.satuan }}</template></Column>
           <Column header="Restock"><template #body="{ data }">{{ n(data.restock) }} {{ data.satuan }}</template></Column>
@@ -214,7 +219,7 @@ onMounted(() => run(muat))
     </Dialog>
 
     <Dialog :visible="!!riwayat" modal :header="`Riwayat ${riwayat?.bahan.nama}`" :style="{ width: '44rem' }" :breakpoints="{ '700px': '96vw' }" @update:visible="riwayat = null">
-      <DataTable v-if="riwayat" :value="riwayat.log" size="small" empty-message="Belum ada catatan">
+      <DataTable paginator :rows="10" :rows-per-page-options="[10, 25, 50]" :always-show-paginator="false" v-if="riwayat" :value="riwayat.log" size="small" empty-message="Belum ada catatan">
         <Column header="Waktu"><template #body="{ data }">{{ tgl(data.at) }}</template></Column>
         <Column header="Jenis"><template #body="{ data }"><Tag :value="JENIS[data.jenis].label" :severity="JENIS[data.jenis].severity" /></template></Column>
         <Column header="Perubahan">

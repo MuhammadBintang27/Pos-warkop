@@ -1,5 +1,6 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
+import { useCari } from '@/composables/useCari'
 import { useRoute } from 'vue-router'
 import { get, post, put } from '@/api/http'
 import { useRun } from '@/composables/useRun'
@@ -56,6 +57,7 @@ onMounted(async () => {
     await run(() => muatUsers(dariUrl.id))
   }
 })
+const { cari: cariKlien, hasil: klienTampil } = useCari(kliens, 'nama', 'alamat', 'id')
 </script>
 
 <template>
@@ -63,7 +65,8 @@ onMounted(async () => {
     <PageHeader icon="pi pi-users" title="Pengguna per klien" subtitle="Buka sebuah klien untuk melihat dan mengelola penggunanya" />
 
     <section class="panel box">
-      <DataTable v-model:expanded-rows="expanded" :value="kliens" data-key="id" size="small" empty-message="Belum ada klien" @row-expand="bukaBaris">
+      <CariInput v-model="cariKlien" placeholder="Cari klien…" />
+      <DataTable paginator :rows="10" :rows-per-page-options="[10, 25, 50]" :always-show-paginator="false" v-model:expanded-rows="expanded" :value="klienTampil" data-key="id" size="small" empty-message="Belum ada klien" @row-expand="bukaBaris">
         <Column expander style="width: 3rem" />
         <Column field="id" header="ID Klien" />
         <Column header="Nama usaha"><template #body="{ data }"><strong>{{ data.nama }}</strong></template></Column>
@@ -84,7 +87,7 @@ onMounted(async () => {
                 @click="form = { klienId: klien.id, nama: '', username: '', password: '', role: 'pelayan', aktif: true }"
               />
             </div>
-            <DataTable :value="users[klien.id] || []" size="small" empty-message="Belum ada pengguna">
+            <DataTable paginator :rows="10" :rows-per-page-options="[10, 25, 50]" :always-show-paginator="false" :value="users[klien.id] || []" size="small" empty-message="Belum ada pengguna">
               <Column field="nama" header="Nama user" />
               <Column field="username" header="Username" />
               <Column header="Role"><template #body="{ data }"><Tag :value="data.role" :severity="SEVERITY[data.role]" /></template></Column>

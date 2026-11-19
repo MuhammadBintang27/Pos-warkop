@@ -1,5 +1,6 @@
 <script setup>
 import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { useCari } from '@/composables/useCari'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import { del, get, post, put } from '@/api/http'
@@ -80,6 +81,7 @@ onMounted(() => {
   offs.push(onEvent('cetak', () => muat().catch(() => {})))
 })
 onBeforeUnmount(() => offs.forEach((off) => off()))
+const { cari: cariPrinter, hasil: printerTampil } = useCari(printer, 'nama', 'ip')
 </script>
 
 <template>
@@ -107,7 +109,8 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
 
     <section class="panel box">
       <h3>Daftar printer</h3>
-      <DataTable :value="printer" size="small" empty-message="Belum ada printer">
+      <CariInput v-model="cariPrinter" placeholder="Cari printer…" />
+      <DataTable paginator :rows="10" :rows-per-page-options="[10, 25, 50]" :always-show-paginator="false" :value="printerTampil" size="small" empty-message="Belum ada printer">
         <Column field="nama" header="Nama" />
         <Column header="Alamat"><template #body="{ data }">{{ data.ip }}:{{ data.port }}</template></Column>
         <Column header="Kertas"><template #body="{ data }">{{ data.lebarMm }} mm</template></Column>

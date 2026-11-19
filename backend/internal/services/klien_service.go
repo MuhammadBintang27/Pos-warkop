@@ -77,7 +77,23 @@ func (s *KlienService) MuatAkses() error {
 		}
 		utils.SetKlienAktif(id, false)
 	}
-	return rows.Err()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	cabut, err := s.db.Query("SELECT id,token_sejak FROM users WHERE token_sejak IS NOT NULL")
+	if err != nil {
+		return err
+	}
+	defer cabut.Close()
+	for cabut.Next() {
+		var id int64
+		var sejak time.Time
+		if err := cabut.Scan(&id, &sejak); err != nil {
+			return err
+		}
+		utils.CabutToken(id, sejak)
+	}
+	return cabut.Err()
 }
 
 // Buat membuat klien beserta tenant bawaan dan akun owner. Nomor klien = nomor terbesar yang ada + 1.
@@ -217,6 +233,9 @@ func (s *KlienService) ResetOwner(id int64) (*dto.KlienKredensial, error) {
 		return nil, err
 	}
 	if _, err := s.db.Exec("UPDATE users SET password_hash=?, aktif=1 WHERE id=?", hash, uid); err != nil {
+		return nil, err
+	}
+	if err := cabutToken(s.db, uid); err != nil {
 		return nil, err
 	}
 	return &dto.KlienKredensial{KlienID: id, Username: username, Password: pw}, nil

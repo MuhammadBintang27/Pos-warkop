@@ -22,7 +22,10 @@ const NAV = [
     icon: 'pi pi-chart-line',
     roles: ['owner'],
     children: [
-      { label: 'Penjualan', to: '/laporan' },
+      { label: 'Ringkasan & Tren', to: '/laporan' },
+      { label: 'Jam Ramai & Kategori', to: '/laporan/waktu' },
+      { label: 'Kinerja Karyawan', to: '/laporan/karyawan' },
+      { label: 'Kasbon & Stok', to: '/laporan/kasbon' },
       { label: 'Tenant', to: '/laporan/tenant' },
       { label: 'Laba Rugi', to: '/laba-rugi' },
     ],
@@ -40,7 +43,7 @@ const NAV = [
       { label: 'Pengguna', to: '/pengguna' },
     ],
   },
-  { label: 'Pengaturan', icon: 'pi pi-cog', roles: ['owner'], children: [{ label: 'Tampilan', to: '/pengaturan' }] },
+  { label: 'Pengaturan', icon: 'pi pi-cog', roles: ['owner'], children: [{ label: 'Tampilan', to: '/pengaturan' }, { label: 'Log Aktivitas', to: '/audit' }] },
 ]
 
 const route = useRoute()

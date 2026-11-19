@@ -1,5 +1,6 @@
 <script setup>
 import { onMounted, ref } from 'vue'
+import { useCari } from '@/composables/useCari'
 import { get, post, put } from '@/api/http'
 import { useRun } from '@/composables/useRun'
 import { useAuthStore } from '@/stores/auth'
@@ -41,6 +42,7 @@ async function simpan() {
 }
 
 onMounted(() => run(muat))
+const { cari: cariUser, hasil: usersTampil } = useCari(users, 'nama', 'username', 'role')
 </script>
 
 <template>
@@ -52,7 +54,8 @@ onMounted(() => run(muat))
     </PageHeader>
 
     <section class="panel box">
-      <DataTable :value="users" size="small" empty-message="Belum ada pengguna">
+      <CariInput v-model="cariUser" placeholder="Cari nama atau username…" />
+      <DataTable paginator :rows="10" :rows-per-page-options="[10, 25, 50]" :always-show-paginator="false" :value="usersTampil" size="small" empty-message="Belum ada pengguna">
         <Column field="nama" header="Nama" />
         <Column field="username" header="Username" />
         <Column header="Role">
