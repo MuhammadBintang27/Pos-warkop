@@ -63,8 +63,8 @@ async function simpan() {
 }
 
 async function simpanRestock() {
-  const { id, jumlah, hargaBeli, catatan } = restock.value
-  if (await run(() => post(`/bahan/${id}/restock`, { jumlah, hargaBeli: hargaBeli || 0, catatan }), 'Stok bertambah')) {
+  const { id, jumlah, hargaBeli, catatan, dariKas } = restock.value
+  if (await run(() => post(`/bahan/${id}/restock`, { jumlah, hargaBeli: hargaBeli || 0, catatan, dariKas }), 'Stok bertambah')) {
     restock.value = null
     await run(muat)
   }
@@ -128,7 +128,7 @@ onMounted(() => run(muat))
         <Column>
           <template #body="{ data }">
             <div class="act">
-              <Button label="Restock" icon="pi pi-plus" size="small" text @click="restock = { id: data.id, nama: data.nama, satuan: data.satuan, jumlah: null, hargaBeli: 0, catatan: '' }" />
+              <Button label="Restock" icon="pi pi-plus" size="small" text @click="restock = { id: data.id, nama: data.nama, satuan: data.satuan, jumlah: null, hargaBeli: 0, catatan: '', dariKas: true }" />
               <Button label="Opname" icon="pi pi-check-square" size="small" text severity="secondary" @click="opname = { ...data, stokAktual: data.stok, catatan: '' }" />
               <Button icon="pi pi-history" size="small" text severity="secondary" aria-label="Riwayat" @click="bukaRiwayat(data)" />
               <template v-if="auth.isOwner">
@@ -186,12 +186,16 @@ onMounted(() => run(muat))
       <div v-if="restock" class="stack">
         <label for="rj">Jumlah masuk ({{ restock.satuan }})</label>
         <InputNumber id="rj" v-model="restock.jumlah" :min="1" fluid autofocus />
-        <label>Total harga beli (opsional)</label>
+        <label>Total harga beli{{ restock.dariKas ? '' : ' (opsional)' }}</label>
         <MoneyInput v-model="restock.hargaBeli" />
         <label for="rc">Catatan</label>
         <InputText id="rc" v-model="restock.catatan" maxlength="255" placeholder="mis. beli di pasar" fluid />
+        <div class="cek">
+          <Checkbox v-model="restock.dariKas" input-id="rk" binary />
+          <label for="rk">Dibayar dari kas laci (dicatat sebagai pengeluaran shift)</label>
+        </div>
       </div>
-      <template #footer><Button label="Tambah stok" icon="pi pi-check" :disabled="!restock?.jumlah" @click="simpanRestock" /></template>
+      <template #footer><Button label="Tambah stok" icon="pi pi-check" :disabled="!restock?.jumlah || (restock.dariKas && !restock.hargaBeli)" @click="simpanRestock" /></template>
     </Dialog>
 
     <Dialog :visible="!!opname" modal :header="`Opname ${opname?.nama}`" :style="{ width: '24rem' }" @update:visible="opname = null">
@@ -226,6 +230,11 @@ onMounted(() => run(muat))
 </template>
 
 <style scoped>
+.cek {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 .gap {
   gap: 14px;
 }

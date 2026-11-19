@@ -52,7 +52,7 @@ type pilihanOpsi struct {
 type itemBaru struct {
 	menuID, tenantID    int64
 	nama, opsi, catatan string
-	harga, qty          int
+	harga, qty, modal   int
 	bahan               []bahanPakai // takaran per porsi, disalin ke baris baru
 }
 
@@ -217,14 +217,14 @@ func (s *PesananService) AddItem(kid, id int64, req dto.AddItemRequest) (*dto.Pe
 			return err
 		}
 		var nama string
-		var harga int
+		var harga, modal int
 		var tersedia, aktif bool
 		var tenantID int64
 		var tenantBuka bool
 		var tenantNama string
-		if tx.QueryRow(`SELECT m.nama,m.harga,m.tersedia,m.aktif,COALESCE(m.tenant_id,0),COALESCE(t.buka,1),COALESCE(t.nama,'')
+		if tx.QueryRow(`SELECT m.nama,m.harga,m.harga_modal,m.tersedia,m.aktif,COALESCE(m.tenant_id,0),COALESCE(t.buka,1),COALESCE(t.nama,'')
 			FROM menu m LEFT JOIN tenant t ON t.id=m.tenant_id WHERE m.id=? AND m.klien_id=?`, req.MenuID, kid).
-			Scan(&nama, &harga, &tersedia, &aktif, &tenantID, &tenantBuka, &tenantNama) != nil || !aktif {
+			Scan(&nama, &harga, &modal, &tersedia, &aktif, &tenantID, &tenantBuka, &tenantNama) != nil || !aktif {
 			return types.NotFound("Menu")
 		}
 		if !tenantBuka {
@@ -244,8 +244,11 @@ func (s *PesananService) AddItem(kid, id int64, req dto.AddItemRequest) (*dto.Pe
 		if err != nil {
 			return err
 		}
+		if len(bahan) > 0 {
+			modal = 0 // menu beresep: HPP dari bahan, bukan harga modal
+		}
 		itemID, err := sisipItem(tx, kid, id, itemBaru{
-			menuID: req.MenuID, tenantID: tenantID, nama: nama, harga: hargaJadi, qty: req.Qty,
+			menuID: req.MenuID, tenantID: tenantID, nama: nama, harga: hargaJadi, qty: req.Qty, modal: modal,
 			opsi: opsiNama, catatan: strings.TrimSpace(req.Catatan), bahan: bahan,
 		})
 		if err != nil {
@@ -275,8 +278,8 @@ func sisipItem(tx *sql.Tx, kid, pesananID int64, it itemBaru) (int64, error) {
 		_, err = tx.Exec("UPDATE pesanan_item SET qty=qty+? WHERE id=? AND klien_id=?", it.qty, itemID, kid)
 	case err == sql.ErrNoRows:
 		var res sql.Result
-		res, err = tx.Exec("INSERT INTO pesanan_item (klien_id,pesanan_id,menu_id,nama,harga,qty,opsi,catatan,tenant_id) VALUES (?,?,?,?,?,?,?,?,?)",
-			kid, pesananID, it.menuID, it.nama, it.harga, it.qty, it.opsi, it.catatan, it.tenantID)
+		res, err = tx.Exec("INSERT INTO pesanan_item (klien_id,pesanan_id,menu_id,nama,harga,qty,modal,opsi,catatan,tenant_id) VALUES (?,?,?,?,?,?,?,?,?,?)",
+			kid, pesananID, it.menuID, it.nama, it.harga, it.qty, it.modal, it.opsi, it.catatan, it.tenantID)
 		if err == nil {
 			if itemID, err = res.LastInsertId(); err == nil {
 				err = simpanSnapshot(tx, kid, itemID, it.bahan)
@@ -782,8 +785,8 @@ func (s *PesananService) Pisah(actor *utils.JWTPayload, id int64, req dto.PisahR
 			} else if _, err = tx.Exec("UPDATE pesanan_item SET qty=qty-? WHERE id=? AND klien_id=?", x.Qty, x.ItemID, kid); err == nil {
 				var res sql.Result
 				// salin dari baris asal supaya status kirim/siap tenant ikut terbawa
-				res, err = tx.Exec(`INSERT INTO pesanan_item (klien_id,pesanan_id,menu_id,nama,harga,qty,opsi,catatan,dikirim,tenant_id,siap_at,dikirim_at,dikirim_oleh)
-					SELECT klien_id,?,menu_id,nama,harga,?,opsi,catatan,dikirim,tenant_id,siap_at,dikirim_at,dikirim_oleh FROM pesanan_item WHERE id=? AND klien_id=?`,
+				res, err = tx.Exec(`INSERT INTO pesanan_item (klien_id,pesanan_id,menu_id,nama,harga,qty,modal,opsi,catatan,dikirim,tenant_id,siap_at,dikirim_at,dikirim_oleh)
+					SELECT klien_id,?,menu_id,nama,harga,?,modal,opsi,catatan,dikirim,tenant_id,siap_at,dikirim_at,dikirim_oleh FROM pesanan_item WHERE id=? AND klien_id=?`,
 					newID, x.Qty, x.ItemID, kid)
 				if err == nil {
 					var baruID int64

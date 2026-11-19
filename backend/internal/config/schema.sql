@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS menu (
   kategori_id BIGINT NOT NULL,
   nama VARCHAR(100) NOT NULL,
   harga INT NOT NULL,
+  harga_modal INT NOT NULL DEFAULT 0,  -- HPP per porsi untuk menu tanpa resep (barang jadi: rokok, kerupuk)
   tersedia TINYINT(1) NOT NULL DEFAULT 1,
   track_stok TINYINT(1) NOT NULL DEFAULT 0,
   stok INT NOT NULL DEFAULT 0,
@@ -143,6 +144,7 @@ CREATE TABLE IF NOT EXISTS pesanan_item (
   nama VARCHAR(100) NOT NULL,
   harga INT NOT NULL,            -- harga satuan termasuk tambahan varian, disalin saat dipesan
   qty INT NOT NULL,
+  modal INT NOT NULL DEFAULT 0,  -- salinan menu.harga_modal saat dipesan, hanya untuk menu tanpa resep
   opsi VARCHAR(255) NOT NULL DEFAULT '',
   catatan VARCHAR(255) NOT NULL DEFAULT '',
   dikirim TINYINT(1) NOT NULL DEFAULT 0,
@@ -345,6 +347,7 @@ CREATE TABLE IF NOT EXISTS bahan_log (
   jumlah INT NOT NULL,             -- perubahan stok, negatif bila berkurang
   stok_akhir INT NOT NULL,
   harga_beli INT NULL,
+  biaya DECIMAL(14,4) NULL,        -- harga rata per satuan saat opname, dasar nilai susut di laba rugi
   catatan VARCHAR(255) NOT NULL DEFAULT '',
   oleh BIGINT NULL,
   at DATETIME NOT NULL,

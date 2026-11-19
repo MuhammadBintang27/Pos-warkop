@@ -15,6 +15,7 @@ type RestockRequest struct {
 	Jumlah    int    `json:"jumlah" validate:"required,gt=0"`
 	HargaBeli int    `json:"hargaBeli" validate:"gte=0"` // total harga pembelian, opsional
 	Catatan   string `json:"catatan" validate:"max=255"`
+	DariKas   bool   `json:"dariKas"` // ikut dicatat sebagai pengeluaran bahan di shift aktif
 }
 
 type OpnameRequest struct {

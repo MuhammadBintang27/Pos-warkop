@@ -120,7 +120,8 @@ func (s *BahanService) Delete(kid, id int64) error {
 func (s *BahanService) ubahStok(kid, id int64, oleh int64, jenis string, hitung func(stok int) (delta int, err error), harga *int, catatan string) error {
 	err := utils.WithTx(s.db, func(tx *sql.Tx) error {
 		var stok int
-		if tx.QueryRow("SELECT stok FROM bahan WHERE id=? AND klien_id=? AND aktif=1 FOR UPDATE", id, kid).Scan(&stok) != nil {
+		var rata float64
+		if tx.QueryRow("SELECT stok,harga_rata FROM bahan WHERE id=? AND klien_id=? AND aktif=1 FOR UPDATE", id, kid).Scan(&stok, &rata) != nil {
 			return types.NotFound("Bahan")
 		}
 		delta, err := hitung(stok)
@@ -130,7 +131,12 @@ func (s *BahanService) ubahStok(kid, id int64, oleh int64, jenis string, hitung 
 		if _, err := tx.Exec("UPDATE bahan SET stok=stok+? WHERE id=? AND klien_id=?", delta, id, kid); err != nil {
 			return err
 		}
-		return catatLog(tx, kid, id, jenis, delta, stok+delta, harga, strings.TrimSpace(catatan), &oleh)
+		if err := catatLog(tx, kid, id, jenis, delta, stok+delta, harga, strings.TrimSpace(catatan), &oleh); err != nil {
+			return err
+		}
+		// nilai selisih opname dibekukan pada harga rata saat ini untuk baris susut di laba rugi
+		_, err = tx.Exec("UPDATE bahan_log SET biaya=? WHERE id=LAST_INSERT_ID()", rata)
+		return err
 	})
 	if err == nil {
 		s.hub.Publish(kid, "menu") // ketersediaan menu bergantung pada stok bahan
@@ -148,11 +154,32 @@ func rataBaru(stok int, rata float64, jumlah, totalHarga int) float64 {
 }
 
 func (s *BahanService) Restock(kid, oleh, id int64, req dto.RestockRequest) error {
+	if req.DariKas && req.HargaBeli <= 0 {
+		return types.BadRequest("Isi total harga beli kalau dibayar dari kas laci")
+	}
+	catatan := strings.TrimSpace(req.Catatan)
 	err := utils.WithTx(s.db, func(tx *sql.Tx) error {
 		var stok int
 		var rata float64
-		if tx.QueryRow("SELECT stok,harga_rata FROM bahan WHERE id=? AND klien_id=? AND aktif=1 FOR UPDATE", id, kid).Scan(&stok, &rata) != nil {
+		var nama, satuan string
+		if tx.QueryRow("SELECT stok,harga_rata,nama,satuan FROM bahan WHERE id=? AND klien_id=? AND aktif=1 FOR UPDATE", id, kid).Scan(&stok, &rata, &nama, &satuan) != nil {
 			return types.NotFound("Bahan")
+		}
+		if req.DariKas {
+			shiftID, err := activeShiftID(tx, kid)
+			if _, ok := utils.AsHTTPError(err); ok {
+				return types.BadRequest("Buka shift dulu sebelum belanja bahan dari kas laci")
+			} else if err != nil {
+				return err
+			}
+			ket := fmt.Sprintf("Restock %s %d %s", nama, req.Jumlah, satuan)
+			if catatan != "" {
+				ket += " - " + catatan
+			}
+			if _, err := tx.Exec("INSERT INTO pengeluaran (klien_id,shift_id,keterangan,jumlah,kategori,dicatat_oleh,at) VALUES (?,?,?,?,'bahan',?,?)",
+				kid, shiftID, ket, req.HargaBeli, oleh, time.Now()); err != nil {
+				return err
+			}
 		}
 		if _, err := tx.Exec("UPDATE bahan SET stok=stok+?, harga_rata=? WHERE id=? AND klien_id=?", req.Jumlah, rataBaru(stok, rata, req.Jumlah, req.HargaBeli), id, kid); err != nil {
 			return err
@@ -161,7 +188,7 @@ func (s *BahanService) Restock(kid, oleh, id int64, req dto.RestockRequest) erro
 		if req.HargaBeli > 0 {
 			harga = &req.HargaBeli
 		}
-		return catatLog(tx, kid, id, logRestock, req.Jumlah, stok+req.Jumlah, harga, strings.TrimSpace(req.Catatan), &oleh)
+		return catatLog(tx, kid, id, logRestock, req.Jumlah, stok+req.Jumlah, harga, catatan, &oleh)
 	})
 	if err == nil {
 		s.hub.Publish(kid, "menu")

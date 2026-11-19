@@ -55,7 +55,7 @@ onMounted(muat)
       </div>
 
       <Message v-if="data.omzetTanpaResep > 0" severity="warn" size="small">
-        Penjualan {{ rp(data.omzetTanpaResep) }} berasal dari menu yang belum punya resep, jadi HPP-nya belum terhitung dan laba kotor bisa terlalu tinggi. Isi resepnya di menu Menu.
+        Penjualan {{ rp(data.omzetTanpaResep) }} berasal dari menu yang belum punya resep atau harga modal, jadi HPP-nya belum terhitung dan laba kotor bisa terlalu tinggi. Isi resep atau harga modalnya di menu Menu.
       </Message>
 
       <SelectButton v-model="mode" :options="MODE" option-label="label" option-value="value" :allow-empty="false" />
@@ -64,7 +64,8 @@ onMounted(muat)
         <div class="baris"><span>Penjualan sendiri (setelah diskon)</span><span>{{ rp(data.penjualanSendiri) }}</span></div>
         <div class="baris"><span>Komisi tenant</span><span>{{ rp(data.komisiTenant) }}</span></div>
         <div class="baris total"><span>Pendapatan</span><span>{{ rp(data.pendapatan) }}</span></div>
-        <div class="baris"><span>HPP (harga pokok bahan terpakai)</span><span>-{{ rp(data.hpp) }}</span></div>
+        <div class="baris"><span>HPP (bahan terpakai dan harga modal)</span><span>-{{ rp(data.hpp) }}</span></div>
+        <div v-if="data.susut" class="baris"><span>Bahan susut (selisih opname)</span><span>{{ data.susut > 0 ? '-' : '+' }}{{ rp(Math.abs(data.susut)) }}</span></div>
         <div class="baris total"><span>Laba kotor</span><span>{{ rp(data.labaKotor) }}</span></div>
         <template v-for="k in data.pengeluaran.filter((x) => !x.dalamHpp)" :key="k.kategori">
           <div class="baris"><span>{{ labelKategori(k.kategori) }}</span><span>-{{ rp(k.total) }}</span></div>
@@ -72,7 +73,7 @@ onMounted(muat)
         <div class="baris"><span>Gaji karyawan (yang dibayar)</span><span>-{{ rp(data.gaji) }}</span></div>
         <div class="baris total akhir"><span>Laba bersih</span><span>{{ rp(data.labaBersih) }}</span></div>
         <small class="hint">
-          Belanja bahan tidak dikurangkan lagi karena sudah masuk HPP lewat bahan yang terpakai. HPP memakai harga rata-rata bahan saat dipesan.
+          Belanja bahan tidak dikurangkan lagi karena sudah masuk HPP lewat bahan yang terpakai. HPP memakai harga rata-rata bahan saat dipesan, atau harga modal untuk menu tanpa resep. Bahan susut adalah stok yang hilang saat opname, dinilai dengan harga rata-rata saat itu.
           Gaji dihitung dari slip yang ditandai dibayar pada rentang ini.
         </small>
       </section>

@@ -24,6 +24,7 @@ type MenuRequest struct {
 	KategoriID int64         `json:"kategoriId" validate:"required,gt=0"`
 	Nama       string        `json:"nama" validate:"required,max=100"`
 	Harga      int           `json:"harga" validate:"gte=0"`
+	HargaModal int           `json:"hargaModal" validate:"gte=0"`
 	Tersedia   bool          `json:"tersedia"`
 	TrackStok  bool          `json:"trackStok"`
 	Stok       int           `json:"stok" validate:"gte=0"`
@@ -58,6 +59,7 @@ type MenuResponse struct {
 	KategoriID int64           `json:"kategoriId"`
 	Nama       string          `json:"nama"`
 	Harga      int             `json:"harga"`
+	HargaModal int             `json:"hargaModal"`
 	Tersedia   bool            `json:"tersedia"`
 	TrackStok  bool            `json:"trackStok"`
 	Stok       int             `json:"stok"`

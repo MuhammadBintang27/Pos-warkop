@@ -28,7 +28,7 @@ func bulat(f float64) int { return int(math.Round(f)) }
 
 func hitungLaba(r *dto.LabaRugiResponse) {
 	r.Pendapatan = r.PenjualanSendiri + r.KomisiTenant
-	r.LabaKotor = r.Pendapatan - r.HPP
+	r.LabaKotor = r.Pendapatan - r.HPP - r.Susut
 	r.LabaBersih = r.LabaKotor - r.TotalPengeluaran - r.Gaji
 }
 
@@ -66,15 +66,25 @@ func (s *LabaService) LabaRugi(kid int64, dari, sampai string) (*dto.LabaRugiRes
 	}
 	rows.Close()
 
-	var hpp float64
+	var hpp, modal, susut float64
 	if err := s.db.QueryRow(`SELECT COALESCE(SUM(i.qty*ib.jumlah*ib.biaya),0) `+itemLunasSQL+`
 		JOIN item_bahan ib ON ib.item_id=i.id WHERE `+milikSendiriSQL, kid, from, to).Scan(&hpp); err != nil {
 		return nil, err
 	}
-	out.HPP = bulat(hpp)
+	if err := s.db.QueryRow(`SELECT COALESCE(SUM(i.qty*i.modal),0) `+itemLunasSQL+` WHERE `+milikSendiriSQL, kid, from, to).Scan(&modal); err != nil {
+		return nil, err
+	}
+	out.HPP = bulat(hpp + modal)
+
+	// biaya NULL = log stok awal saat bahan dibuat, bukan selisih
+	if err := s.db.QueryRow(`SELECT COALESCE(-SUM(jumlah*biaya),0) FROM bahan_log
+		WHERE klien_id=? AND jenis='opname' AND biaya IS NOT NULL AND at>=? AND at<?`, kid, from, to).Scan(&susut); err != nil {
+		return nil, err
+	}
+	out.Susut = bulat(susut)
 
 	if err := s.db.QueryRow(`SELECT COALESCE(SUM(i.harga*i.qty),0) `+itemLunasSQL+`
-		WHERE `+milikSendiriSQL+` AND NOT EXISTS (SELECT 1 FROM item_bahan ib WHERE ib.item_id=i.id)`, kid, from, to).Scan(&out.OmzetTanpaResep); err != nil {
+		WHERE `+milikSendiriSQL+` AND i.modal=0 AND NOT EXISTS (SELECT 1 FROM item_bahan ib WHERE ib.item_id=i.id)`, kid, from, to).Scan(&out.OmzetTanpaResep); err != nil {
 		return nil, err
 	}
 
@@ -112,8 +122,8 @@ func (s *LabaService) PerMenu(kid int64, dari, sampai string) ([]dto.MarginMenu,
 		return nil, err
 	}
 	rows, err := s.db.Query(`SELECT i.menu_id, MAX(i.nama), SUM(i.qty), SUM(i.harga*i.qty),
-		COALESCE(SUM(i.qty*(SELECT COALESCE(SUM(ib.jumlah*ib.biaya),0) FROM item_bahan ib WHERE ib.item_id=i.id)),0),
-		MAX(EXISTS(SELECT 1 FROM item_bahan ib WHERE ib.item_id=i.id))
+		COALESCE(SUM(i.qty*(i.modal+(SELECT COALESCE(SUM(ib.jumlah*ib.biaya),0) FROM item_bahan ib WHERE ib.item_id=i.id))),0),
+		MAX(i.modal>0 OR EXISTS(SELECT 1 FROM item_bahan ib WHERE ib.item_id=i.id))
 		`+itemLunasSQL+` WHERE `+milikSendiriSQL+` GROUP BY i.menu_id ORDER BY 4 DESC`, kid, from, to)
 	if err != nil {
 		return nil, err

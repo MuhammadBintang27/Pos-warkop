@@ -13,7 +13,8 @@ type LabaRugiResponse struct {
 	KomisiTenant     int                   `json:"komisiTenant"`     // komisi dari tenant lain
 	Pendapatan       int                   `json:"pendapatan"`
 	HPP              int                   `json:"hpp"`
-	LabaKotor        int                   `json:"labaKotor"`
+	Susut            int                   `json:"susut"` // nilai selisih opname; negatif bila stok fisik lebih
+	LabaKotor       int                   `json:"labaKotor"`
 	OmzetTanpaResep  int                   `json:"omzetTanpaResep"` // penjualan sendiri yang menunya belum punya resep, HPP-nya belum terhitung
 	Pengeluaran      []PengeluaranKategori `json:"pengeluaran"`
 	TotalPengeluaran int                   `json:"totalPengeluaran"` // tanpa belanja bahan

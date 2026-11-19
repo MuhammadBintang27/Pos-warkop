@@ -73,13 +73,13 @@ func (s *MenuService) List(kid int64) ([]*dto.KategoriResponse, error) {
 	rows.Close()
 
 	menuByID := map[int64]*dto.MenuResponse{}
-	rows, err = s.db.Query("SELECT id,kategori_id,nama,harga,tersedia,track_stok,stok,COALESCE(tenant_id,0) FROM menu WHERE klien_id=? AND aktif=1 ORDER BY nama", kid)
+	rows, err = s.db.Query("SELECT id,kategori_id,nama,harga,harga_modal,tersedia,track_stok,stok,COALESCE(tenant_id,0) FROM menu WHERE klien_id=? AND aktif=1 ORDER BY nama", kid)
 	if err != nil {
 		return nil, err
 	}
 	for rows.Next() {
 		m := &dto.MenuResponse{Varian: []*dto.GrupResponse{}, Resep: []dto.ResepItem{}}
-		if err := rows.Scan(&m.ID, &m.KategoriID, &m.Nama, &m.Harga, &m.Tersedia, &m.TrackStok, &m.Stok, &m.TenantID); err != nil {
+		if err := rows.Scan(&m.ID, &m.KategoriID, &m.Nama, &m.Harga, &m.HargaModal, &m.Tersedia, &m.TrackStok, &m.Stok, &m.TenantID); err != nil {
 			rows.Close()
 			return nil, err
 		}
@@ -217,8 +217,8 @@ func (s *MenuService) save(kid, id int64, req dto.MenuRequest) (int64, error) {
 			return types.BadRequest("Kategori tidak ditemukan")
 		}
 		if id == 0 {
-			res, err := tx.Exec("INSERT INTO menu (klien_id,kategori_id,nama,harga,tersedia,track_stok,stok,tenant_id) VALUES (?,?,?,?,?,?,?,?)",
-				kid, req.KategoriID, req.Nama, req.Harga, req.Tersedia, req.TrackStok, req.Stok, req.TenantID)
+			res, err := tx.Exec("INSERT INTO menu (klien_id,kategori_id,nama,harga,harga_modal,tersedia,track_stok,stok,tenant_id) VALUES (?,?,?,?,?,?,?,?,?)",
+				kid, req.KategoriID, req.Nama, req.Harga, req.HargaModal, req.Tersedia, req.TrackStok, req.Stok, req.TenantID)
 			if err != nil {
 				return err
 			}
@@ -230,8 +230,8 @@ func (s *MenuService) save(kid, id int64, req dto.MenuRequest) (int64, error) {
 			if tx.QueryRow("SELECT aktif FROM menu WHERE id=? AND klien_id=? FOR UPDATE", id, kid).Scan(&aktif) != nil || !aktif {
 				return types.NotFound("Menu")
 			}
-			if _, err := tx.Exec("UPDATE menu SET kategori_id=?,nama=?,harga=?,tersedia=?,track_stok=?,stok=?,tenant_id=? WHERE id=? AND klien_id=?",
-				req.KategoriID, req.Nama, req.Harga, req.Tersedia, req.TrackStok, req.Stok, req.TenantID, id, kid); err != nil {
+			if _, err := tx.Exec("UPDATE menu SET kategori_id=?,nama=?,harga=?,harga_modal=?,tersedia=?,track_stok=?,stok=?,tenant_id=? WHERE id=? AND klien_id=?",
+				req.KategoriID, req.Nama, req.Harga, req.HargaModal, req.Tersedia, req.TrackStok, req.Stok, req.TenantID, id, kid); err != nil {
 				return err
 			}
 			// item pesanan menyalin nama dan harga opsi, jadi varian aman diganti total

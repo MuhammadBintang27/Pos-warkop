@@ -58,7 +58,7 @@ function hapusKat(k) {
 function bukaMenu(m) {
   form.value = m
     ? {
-        id: m.id, tenantId: m.tenantId, kategoriId: m.kategoriId, nama: m.nama, harga: m.harga, tersedia: m.tersedia, trackStok: m.trackStok, stok: m.stok,
+        id: m.id, tenantId: m.tenantId, kategoriId: m.kategoriId, nama: m.nama, harga: m.harga, hargaModal: m.hargaModal, tersedia: m.tersedia, trackStok: m.trackStok, stok: m.stok,
         resep: m.resep.map((r) => ({ bahanId: r.bahanId, jumlah: r.jumlah })),
         varian: m.varian.map((g) => ({
           nama: g.nama, wajib: g.wajib, multi: g.multi, gantiHarga: g.gantiHarga,
@@ -68,7 +68,7 @@ function bukaMenu(m) {
     : {
         tenantId: tenant.value[0]?.id ?? null,
         kategoriId: aktif.value || kategori.value[0]?.id || null,
-        nama: '', harga: 0, tersedia: true, trackStok: false, stok: 0, varian: [], resep: [],
+        nama: '', harga: 0, hargaModal: 0, tersedia: true, trackStok: false, stok: 0, varian: [], resep: [],
       }
 }
 
@@ -86,6 +86,7 @@ async function simpanMenu() {
     ...f,
     nama: f.nama.trim(),
     harga: f.harga || 0,
+    hargaModal: f.hargaModal || 0,
     stok: f.trackStok ? f.stok || 0 : 0,
     resep: f.resep.filter((r) => r.bahanId && r.jumlah > 0),
     varian: f.varian
@@ -218,6 +219,11 @@ onMounted(() => run(muat))
           <Button icon="pi pi-times" text severity="secondary" aria-label="Hapus bahan" @click="form.resep.splice(ri, 1)" />
         </div>
         <Button label="Tambah bahan ke resep" icon="pi pi-plus" severity="secondary" outlined :disabled="!bahan.length" @click="form.resep.push({ bahanId: null, jumlah: null })" />
+        <template v-if="!form.resep.some((r) => r.bahanId && r.jumlah > 0)">
+          <label>Harga modal per porsi</label>
+          <MoneyInput v-model="form.hargaModal" />
+          <small class="hasil">Untuk barang jadi tanpa resep (rokok, kerupuk, minuman botol): harga beli per item, dipakai sebagai HPP di laba rugi.</small>
+        </template>
 
         <h4>Varian</h4>
         <small class="hasil">
