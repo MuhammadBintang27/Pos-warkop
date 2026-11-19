@@ -19,5 +19,8 @@ WORKDIR /app
 COPY --from=api /warkop /superadmin ./
 COPY --from=web /src/dist ./dist
 ENV APP_ENV=production PORT=8080 STATIC_DIR=/app/dist TZ_NAME=Asia/Jakarta
+# diisi workflow GitHub dengan commit SHA; tampil di /health
+ARG VERSI=dev
+ENV VERSI=$VERSI
 EXPOSE 8080
 CMD ["./warkop"]

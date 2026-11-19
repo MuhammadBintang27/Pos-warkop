@@ -2,6 +2,7 @@ package app
 
 import (
 	"database/sql"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -44,7 +45,7 @@ func New(db *sql.DB) *App {
 	f.Use(helmet.New(helmet.Config{ContentSecurityPolicy: ""}))
 
 	f.Get("/health", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{"status": "ok"})
+		return c.JSON(fiber.Map{"status": "ok", "versi": os.Getenv("VERSI")}) // commit yang sedang jalan, untuk cek hasil deploy
 	})
 
 	loginLimiter := limiter.New(limiter.Config{
