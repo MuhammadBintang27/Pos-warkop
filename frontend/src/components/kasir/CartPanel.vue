@@ -181,6 +181,7 @@ async function kirim() {
           :max-fraction-digits="0"
           :min="0"
           :disabled="!p"
+          size="small"
           @blur="simpanDiskon"
         />
       </div>
@@ -191,6 +192,7 @@ async function kirim() {
         :severity="auth.isKasir ? 'secondary' : undefined"
         :variant="auth.isKasir ? 'outlined' : undefined"
         :disabled="!belumKirim"
+        size="small"
         fluid
         @click="kirim"
       />
@@ -273,7 +275,7 @@ async function kirim() {
   grid-template-columns: minmax(0, 1fr) auto auto auto;
   align-items: center;
   gap: 8px;
-  padding: 7px 12px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--p-content-border-color);
 }
 .bills {
@@ -387,8 +389,8 @@ async function kirim() {
 .foot {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 14px;
+  gap: 6px;
+  padding: 10px 12px;
   border-top: 1px solid var(--p-content-border-color);
   background: color-mix(in srgb, var(--p-primary-color) 4%, var(--p-content-background));
 }
@@ -406,9 +408,9 @@ async function kirim() {
   text-align: right;
 }
 .total {
-  padding-top: 8px;
+  padding-top: 6px;
   border-top: 1px solid var(--p-content-border-color);
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   color: var(--accent-text);
   font-weight: 700;
 }
