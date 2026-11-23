@@ -72,8 +72,12 @@ async function simpanBon() {
   }
 }
 
-const bukaSlip = (k) =>
-  (slip.value = { k, rentang: [awalBulan(), akhirBulan()], hari: k.jenis === 'harian' ? 26 : 0, tunjangan: 0, bonus: 0, potongan: 0, potonganBon: 0, catatan: '' })
+const bukaSlip = (k) => {
+  const hari = k.jenis === 'harian' ? 26 : 0
+  // bon langsung diusulkan dipotong penuh, dibatasi gaji pokok agar netto tidak minus
+  const potonganBon = Math.min(k.saldoBon, k.jenis === 'harian' ? k.gaji * hari : k.gaji)
+  slip.value = { k, rentang: [awalBulan(), akhirBulan()], hari, tunjangan: 0, bonus: 0, potongan: 0, potonganBon, catatan: '' }
+}
 
 const hitung = computed(() => {
   const s = slip.value
