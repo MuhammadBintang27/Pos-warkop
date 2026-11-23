@@ -53,6 +53,7 @@ type itemBaru struct {
 	menuID, tenantID    int64
 	nama, opsi, catatan string
 	harga, qty, modal   int
+	komisi              int          // salinan menu.komisi per porsi
 	bahan               []bahanPakai // takaran per porsi, disalin ke baris baru
 }
 
@@ -217,14 +218,14 @@ func (s *PesananService) AddItem(kid, id int64, req dto.AddItemRequest) (*dto.Pe
 			return err
 		}
 		var nama string
-		var harga, modal int
+		var harga, modal, komisi int
 		var tersedia, aktif bool
 		var tenantID int64
 		var tenantBuka bool
 		var tenantNama string
-		if tx.QueryRow(`SELECT m.nama,m.harga,m.harga_modal,m.tersedia,m.aktif,COALESCE(m.tenant_id,0),COALESCE(t.buka,1),COALESCE(t.nama,'')
+		if tx.QueryRow(`SELECT m.nama,m.harga,m.harga_modal,m.komisi,m.tersedia,m.aktif,COALESCE(m.tenant_id,0),COALESCE(t.buka,1),COALESCE(t.nama,'')
 			FROM menu m LEFT JOIN tenant t ON t.id=m.tenant_id WHERE m.id=? AND m.klien_id=?`, req.MenuID, kid).
-			Scan(&nama, &harga, &modal, &tersedia, &aktif, &tenantID, &tenantBuka, &tenantNama) != nil || !aktif {
+			Scan(&nama, &harga, &modal, &komisi, &tersedia, &aktif, &tenantID, &tenantBuka, &tenantNama) != nil || !aktif {
 			return types.NotFound("Menu")
 		}
 		if !tenantBuka {
@@ -248,7 +249,7 @@ func (s *PesananService) AddItem(kid, id int64, req dto.AddItemRequest) (*dto.Pe
 			modal = 0 // menu beresep: HPP dari bahan, bukan harga modal
 		}
 		itemID, err := sisipItem(tx, kid, id, itemBaru{
-			menuID: req.MenuID, tenantID: tenantID, nama: nama, harga: hargaJadi, qty: req.Qty, modal: modal,
+			menuID: req.MenuID, tenantID: tenantID, nama: nama, harga: hargaJadi, qty: req.Qty, modal: modal, komisi: komisi,
 			opsi: opsiNama, catatan: strings.TrimSpace(req.Catatan), bahan: bahan,
 		})
 		if err != nil {
@@ -268,8 +269,8 @@ func sisipItem(tx *sql.Tx, kid, pesananID int64, it itemBaru) (int64, error) {
 	var itemID int64
 	var qtyAda int
 	err := tx.QueryRow(`SELECT id,qty FROM pesanan_item
-		WHERE klien_id=? AND pesanan_id=? AND menu_id=? AND harga=? AND opsi=? AND catatan=? AND dikirim=0 LIMIT 1 FOR UPDATE`,
-		kid, pesananID, it.menuID, it.harga, it.opsi, it.catatan).Scan(&itemID, &qtyAda)
+		WHERE klien_id=? AND pesanan_id=? AND menu_id=? AND harga=? AND komisi=? AND opsi=? AND catatan=? AND dikirim=0 LIMIT 1 FOR UPDATE`,
+		kid, pesananID, it.menuID, it.harga, it.komisi, it.opsi, it.catatan).Scan(&itemID, &qtyAda)
 	switch {
 	case err == nil:
 		if qtyAda+it.qty > 99 {
@@ -278,8 +279,8 @@ func sisipItem(tx *sql.Tx, kid, pesananID int64, it itemBaru) (int64, error) {
 		_, err = tx.Exec("UPDATE pesanan_item SET qty=qty+? WHERE id=? AND klien_id=?", it.qty, itemID, kid)
 	case err == sql.ErrNoRows:
 		var res sql.Result
-		res, err = tx.Exec("INSERT INTO pesanan_item (klien_id,pesanan_id,menu_id,nama,harga,qty,modal,opsi,catatan,tenant_id) VALUES (?,?,?,?,?,?,?,?,?,?)",
-			kid, pesananID, it.menuID, it.nama, it.harga, it.qty, it.modal, it.opsi, it.catatan, it.tenantID)
+		res, err = tx.Exec("INSERT INTO pesanan_item (klien_id,pesanan_id,menu_id,nama,harga,qty,modal,komisi,opsi,catatan,tenant_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+			kid, pesananID, it.menuID, it.nama, it.harga, it.qty, it.modal, it.komisi, it.opsi, it.catatan, it.tenantID)
 		if err == nil {
 			if itemID, err = res.LastInsertId(); err == nil {
 				err = simpanSnapshot(tx, kid, itemID, it.bahan)
@@ -785,8 +786,8 @@ func (s *PesananService) Pisah(actor *utils.JWTPayload, id int64, req dto.PisahR
 			} else if _, err = tx.Exec("UPDATE pesanan_item SET qty=qty-? WHERE id=? AND klien_id=?", x.Qty, x.ItemID, kid); err == nil {
 				var res sql.Result
 				// salin dari baris asal supaya status kirim/siap tenant ikut terbawa
-				res, err = tx.Exec(`INSERT INTO pesanan_item (klien_id,pesanan_id,menu_id,nama,harga,qty,modal,opsi,catatan,dikirim,tenant_id,siap_at,dikirim_at,dikirim_oleh)
-					SELECT klien_id,?,menu_id,nama,harga,?,modal,opsi,catatan,dikirim,tenant_id,siap_at,dikirim_at,dikirim_oleh FROM pesanan_item WHERE id=? AND klien_id=?`,
+				res, err = tx.Exec(`INSERT INTO pesanan_item (klien_id,pesanan_id,menu_id,nama,harga,qty,modal,komisi,opsi,catatan,dikirim,tenant_id,siap_at,dikirim_at,dikirim_oleh)
+					SELECT klien_id,?,menu_id,nama,harga,?,modal,komisi,opsi,catatan,dikirim,tenant_id,siap_at,dikirim_at,dikirim_oleh FROM pesanan_item WHERE id=? AND klien_id=?`,
 					newID, x.Qty, x.ItemID, kid)
 				if err == nil {
 					var baruID int64

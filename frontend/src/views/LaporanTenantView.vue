@@ -6,7 +6,7 @@ import { useToast } from 'primevue/usetoast'
 import { del, errMsg, get, post } from '@/api/http'
 import { useRun } from '@/composables/useRun'
 import { konfirmasi } from '@/utils/confirm'
-import { hari, rp, tgl, ymd } from '@/utils/format'
+import { hari, labelKomisi, rp, tgl, ymd } from '@/utils/format'
 import { cetakRekapTenant } from '@/utils/cetak'
 import { usePengaturanStore } from '@/stores/pengaturan'
 
@@ -79,6 +79,7 @@ const cetakRekap = () =>
         sampai: ymd(sampai),
         milikSendiri: !!t.milikSendiri,
         komisiPersen: t.komisiPersen,
+        komisiPerMenu: !!t.komisiPerMenu,
         hari: barisPeriode.value.map((b) => ({
           tanggal: b.tanggal, transaksi: b.transaksi, kotor: b.kotor, diskon: b.diskon, komisi: b.komisi, setor: b.setor, status: b.status,
         })),
@@ -285,7 +286,7 @@ const { cari: cariBaris, hasil: barisTampil } = useCari(baris, 'nama', 'tanggal'
                 <Column header="Komisi">
                   <template #body="{ data: b }">
                     <small v-if="b.milikSendiri" class="redup">milik sendiri</small>
-                    <template v-else>{{ rp(b.komisi) }} <small class="redup">({{ b.komisiPersen }}%)</small></template>
+                    <template v-else>{{ rp(b.komisi) }} <small class="redup">({{ labelKomisi(b) }})</small></template>
                   </template>
                 </Column>
                 <Column header="Setor ke tenant">

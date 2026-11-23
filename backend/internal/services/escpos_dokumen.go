@@ -195,7 +195,7 @@ func escposClosing(p dto.ClosingPayload, lebarMM int) []byte {
 		w.tebal(true)
 		w.kolom("PENDAPATAN PEMILIK", rupiah(p.Komisi))
 	} else {
-		w.kolom("Komisi "+strconv.FormatFloat(p.KomisiPersen, 'f', -1, 64)+"%", "-"+rupiah(p.Komisi))
+		w.kolom(labelKomisi(p.KomisiPersen, p.KomisiPerMenu), "-"+rupiah(p.Komisi))
 		w.tebal(true)
 		w.kolom("SETOR TENANT", rupiah(p.Setor))
 	}
@@ -232,6 +232,13 @@ func escposClosing(p dto.ClosingPayload, lebarMM int) []byte {
 	return w.akhir()
 }
 
+func labelKomisi(persen float64, perMenu bool) string {
+	if perMenu {
+		return "Komisi per menu"
+	}
+	return "Komisi " + strconv.FormatFloat(persen, 'f', -1, 64) + "%"
+}
+
 // escposRekapTenant: struk bukti setor satu periode, satu baris per hari plus total; ditandatangani tenant dan pemilik.
 func escposRekapTenant(p dto.RekapTenantPayload, lebarMM int) []byte {
 	w := barisPenulis(lebarMM)
@@ -266,7 +273,7 @@ func escposRekapTenant(p dto.RekapTenantPayload, lebarMM int) []byte {
 		w.kolom("PENDAPATAN", rupiah(komisi))
 	} else {
 		w.tebal(false)
-		w.kolom("Komisi "+strconv.FormatFloat(p.KomisiPersen, 'f', -1, 64)+"%", "-"+rupiah(komisi))
+		w.kolom(labelKomisi(p.KomisiPersen, p.KomisiPerMenu), "-"+rupiah(komisi))
 		w.tebal(true)
 		w.kolom("SETOR TENANT", rupiah(setor))
 	}

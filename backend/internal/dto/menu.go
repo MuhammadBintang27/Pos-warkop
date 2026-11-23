@@ -25,6 +25,7 @@ type MenuRequest struct {
 	Nama       string        `json:"nama" validate:"required,max=100"`
 	Harga      int           `json:"harga" validate:"gte=0"`
 	HargaModal int           `json:"hargaModal" validate:"gte=0"`
+	Komisi     int           `json:"komisi" validate:"gte=0"` // Rp per porsi untuk pemilik tempat, hanya dipakai tenant komisi per menu
 	Tersedia   bool          `json:"tersedia"`
 	TrackStok  bool          `json:"trackStok"`
 	Stok       int           `json:"stok" validate:"gte=0"`
@@ -61,6 +62,7 @@ type MenuResponse struct {
 	Nama       string          `json:"nama"`
 	Harga      int             `json:"harga"`
 	HargaModal int             `json:"hargaModal"`
+	Komisi     int             `json:"komisi"`
 	Tersedia   bool            `json:"tersedia"`
 	TrackStok  bool            `json:"trackStok"`
 	Stok       int             `json:"stok"`

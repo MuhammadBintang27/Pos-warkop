@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { get } from '@/api/http'
 import { useRun } from '@/composables/useRun'
-import { hari, rp, ymd } from '@/utils/format'
+import { hari, labelKomisi, rp, ymd } from '@/utils/format'
 
 const STATUS = {
   belum: { label: 'Belum closing', severity: 'secondary' },
@@ -60,7 +60,7 @@ onMounted(() => run(muat))
         <Column field="transaksi" header="Bill" />
         <Column header="Penjualan"><template #body="{ data: b }">{{ rp(b.kotor) }}</template></Column>
         <Column header="Diskon"><template #body="{ data: b }">{{ rp(b.diskon) }}</template></Column>
-        <Column header="Komisi"><template #body="{ data: b }">{{ rp(b.komisi) }} <small class="redup">({{ b.komisiPersen }}%)</small></template></Column>
+        <Column header="Komisi"><template #body="{ data: b }">{{ rp(b.komisi) }} <small class="redup">({{ labelKomisi(b) }})</small></template></Column>
         <Column header="Bagian Anda"><template #body="{ data: b }">{{ rp(b.setor) }}</template></Column>
         <Column header="Status">
           <template #body="{ data: b }"><Tag :value="STATUS[b.status]?.label ?? b.status" :severity="STATUS[b.status]?.severity" /></template>

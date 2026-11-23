@@ -70,6 +70,10 @@ func TestEscposClosingTenantDanMilikSendiri(t *testing.T) {
 			t.Errorf("closing tenant tidak memuat %q", want)
 		}
 	}
+	p.KomisiPerMenu = true
+	if b = escposClosing(p, 58); !bytes.Contains(b, []byte("Komisi per menu")) {
+		t.Error("closing tenant komisi per menu harus berlabel Komisi per menu")
+	}
 	p.MilikSendiri = true
 	b = escposClosing(p, 58)
 	if !bytes.Contains(b, []byte("PENDAPATAN PEMILIK")) || bytes.Contains(b, []byte("SETOR TENANT")) || bytes.Contains(b, []byte("(_________)")) {

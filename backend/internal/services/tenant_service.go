@@ -5,6 +5,7 @@ import (
 
 	"warkop/internal/dto"
 	"warkop/internal/types"
+	"warkop/internal/utils"
 )
 
 type TenantService struct {
@@ -17,7 +18,7 @@ func NewTenantService(db *sql.DB, hub *EventHub) *TenantService {
 }
 
 func (s *TenantService) List(kid int64) ([]dto.TenantResponse, error) {
-	rows, err := s.db.Query("SELECT id,nama,komisi_persen,buka,milik_sendiri,printer_id FROM tenant WHERE klien_id=? AND aktif=1 ORDER BY id", kid)
+	rows, err := s.db.Query("SELECT id,nama,komisi_persen,komisi_per_menu,buka,milik_sendiri,printer_id FROM tenant WHERE klien_id=? AND aktif=1 ORDER BY id", kid)
 	if err != nil {
 		return nil, err
 	}
@@ -25,7 +26,7 @@ func (s *TenantService) List(kid int64) ([]dto.TenantResponse, error) {
 	out := []dto.TenantResponse{}
 	for rows.Next() {
 		var t dto.TenantResponse
-		if err := rows.Scan(&t.ID, &t.Nama, &t.KomisiPersen, &t.Buka, &t.MilikSendiri, &t.PrinterID); err != nil {
+		if err := rows.Scan(&t.ID, &t.Nama, &t.KomisiPersen, &t.KomisiPerMenu, &t.Buka, &t.MilikSendiri, &t.PrinterID); err != nil {
 			return nil, err
 		}
 		out = append(out, t)
@@ -39,6 +40,11 @@ func komisiEfektif(req dto.TenantRequest) float64 {
 		return 100
 	}
 	return req.KomisiPersen
+}
+
+// perMenuEfektif: dapur milik sendiri tidak memakai komisi per menu karena seluruh penjualannya milik pemilik tempat.
+func perMenuEfektif(req dto.TenantRequest) bool {
+	return req.KomisiPerMenu && !req.MilikSendiri
 }
 
 func (s *TenantService) cekPrinter(kid int64, id *int64) error {
@@ -56,8 +62,8 @@ func (s *TenantService) Create(kid int64, req dto.TenantRequest) error {
 	if err := s.cekPrinter(kid, req.PrinterID); err != nil {
 		return err
 	}
-	if _, err := s.db.Exec("INSERT INTO tenant (klien_id,nama,komisi_persen,milik_sendiri,printer_id) VALUES (?,?,?,?,?)",
-		kid, req.Nama, komisiEfektif(req), req.MilikSendiri, req.PrinterID); err != nil {
+	if _, err := s.db.Exec("INSERT INTO tenant (klien_id,nama,komisi_persen,komisi_per_menu,milik_sendiri,printer_id) VALUES (?,?,?,?,?,?)",
+		kid, req.Nama, komisiEfektif(req), perMenuEfektif(req), req.MilikSendiri, req.PrinterID); err != nil {
 		return err
 	}
 	s.hub.Publish(kid, "menu")
@@ -68,13 +74,25 @@ func (s *TenantService) Update(kid, id int64, req dto.TenantRequest) error {
 	if err := s.cekPrinter(kid, req.PrinterID); err != nil {
 		return err
 	}
-	if _, err := s.db.Exec("UPDATE tenant SET nama=?, komisi_persen=?, milik_sendiri=?, printer_id=? WHERE id=? AND klien_id=? AND aktif=1",
-		req.Nama, komisiEfektif(req), req.MilikSendiri, req.PrinterID, id, kid); err != nil {
+	err := utils.WithTx(s.db, func(tx *sql.Tx) error {
+		var ada int
+		if tx.QueryRow("SELECT 1 FROM tenant WHERE id=? AND klien_id=? AND aktif=1 FOR UPDATE", id, kid).Scan(&ada) != nil {
+			return types.NotFound("Tenant")
+		}
+		if _, err := tx.Exec("UPDATE tenant SET nama=?, komisi_persen=?, komisi_per_menu=?, milik_sendiri=?, printer_id=? WHERE id=? AND klien_id=?",
+			req.Nama, komisiEfektif(req), perMenuEfektif(req), req.MilikSendiri, req.PrinterID, id, kid); err != nil {
+			return err
+		}
+		// tarif disimpan walau tenant kembali ke persen, supaya tidak perlu diisi ulang bila dipindah lagi ke per menu
+		for _, m := range req.KomisiMenu {
+			if _, err := tx.Exec("UPDATE menu SET komisi=? WHERE id=? AND klien_id=? AND tenant_id=?", m.Komisi, m.MenuID, kid, id); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
 		return err
-	}
-	var ada int
-	if s.db.QueryRow("SELECT 1 FROM tenant WHERE id=? AND klien_id=? AND aktif=1", id, kid).Scan(&ada) != nil {
-		return types.NotFound("Tenant")
 	}
 	s.hub.Publish(kid, "menu")
 	return nil

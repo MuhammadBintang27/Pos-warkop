@@ -42,10 +42,15 @@ func parseRange(dari, sampai string, now time.Time) (from, to time.Time, err err
 	return d, e.AddDate(0, 0, 1), nil
 }
 
-// hitungSetoran: komisi dihitung dari penjualan setelah diskon; sisanya disetor ke tenant.
-func hitungSetoran(kotor, diskon int, persen float64) (komisi, setor int) {
+// hitungSetoran: komisi persen dihitung dari penjualan setelah diskon. Komisi per menu = jumlah Rp per porsi (komisiMenu),
+// diskon ditanggung tenant, dan dibatasi sebesar penjualan setelah diskon supaya setoran tidak minus. Sisanya disetor ke tenant.
+func hitungSetoran(kotor, diskon, komisiMenu int, persen float64, perMenu bool) (komisi, setor int) {
 	dasar := kotor - diskon
-	komisi = int(math.Round(float64(dasar) * persen / 100))
+	if perMenu {
+		komisi = max(min(komisiMenu, dasar), 0)
+	} else {
+		komisi = int(math.Round(float64(dasar) * persen / 100))
+	}
 	return komisi, dasar - komisi
 }
 
@@ -57,9 +62,9 @@ func (s *LaporanService) Tenant(kid int64, dari, sampai string) (*dto.SetoranRes
 		return nil, err
 	}
 
-	type jumlah struct{ kotor, diskon int }
+	type jumlah struct{ kotor, diskon, komisi int }
 	totals := map[int64]jumlah{}
-	rows, err := s.db.Query(`SELECT COALESCE(i.tenant_id,0), SUM(i.harga*i.qty), COALESCE(SUM(ROUND(p.diskon*(i.harga*i.qty)/ps.sub)),0)
+	rows, err := s.db.Query(`SELECT COALESCE(i.tenant_id,0), SUM(i.harga*i.qty), COALESCE(SUM(ROUND(p.diskon*(i.harga*i.qty)/ps.sub)),0), SUM(i.komisi*i.qty)
 		FROM pesanan_item i
 		JOIN pesanan p ON p.id=i.pesanan_id AND p.klien_id=? AND p.status='lunas'
 		JOIN shift sh ON sh.id=p.shift_id AND sh.buka_at>=? AND sh.buka_at<?
@@ -71,7 +76,7 @@ func (s *LaporanService) Tenant(kid int64, dari, sampai string) (*dto.SetoranRes
 	for rows.Next() {
 		var id int64
 		var j jumlah
-		if err := rows.Scan(&id, &j.kotor, &j.diskon); err != nil {
+		if err := rows.Scan(&id, &j.kotor, &j.diskon, &j.komisi); err != nil {
 			rows.Close()
 			return nil, err
 		}
@@ -80,7 +85,7 @@ func (s *LaporanService) Tenant(kid int64, dari, sampai string) (*dto.SetoranRes
 	rows.Close()
 
 	out := &dto.SetoranResponse{Dari: from.Format(dateLayout), Sampai: to.AddDate(0, 0, -1).Format(dateLayout), Tenant: []dto.SetoranTenant{}}
-	rows, err = s.db.Query("SELECT id,nama,komisi_persen,aktif FROM tenant WHERE klien_id=? ORDER BY id", kid)
+	rows, err = s.db.Query("SELECT id,nama,komisi_persen,komisi_per_menu,aktif FROM tenant WHERE klien_id=? ORDER BY id", kid)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +93,7 @@ func (s *LaporanService) Tenant(kid int64, dari, sampai string) (*dto.SetoranRes
 	for rows.Next() {
 		var t dto.SetoranTenant
 		var aktif bool
-		if err := rows.Scan(&t.ID, &t.Nama, &t.KomisiPersen, &aktif); err != nil {
+		if err := rows.Scan(&t.ID, &t.Nama, &t.KomisiPersen, &t.KomisiPerMenu, &aktif); err != nil {
 			return nil, err
 		}
 		j := totals[t.ID]
@@ -96,7 +101,7 @@ func (s *LaporanService) Tenant(kid int64, dari, sampai string) (*dto.SetoranRes
 			continue
 		}
 		t.Kotor, t.Diskon = j.kotor, j.diskon
-		t.Komisi, t.Setor = hitungSetoran(t.Kotor, t.Diskon, t.KomisiPersen)
+		t.Komisi, t.Setor = hitungSetoran(t.Kotor, t.Diskon, j.komisi, t.KomisiPersen, t.KomisiPerMenu)
 		out.Tenant = append(out.Tenant, t)
 	}
 	return out, rows.Err()

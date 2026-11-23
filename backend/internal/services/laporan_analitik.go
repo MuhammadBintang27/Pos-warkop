@@ -112,8 +112,8 @@ func (s *LaporanService) tren(kid int64, from, to time.Time) ([]dto.TrenHari, er
 		return nil, err
 	}
 	// pendapatan per hari per tenant: milik sendiri penuh, tenant lain hanya komisinya (rumus Laba Rugi)
-	rows, err := s.db.Query(`SELECT DATE(sh.buka_at), COALESCE(t.komisi_persen,100), COALESCE(t.milik_sendiri,1), SUM(i.harga*i.qty),
-		COALESCE(SUM(ROUND(p.diskon*(i.harga*i.qty)/ps.sub)),0) `+itemLunasSQL+`
+	rows, err := s.db.Query(`SELECT DATE(sh.buka_at), COALESCE(t.komisi_persen,100), COALESCE(t.komisi_per_menu,0), COALESCE(t.milik_sendiri,1), SUM(i.harga*i.qty),
+		COALESCE(SUM(ROUND(p.diskon*(i.harga*i.qty)/ps.sub)),0), SUM(i.komisi*i.qty) `+itemLunasSQL+`
 		JOIN (SELECT pesanan_id, SUM(harga*qty) AS sub FROM pesanan_item WHERE klien_id=? GROUP BY pesanan_id) ps ON ps.pesanan_id=p.id AND ps.sub>0
 		GROUP BY DATE(sh.buka_at), i.tenant_id`, kid, from, to, kid)
 	if err != nil {
@@ -123,13 +123,13 @@ func (s *LaporanService) tren(kid int64, from, to time.Time) ([]dto.TrenHari, er
 	for rows.Next() {
 		var tgl time.Time
 		var persen float64
-		var sendiri bool
-		var kotor, diskon int
-		if err := rows.Scan(&tgl, &persen, &sendiri, &kotor, &diskon); err != nil {
+		var sendiri, perMenu bool
+		var kotor, diskon, komisiMenu int
+		if err := rows.Scan(&tgl, &persen, &perMenu, &sendiri, &kotor, &diskon, &komisiMenu); err != nil {
 			rows.Close()
 			return nil, err
 		}
-		komisi, _ := hitungSetoran(kotor, diskon, persen) // sama persis dengan LabaRugi, termasuk tenant milik sendiri
+		komisi, _ := hitungSetoran(kotor, diskon, komisiMenu, persen, perMenu) // sama persis dengan LabaRugi, termasuk tenant milik sendiri
 		pendapatan[tgl.Format(dateLayout)] += komisi
 	}
 	rows.Close()

@@ -4,7 +4,7 @@ import { useCari } from '@/composables/useCari'
 import { useRoute } from 'vue-router'
 import { get } from '@/api/http'
 import { useRun } from '@/composables/useRun'
-import { hari, rp, tgl, ymd } from '@/utils/format'
+import { hari, labelKomisi, rp, tgl, ymd } from '@/utils/format'
 import { unduhExcel } from '@/utils/ekspor'
 
 const run = useRun()
@@ -273,8 +273,8 @@ async function excel() {
         },
         {
           nama: 'Setoran tenant',
-          kolom: [{ header: 'Tenant', key: 'nama', lebar: 22 }, uang('Penjualan', 'kotor'), uang('Diskon', 'diskon'), { header: 'Komisi %', key: 'komisiPersen' }, uang('Komisi', 'komisi'), uang('Setor', 'setor')],
-          baris: setoran.value?.tenant ?? [],
+          kolom: [{ header: 'Tenant', key: 'nama', lebar: 22 }, uang('Penjualan', 'kotor'), uang('Diskon', 'diskon'), { header: 'Tarif komisi', key: 'tarif' }, uang('Komisi', 'komisi'), uang('Setor', 'setor')],
+          baris: (setoran.value?.tenant ?? []).map((t) => ({ ...t, tarif: labelKomisi(t) })),
         },
       ]),
     'Excel diunduh',
@@ -361,7 +361,7 @@ const { cari: cariStok, hasil: stokTampil } = useCari(computed(() => an.value.st
             <Column header="Penjualan"><template #body="{ data: t }">{{ rp(t.kotor) }}</template></Column>
             <Column header="Diskon"><template #body="{ data: t }">{{ rp(t.diskon) }}</template></Column>
             <Column header="Komisi">
-              <template #body="{ data: t }">{{ rp(t.komisi) }} <small class="none">({{ t.komisiPersen }}%)</small></template>
+              <template #body="{ data: t }">{{ rp(t.komisi) }} <small class="none">({{ labelKomisi(t) }})</small></template>
             </Column>
             <Column header="Setor ke tenant"><template #body="{ data: t }"><strong>{{ rp(t.setor) }}</strong></template></Column>
           </DataTable>

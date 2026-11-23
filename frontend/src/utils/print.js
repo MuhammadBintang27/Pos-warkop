@@ -1,4 +1,4 @@
-import { rp, tgl } from '@/utils/format'
+import { labelKomisi, rp, tgl } from '@/utils/format'
 
 const CSS = `@page{size:58mm auto;margin:0}
 body{font:12px/1.4 monospace;width:48mm;margin:0 auto;padding:4mm 0;color:#000}
@@ -113,7 +113,7 @@ export function printClosing(b, detail, usaha, tertunda) {
     <div class="r"><span>Diskon</span><span>-${rp(b.diskon)}</span></div>
     ${b.milikSendiri
       ? `<div class="r b"><span>PENDAPATAN PEMILIK</span><span>${rp(b.komisi)}</span></div>`
-      : `<div class="r"><span>Komisi ${b.komisiPersen}%</span><span>-${rp(b.komisi)}</span></div>
+      : `<div class="r"><span>Komisi ${labelKomisi(b)}</span><span>-${rp(b.komisi)}</span></div>
     <div class="r b"><span>SETOR TENANT</span><span>${rp(b.setor)}</span></div>`}
     ${detail?.talangan?.length ? `<div class="sub">Termasuk ${detail.talangan.length} bill belum dibayar pelanggan (${rp(detail.talangan.reduce((s, t) => s + t.kotor, 0))}), ditalangi pemilik</div>` : ''}
     ${detail?.batalQty ? `<div class="sub">Dibatalkan: ${detail.batalQty} porsi (${rp(detail.batalNilai)})</div>` : ''}
@@ -144,7 +144,7 @@ export function printRekapTenant(p, usaha) {
     <div class="r"><span>Diskon</span><span>-${rp(jumlah('diskon'))}</span></div>
     ${p.milikSendiri
       ? `<div class="r b"><span>PENDAPATAN</span><span>${rp(jumlah('komisi'))}</span></div>`
-      : `<div class="r"><span>Komisi ${p.komisiPersen}%</span><span>-${rp(jumlah('komisi'))}</span></div>
+      : `<div class="r"><span>Komisi ${labelKomisi(p)}</span><span>-${rp(jumlah('komisi'))}</span></div>
     <div class="r b"><span>SETOR TENANT</span><span>${rp(jumlah('setor'))}</span></div>`}
     ${belum ? `<div class="sub">* ${belum} hari belum di-closing atau berubah setelah closing; angkanya masih bisa berubah</div>` : ''}<hr>
     <div class="sub">Dicetak ${tgl(new Date())}</div>

@@ -69,7 +69,7 @@ function hapusKat(k) {
 function bukaMenu(m) {
   form.value = m
     ? {
-        id: m.id, tenantId: m.tenantId, kategoriId: m.kategoriId, nama: m.nama, harga: m.harga, hargaModal: m.hargaModal, tersedia: m.tersedia, trackStok: m.trackStok, stok: m.stok,
+        id: m.id, tenantId: m.tenantId, kategoriId: m.kategoriId, nama: m.nama, harga: m.harga, hargaModal: m.hargaModal, komisi: m.komisi, tersedia: m.tersedia, trackStok: m.trackStok, stok: m.stok,
         resep: m.resep.map((r) => ({ bahanId: r.bahanId, jumlah: r.jumlah })),
         varian: m.varian.map((g) => ({
           nama: g.nama, wajib: g.wajib, multi: g.multi, gantiHarga: g.gantiHarga,
@@ -79,7 +79,7 @@ function bukaMenu(m) {
     : {
         tenantId: pilihTenant.value || tenant.value[0]?.id || null,
         kategoriId: aktif.value || kategori.value[0]?.id || null,
-        nama: '', harga: 0, hargaModal: 0, tersedia: true, trackStok: false, stok: 0, varian: [], resep: [],
+        nama: '', harga: 0, hargaModal: 0, komisi: 0, tersedia: true, trackStok: false, stok: 0, varian: [], resep: [],
       }
 }
 
@@ -98,6 +98,7 @@ async function simpanMenu() {
     nama: f.nama.trim(),
     harga: f.harga || 0,
     hargaModal: f.hargaModal || 0,
+    komisi: f.komisi || 0,
     stok: f.trackStok ? f.stok || 0 : 0,
     resep: f.resep.filter((r) => r.bahanId && r.jumlah > 0),
     varian: f.varian
@@ -225,6 +226,12 @@ onMounted(() => run(muat))
         <template v-if="form.trackStok">
           <label for="stok">Stok saat ini</label>
           <InputNumber id="stok" v-model="form.stok" :min="0" fluid />
+        </template>
+
+        <template v-if="tenant.find((t) => t.id === form.tenantId)?.komisiPerMenu">
+          <label>Komisi pemilik tempat per porsi</label>
+          <MoneyInput v-model="form.komisi" />
+          <small class="hasil">Tenant ini memakai komisi rupiah per menu. Bisa juga diatur sekaligus di halaman Tenant.</small>
         </template>
 
         <h4>Resep</h4>

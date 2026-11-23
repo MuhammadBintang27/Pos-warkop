@@ -3,7 +3,7 @@ import { ref, watch } from 'vue'
 import { get } from '@/api/http'
 import { useRun } from '@/composables/useRun'
 import { usePengaturanStore } from '@/stores/pengaturan'
-import { rp, tgl } from '@/utils/format'
+import { labelKomisi, rp, tgl } from '@/utils/format'
 import { cetakClosing } from '@/utils/cetak'
 
 const STATUS = {
@@ -54,7 +54,7 @@ watch(visible, (v) => {
       <div class="row"><span>Diskon</span><span>-{{ rp(baris.diskon) }}</span></div>
       <div v-if="baris.milikSendiri" class="row total"><span>Pendapatan pemilik</span><strong>{{ rp(baris.komisi) }}</strong></div>
       <template v-else>
-        <div class="row"><span>Komisi {{ baris.komisiPersen }}%</span><span>-{{ rp(baris.komisi) }}</span></div>
+        <div class="row"><span>Komisi {{ labelKomisi(baris) }}</span><span>-{{ rp(baris.komisi) }}</span></div>
         <div class="row total"><span>Setor ke tenant</span><strong>{{ rp(baris.setor) }}</strong></div>
       </template>
       <div v-if="detail?.talangan?.length" class="talangan">

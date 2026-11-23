@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS tenant (
   klien_id BIGINT NOT NULL,
   nama VARCHAR(100) NOT NULL,
   komisi_persen DECIMAL(5,2) NOT NULL DEFAULT 0,  -- bagian pemilik tempat dari penjualan tenant
+  komisi_per_menu TINYINT(1) NOT NULL DEFAULT 0,  -- 1: komisi = menu.komisi (Rp per porsi), komisi_persen diabaikan
   buka TINYINT(1) NOT NULL DEFAULT 1,             -- tenant tutup: semua menunya tidak bisa dipesan
   milik_sendiri TINYINT(1) NOT NULL DEFAULT 0,    -- milik pemilik tempat: komisi 100%, tidak ada setoran
   printer_id BIGINT NULL,                         -- printer tiket dapur tenant ini
@@ -55,6 +56,7 @@ CREATE TABLE IF NOT EXISTS menu (
   nama VARCHAR(100) NOT NULL,
   harga INT NOT NULL,
   harga_modal INT NOT NULL DEFAULT 0,  -- HPP per porsi untuk menu tanpa resep (barang jadi: rokok, kerupuk)
+  komisi INT NOT NULL DEFAULT 0,       -- Rp per porsi untuk pemilik tempat, dipakai bila tenant komisi_per_menu
   tersedia TINYINT(1) NOT NULL DEFAULT 1,
   track_stok TINYINT(1) NOT NULL DEFAULT 0,
   stok INT NOT NULL DEFAULT 0,
@@ -157,6 +159,7 @@ CREATE TABLE IF NOT EXISTS pesanan_item (
   harga INT NOT NULL,            -- harga satuan termasuk tambahan varian, disalin saat dipesan
   qty INT NOT NULL,
   modal INT NOT NULL DEFAULT 0,  -- salinan menu.harga_modal saat dipesan, hanya untuk menu tanpa resep
+  komisi INT NOT NULL DEFAULT 0, -- salinan menu.komisi saat dipesan
   opsi VARCHAR(255) NOT NULL DEFAULT '',
   catatan VARCHAR(255) NOT NULL DEFAULT '',
   dikirim TINYINT(1) NOT NULL DEFAULT 0,
@@ -257,6 +260,7 @@ CREATE TABLE IF NOT EXISTS closing_tenant (
   kotor INT NOT NULL,
   diskon INT NOT NULL,
   komisi_persen DECIMAL(5,2) NOT NULL,
+  komisi_per_menu TINYINT(1) NOT NULL DEFAULT 0,
   komisi INT NOT NULL,
   setor INT NOT NULL,
   dibuat_oleh BIGINT NOT NULL,
@@ -429,6 +433,7 @@ CREATE TABLE IF NOT EXISTS closing_tenant_bill (
   pesanan_id BIGINT NOT NULL,
   kotor INT NOT NULL,
   diskon INT NOT NULL,
+  komisi INT NOT NULL DEFAULT 0, -- jumlah komisi per menu item tenant di bill ini
   INDEX (closing_id),
   FOREIGN KEY (closing_id) REFERENCES closing_tenant(id) ON DELETE CASCADE,
   FOREIGN KEY (pesanan_id) REFERENCES pesanan(id),

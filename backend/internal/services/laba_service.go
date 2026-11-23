@@ -41,8 +41,8 @@ func (s *LabaService) LabaRugi(kid int64, dari, sampai string) (*dto.LabaRugiRes
 	}
 	out := &dto.LabaRugiResponse{Dari: from.Format(dateLayout), Sampai: to.AddDate(0, 0, -1).Format(dateLayout), Pengeluaran: []dto.PengeluaranKategori{}}
 
-	rows, err := s.db.Query(`SELECT COALESCE(t.milik_sendiri,1), COALESCE(t.komisi_persen,100), SUM(i.harga*i.qty),
-		COALESCE(SUM(ROUND(p.diskon*(i.harga*i.qty)/ps.sub)),0)
+	rows, err := s.db.Query(`SELECT COALESCE(t.milik_sendiri,1), COALESCE(t.komisi_persen,100), COALESCE(t.komisi_per_menu,0), SUM(i.harga*i.qty),
+		COALESCE(SUM(ROUND(p.diskon*(i.harga*i.qty)/ps.sub)),0), SUM(i.komisi*i.qty)
 		`+itemLunasSQL+`
 		JOIN (SELECT pesanan_id, SUM(harga*qty) AS sub FROM pesanan_item WHERE klien_id=? GROUP BY pesanan_id) ps ON ps.pesanan_id=p.id AND ps.sub>0
 		GROUP BY i.tenant_id`, kid, from, to, kid)
@@ -50,14 +50,14 @@ func (s *LabaService) LabaRugi(kid int64, dari, sampai string) (*dto.LabaRugiRes
 		return nil, err
 	}
 	for rows.Next() {
-		var sendiri bool
+		var sendiri, perMenu bool
 		var persen float64
-		var kotor, diskon int
-		if err := rows.Scan(&sendiri, &persen, &kotor, &diskon); err != nil {
+		var kotor, diskon, komisiMenu int
+		if err := rows.Scan(&sendiri, &persen, &perMenu, &kotor, &diskon, &komisiMenu); err != nil {
 			rows.Close()
 			return nil, err
 		}
-		komisi, _ := hitungSetoran(kotor, diskon, persen)
+		komisi, _ := hitungSetoran(kotor, diskon, komisiMenu, persen, perMenu)
 		if sendiri {
 			out.PenjualanSendiri += komisi
 		} else {

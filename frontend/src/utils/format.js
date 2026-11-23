@@ -1,5 +1,8 @@
 export const rp = (n) => 'Rp' + Number(n || 0).toLocaleString('id-ID')
 
+// x: tenant atau baris laporan yang memuat komisiPersen dan komisiPerMenu
+export const labelKomisi = (x) => (x.komisiPerMenu ? 'per menu' : `${x.komisiPersen}%`)
+
 // Menu dengan grup penentu harga wajib: tampilkan harga terendah ("mulai") karena harga dasar tidak dipakai.
 export function hargaTampil(m) {
   const g = m.varian.find((v) => v.gantiHarga && v.wajib)

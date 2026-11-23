@@ -7,18 +7,23 @@ import (
 
 func TestHitungSetoran(t *testing.T) {
 	tests := []struct {
-		name          string
-		kotor, diskon int
-		persen        float64
-		komisi, setor int
+		name                      string
+		kotor, diskon, komisiMenu int
+		persen                    float64
+		perMenu                   bool
+		komisi, setor             int
 	}{
-		{"komisi 10% setelah diskon", 100000, 10000, 10, 9000, 81000},
-		{"tanpa komisi", 50000, 0, 0, 0, 50000},
-		{"pembulatan setengah ke atas", 1005, 0, 10, 101, 904},
-		{"tanpa penjualan", 0, 0, 15, 0, 0},
+		{"komisi 10% setelah diskon", 100000, 10000, 0, 10, false, 9000, 81000},
+		{"tanpa komisi", 50000, 0, 0, 0, false, 0, 50000},
+		{"pembulatan setengah ke atas", 1005, 0, 0, 10, false, 101, 904},
+		{"tanpa penjualan", 0, 0, 0, 15, false, 0, 0},
+		{"persen mengabaikan tarif menu", 100000, 0, 30000, 10, false, 10000, 90000},
+		{"per menu: diskon ditanggung tenant", 100000, 10000, 30000, 10, true, 30000, 60000},
+		{"per menu: dibatasi penjualan setelah diskon", 20000, 15000, 8000, 0, true, 5000, 0},
+		{"per menu: diskon penuh", 10000, 10000, 2000, 0, true, 0, 0},
 	}
 	for _, tc := range tests {
-		komisi, setor := hitungSetoran(tc.kotor, tc.diskon, tc.persen)
+		komisi, setor := hitungSetoran(tc.kotor, tc.diskon, tc.komisiMenu, tc.persen, tc.perMenu)
 		if komisi != tc.komisi || setor != tc.setor {
 			t.Errorf("%s: komisi=%d setor=%d, want %d dan %d", tc.name, komisi, setor, tc.komisi, tc.setor)
 		}

@@ -46,22 +46,23 @@ type TalanganBill struct {
 }
 
 type HarianTenant struct {
-	TenantID     int64      `json:"tenantId"`
-	Nama         string     `json:"nama"`
-	Tanggal      string     `json:"tanggal"`
-	Transaksi    int        `json:"transaksi"`
-	Kotor        int        `json:"kotor"`
-	Diskon       int        `json:"diskon"`
-	KomisiPersen float64    `json:"komisiPersen"`
-	Komisi       int        `json:"komisi"`
-	Setor        int        `json:"setor"`
-	Status       string     `json:"status"`
-	MilikSendiri bool       `json:"milikSendiri"`
-	ClosingID    int64      `json:"closingId"`
-	DisetorAt    *time.Time `json:"disetorAt"`
-	DisetorOleh  string     `json:"disetorOleh"`
-	DibuatAt     *time.Time `json:"dibuatAt"`
-	DibuatOleh   string     `json:"dibuatOleh"`
+	TenantID      int64      `json:"tenantId"`
+	Nama          string     `json:"nama"`
+	Tanggal       string     `json:"tanggal"`
+	Transaksi     int        `json:"transaksi"`
+	Kotor         int        `json:"kotor"`
+	Diskon        int        `json:"diskon"`
+	KomisiPersen  float64    `json:"komisiPersen"`
+	KomisiPerMenu bool       `json:"komisiPerMenu"`
+	Komisi        int        `json:"komisi"`
+	Setor         int        `json:"setor"`
+	Status        string     `json:"status"`
+	MilikSendiri  bool       `json:"milikSendiri"`
+	ClosingID     int64      `json:"closingId"`
+	DisetorAt     *time.Time `json:"disetorAt"`
+	DisetorOleh   string     `json:"disetorOleh"`
+	DibuatAt      *time.Time `json:"dibuatAt"`
+	DibuatOleh    string     `json:"dibuatOleh"`
 }
 
 // TertundaTenant: bill terbuka (belum dibayar pelanggan) berisi menu tenant, belum masuk penjualan.

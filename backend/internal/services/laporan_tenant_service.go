@@ -23,12 +23,14 @@ type kunciHarian struct {
 
 type jumlahJual struct {
 	kotor, diskon, transaksi int
+	komisi                   int // jumlah komisi per menu (Rp per porsi x qty)
 }
 
 type closingRow struct {
 	id                       int64
 	transaksi, kotor, diskon int
 	persen                   float64
+	perMenu                  bool
 	komisi, setor            int
 	disetorAt, dibuatAt      *time.Time
 	dibuatOleh, disetorOleh  string
@@ -45,7 +47,7 @@ const (
 	// Penjualan tenant per hari kerja (tanggal shift dibuka) dari bill lunas.
 	// Diskon bill dibagi proporsional menurut nilai item tiap tenant.
 	penjualanTenantHarianSQL = `SELECT COALESCE(i.tenant_id,0), DATE(sh.buka_at), SUM(i.harga*i.qty),
-		COALESCE(SUM(ROUND(p.diskon*(i.harga*i.qty)/ps.sub)),0), COUNT(DISTINCT p.id)
+		COALESCE(SUM(ROUND(p.diskon*(i.harga*i.qty)/ps.sub)),0), COUNT(DISTINCT p.id), SUM(i.komisi*i.qty)
 		FROM pesanan_item i
 		JOIN pesanan p ON p.id=i.pesanan_id AND p.klien_id=? AND p.status='lunas'
 		JOIN shift sh ON sh.id=p.shift_id AND sh.buka_at>=? AND sh.buka_at<?
@@ -85,7 +87,7 @@ func penjualanHarian(q querier, kid int64, from, to time.Time) (map[kunciHarian]
 		var id int64
 		var tgl time.Time
 		var j jumlahJual
-		if err := rows.Scan(&id, &tgl, &j.kotor, &j.diskon, &j.transaksi); err != nil {
+		if err := rows.Scan(&id, &tgl, &j.kotor, &j.diskon, &j.transaksi, &j.komisi); err != nil {
 			rows.Close()
 			return nil, err
 		}
@@ -94,7 +96,7 @@ func penjualanHarian(q querier, kid int64, from, to time.Time) (map[kunciHarian]
 	rows.Close()
 
 	// bill belum dibayar yang sudah ditalangi pada closing tanggal itu: memakai nilai yang dibekukan saat closing
-	rows, err = q.Query(`SELECT c.tenant_id, c.tanggal, SUM(cb.kotor), SUM(cb.diskon), COUNT(*)
+	rows, err = q.Query(`SELECT c.tenant_id, c.tanggal, SUM(cb.kotor), SUM(cb.diskon), COUNT(*), SUM(cb.komisi)
 		FROM closing_tenant_bill cb JOIN closing_tenant c ON c.id=cb.closing_id
 		WHERE c.klien_id=? AND c.tanggal>=? AND c.tanggal<? GROUP BY c.tenant_id, c.tanggal`, kid, from.Format(dateLayout), to.Format(dateLayout))
 	if err != nil {
@@ -105,12 +107,12 @@ func penjualanHarian(q querier, kid int64, from, to time.Time) (map[kunciHarian]
 		var id int64
 		var tgl time.Time
 		var t jumlahJual
-		if err := rows.Scan(&id, &tgl, &t.kotor, &t.diskon, &t.transaksi); err != nil {
+		if err := rows.Scan(&id, &tgl, &t.kotor, &t.diskon, &t.transaksi, &t.komisi); err != nil {
 			return nil, err
 		}
 		k := kunciHarian{id, tgl.Format(dateLayout)}
 		j := out[k]
-		j.kotor, j.diskon, j.transaksi = j.kotor+t.kotor, j.diskon+t.diskon, j.transaksi+t.transaksi
+		j.kotor, j.diskon, j.transaksi, j.komisi = j.kotor+t.kotor, j.diskon+t.diskon, j.transaksi+t.transaksi, j.komisi+t.komisi
 		out[k] = j
 	}
 	return out, rows.Err()
@@ -129,17 +131,18 @@ func (s *LaporanTenantService) Harian(kid int64, q dto.HarianQuery) (*dto.Harian
 	type infoTenant struct {
 		nama    string
 		persen  float64
+		perMenu bool
 		sendiri bool
 	}
 	tenants := map[int64]infoTenant{}
-	rows, err := s.db.Query("SELECT id,nama,komisi_persen,milik_sendiri FROM tenant WHERE klien_id=?", kid)
+	rows, err := s.db.Query("SELECT id,nama,komisi_persen,komisi_per_menu,milik_sendiri FROM tenant WHERE klien_id=?", kid)
 	if err != nil {
 		return nil, err
 	}
 	for rows.Next() {
 		var id int64
 		var t infoTenant
-		if err := rows.Scan(&id, &t.nama, &t.persen, &t.sendiri); err != nil {
+		if err := rows.Scan(&id, &t.nama, &t.persen, &t.perMenu, &t.sendiri); err != nil {
 			rows.Close()
 			return nil, err
 		}
@@ -148,7 +151,7 @@ func (s *LaporanTenantService) Harian(kid int64, q dto.HarianQuery) (*dto.Harian
 	rows.Close()
 
 	closed := map[kunciHarian]closingRow{}
-	rows, err = s.db.Query(`SELECT c.id,c.tenant_id,c.tanggal,c.transaksi,c.kotor,c.diskon,c.komisi_persen,c.komisi,c.setor,
+	rows, err = s.db.Query(`SELECT c.id,c.tenant_id,c.tanggal,c.transaksi,c.kotor,c.diskon,c.komisi_persen,c.komisi_per_menu,c.komisi,c.setor,
 		c.disetor_at,c.dibuat_at,uc.nama,COALESCE(us.nama,'')
 		FROM closing_tenant c JOIN users uc ON uc.id=c.dibuat_oleh LEFT JOIN users us ON us.id=c.disetor_oleh
 		WHERE c.klien_id=? AND c.tanggal>=? AND c.tanggal<?`, kid, from.Format(dateLayout), to.Format(dateLayout))
@@ -159,7 +162,7 @@ func (s *LaporanTenantService) Harian(kid int64, q dto.HarianQuery) (*dto.Harian
 		var c closingRow
 		var tenantID int64
 		var tgl time.Time
-		if err := rows.Scan(&c.id, &tenantID, &tgl, &c.transaksi, &c.kotor, &c.diskon, &c.persen, &c.komisi, &c.setor,
+		if err := rows.Scan(&c.id, &tenantID, &tgl, &c.transaksi, &c.kotor, &c.diskon, &c.persen, &c.perMenu, &c.komisi, &c.setor,
 			&c.disetorAt, &c.dibuatAt, &c.dibuatOleh, &c.disetorOleh); err != nil {
 			rows.Close()
 			return nil, err
@@ -189,7 +192,7 @@ func (s *LaporanTenantService) Harian(kid int64, q dto.HarianQuery) (*dto.Harian
 		}
 		b := dto.HarianTenant{
 			TenantID: k.tenantID, Nama: t.nama, Tanggal: k.tanggal, MilikSendiri: t.sendiri,
-			Transaksi: j.transaksi, Kotor: j.kotor, Diskon: j.diskon, KomisiPersen: t.persen,
+			Transaksi: j.transaksi, Kotor: j.kotor, Diskon: j.diskon, KomisiPersen: t.persen, KomisiPerMenu: t.perMenu,
 			Status: statusPenutupan(ada, c.disetorAt != nil, c.kotor, c.diskon, j.kotor, j.diskon),
 		}
 		if t.sendiri {
@@ -198,9 +201,9 @@ func (s *LaporanTenantService) Harian(kid int64, q dto.HarianQuery) (*dto.Harian
 		if ada { // angka yang dibekukan saat closing yang dipakai untuk setoran
 			b.ClosingID, b.DisetorAt, b.DisetorOleh = c.id, c.disetorAt, c.disetorOleh
 			b.DibuatAt, b.DibuatOleh = c.dibuatAt, c.dibuatOleh
-			b.Transaksi, b.Kotor, b.Diskon, b.KomisiPersen, b.Komisi, b.Setor = c.transaksi, c.kotor, c.diskon, c.persen, c.komisi, c.setor
+			b.Transaksi, b.Kotor, b.Diskon, b.KomisiPersen, b.KomisiPerMenu, b.Komisi, b.Setor = c.transaksi, c.kotor, c.diskon, c.persen, c.perMenu, c.komisi, c.setor
 		} else {
-			b.Komisi, b.Setor = hitungSetoran(b.Kotor, b.Diskon, b.KomisiPersen)
+			b.Komisi, b.Setor = hitungSetoran(b.Kotor, b.Diskon, j.komisi, b.KomisiPersen, b.KomisiPerMenu)
 		}
 		out.Baris = append(out.Baris, b)
 	}
@@ -235,7 +238,7 @@ func (s *LaporanTenantService) Harian(kid int64, q dto.HarianQuery) (*dto.Harian
 			continue
 		}
 		ada[k] = true
-		out.Baris = append(out.Baris, dto.HarianTenant{TenantID: t.TenantID, Nama: info.nama, Tanggal: out.Sampai, MilikSendiri: info.sendiri, KomisiPersen: info.persen, Status: statusBelum})
+		out.Baris = append(out.Baris, dto.HarianTenant{TenantID: t.TenantID, Nama: info.nama, Tanggal: out.Sampai, MilikSendiri: info.sendiri, KomisiPersen: info.persen, KomisiPerMenu: info.perMenu, Status: statusBelum})
 	}
 	sort.Slice(out.Baris, func(a, b int) bool {
 		if out.Baris[a].Tanggal != out.Baris[b].Tanggal {
@@ -247,8 +250,8 @@ func (s *LaporanTenantService) Harian(kid int64, q dto.HarianQuery) (*dto.Harian
 }
 
 type talanganBill struct {
-	pesananID     int64
-	kotor, diskon int
+	pesananID             int64
+	kotor, diskon, komisi int
 }
 
 // pilihTalangan memeriksa bill terbuka yang dipilih dan menghitung bagian tenant (item terkirim yang belum ditalangi) beserta bagian diskonnya.
@@ -264,9 +267,10 @@ func pilihTalangan(tx *sql.Tx, kid, tenantID int64, ids []int64) ([]talanganBill
 		if tx.QueryRow("SELECT diskon FROM pesanan WHERE id=? AND klien_id=? AND status='open' FOR UPDATE", id, kid).Scan(&diskon) != nil {
 			return nil, types.BadRequest(fmt.Sprintf("Bill #%d tidak ditemukan atau sudah dibayar", id))
 		}
-		var kotor, sub int
-		if err := tx.QueryRow(`SELECT COALESCE(SUM(CASE WHEN tenant_id=? AND dikirim=1 AND closing_id IS NULL THEN harga*qty END),0), COALESCE(SUM(harga*qty),0)
-			FROM pesanan_item WHERE klien_id=? AND pesanan_id=?`, tenantID, kid, id).Scan(&kotor, &sub); err != nil {
+		var kotor, komisi, sub int
+		if err := tx.QueryRow(`SELECT COALESCE(SUM(CASE WHEN tenant_id=? AND dikirim=1 AND closing_id IS NULL THEN harga*qty END),0),
+			COALESCE(SUM(CASE WHEN tenant_id=? AND dikirim=1 AND closing_id IS NULL THEN komisi*qty END),0), COALESCE(SUM(harga*qty),0)
+			FROM pesanan_item WHERE klien_id=? AND pesanan_id=?`, tenantID, tenantID, kid, id).Scan(&kotor, &komisi, &sub); err != nil {
 			return nil, err
 		}
 		if kotor == 0 {
@@ -276,7 +280,7 @@ func pilihTalangan(tx *sql.Tx, kid, tenantID int64, ids []int64) ([]talanganBill
 		if sub > 0 {
 			d = int(math.Round(float64(diskon) * float64(kotor) / float64(sub)))
 		}
-		out = append(out, talanganBill{id, kotor, d})
+		out = append(out, talanganBill{id, kotor, d, komisi})
 	}
 	return out, nil
 }
@@ -353,8 +357,8 @@ func (s *LaporanTenantService) Closing(actor *utils.JWTPayload, req dto.ClosingR
 	}
 	return utils.WithTx(s.db, func(tx *sql.Tx) error {
 		var persen float64
-		var sendiri bool
-		if tx.QueryRow("SELECT komisi_persen,milik_sendiri FROM tenant WHERE id=? AND klien_id=? FOR UPDATE", req.TenantID, kid).Scan(&persen, &sendiri) != nil {
+		var perMenu, sendiri bool
+		if tx.QueryRow("SELECT komisi_persen,komisi_per_menu,milik_sendiri FROM tenant WHERE id=? AND klien_id=? FOR UPDATE", req.TenantID, kid).Scan(&persen, &perMenu, &sendiri) != nil {
 			return types.NotFound("Tenant")
 		}
 		if sendiri {
@@ -370,14 +374,14 @@ func (s *LaporanTenantService) Closing(actor *utils.JWTPayload, req dto.ClosingR
 			return err
 		}
 		for _, t := range talangan {
-			j.kotor, j.diskon, j.transaksi = j.kotor+t.kotor, j.diskon+t.diskon, j.transaksi+1
+			j.kotor, j.diskon, j.transaksi, j.komisi = j.kotor+t.kotor, j.diskon+t.diskon, j.transaksi+1, j.komisi+t.komisi
 		}
 		if j.kotor == 0 {
 			return types.BadRequest("Tidak ada penjualan tenant ini pada tanggal tersebut")
 		}
-		komisi, setor := hitungSetoran(j.kotor, j.diskon, persen)
-		res, err := tx.Exec(`INSERT INTO closing_tenant (klien_id,tenant_id,tanggal,transaksi,kotor,diskon,komisi_persen,komisi,setor,dibuat_oleh,dibuat_at)
-			VALUES (?,?,?,?,?,?,?,?,?,?,?)`, kid, req.TenantID, from.Format(dateLayout), j.transaksi, j.kotor, j.diskon, persen, komisi, setor, actor.UserID, time.Now())
+		komisi, setor := hitungSetoran(j.kotor, j.diskon, j.komisi, persen, perMenu)
+		res, err := tx.Exec(`INSERT INTO closing_tenant (klien_id,tenant_id,tanggal,transaksi,kotor,diskon,komisi_persen,komisi_per_menu,komisi,setor,dibuat_oleh,dibuat_at)
+			VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`, kid, req.TenantID, from.Format(dateLayout), j.transaksi, j.kotor, j.diskon, persen, perMenu, komisi, setor, actor.UserID, time.Now())
 		if utils.MySQLErrNo(err) == utils.MySQLDuplicate {
 			return types.BadRequest("Tanggal ini sudah di-closing untuk tenant tersebut")
 		}
@@ -389,7 +393,7 @@ func (s *LaporanTenantService) Closing(actor *utils.JWTPayload, req dto.ClosingR
 			return err
 		}
 		for _, t := range talangan {
-			if _, err := tx.Exec("INSERT INTO closing_tenant_bill (klien_id,closing_id,pesanan_id,kotor,diskon) VALUES (?,?,?,?,?)", kid, closingID, t.pesananID, t.kotor, t.diskon); err != nil {
+			if _, err := tx.Exec("INSERT INTO closing_tenant_bill (klien_id,closing_id,pesanan_id,kotor,diskon,komisi) VALUES (?,?,?,?,?,?)", kid, closingID, t.pesananID, t.kotor, t.diskon, t.komisi); err != nil {
 				return err
 			}
 			if _, err := tx.Exec("UPDATE pesanan_item SET closing_id=? WHERE klien_id=? AND pesanan_id=? AND tenant_id=? AND dikirim=1 AND closing_id IS NULL", closingID, kid, t.pesananID, req.TenantID); err != nil {

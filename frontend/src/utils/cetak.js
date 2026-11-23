@@ -22,6 +22,7 @@ export async function cetakClosing(b, detail, usaha, tertunda) {
       kotor: b.kotor,
       diskon: b.diskon,
       komisiPersen: b.komisiPersen,
+      komisiPerMenu: b.komisiPerMenu,
       komisi: b.komisi,
       setor: b.setor,
       batalQty: detail?.batalQty ?? 0,
@@ -41,7 +42,8 @@ export async function cetakClosing(b, detail, usaha, tertunda) {
   printClosing(b, detail, usaha, tertunda)
   return false
 }
-
+
+
 export async function cetakRekapTenant(p, usaha) {
   if (usaha.printerKasirId) {
     const { antre } = await post('/cetak/rekap-tenant', p)
