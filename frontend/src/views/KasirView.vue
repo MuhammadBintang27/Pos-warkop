@@ -98,6 +98,7 @@ onBeforeUnmount(() => {
   <div class="kasir">
     <PageHeader icon="pi pi-shopping-cart" title="Kasir" :subtitle="subtitle">
       <button class="pill" @click="dlg.denah = true"><i class="pi pi-th-large" /> {{ aktif ? 'Ganti meja' : 'Pilih meja' }}</button>
+      <button class="pill" @click="store.baru('')"><i class="pi pi-shopping-bag" /> Bawa pulang</button>
       <template v-if="auth.isKasir">
         <button class="pill" @click="dlg.kas = true"><i class="pi pi-wallet" /> Kas Keluar</button>
         <button class="pill" @click="dlg.kasbon = true"><i class="pi pi-clock" /> Kasbon</button>
