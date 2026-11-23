@@ -74,6 +74,8 @@ onMounted(async () => {
       store.refreshPesanan()
       store.loadDenah()
     }),
+    // tenant menekan Selesai: perbarui tanda "sudah diantar" di keranjang
+    onEvent('dapur', store.refreshPesanan),
     onEvent('meja', store.loadDenah),
     onEvent('menu', () => Promise.all([store.loadMenu(), store.loadTenant()])),
     onEvent('shift', () => auth.isKasir && store.loadShift()),

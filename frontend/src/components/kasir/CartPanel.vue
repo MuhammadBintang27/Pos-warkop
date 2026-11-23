@@ -13,6 +13,7 @@ const store = useKasirStore()
 const auth = useAuthStore()
 const toast = useToast()
 const run = useRun()
+const jam = (d) => new Date(d).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
 
 const p = computed(() => store.pesanan)
 const baris = computed(() => gabungTerkirim(p.value?.items ?? []))
@@ -149,7 +150,8 @@ async function kirim() {
     <ul v-else class="items">
       <li v-for="i in baris" :key="i.id" class="item" :class="{ lebar }">
         <span class="barisnama" :title="[i.nama, i.opsi, i.catatan && `“${i.catatan}”`, `${rp(i.harga)} per porsi`].filter(Boolean).join(' · ')">
-          <i v-if="i.dikirim" class="pi pi-send kirim" title="Sudah dikirim ke dapur" />
+          <i v-if="i.siapAt" class="pi pi-check-circle kirim antar" :title="`Sudah diantar tenant ${jam(i.siapAt)}`" />
+          <i v-else-if="i.dikirim" class="pi pi-send kirim" title="Sudah dikirim ke dapur, belum diantar" />
           <strong>{{ i.nama }}</strong>
           <small v-if="i.opsi">{{ i.opsi }}</small>
           <small v-if="i.catatan" class="note">“{{ i.catatan }}”</small>
@@ -339,6 +341,9 @@ async function kirim() {
   flex: none;
   font-size: 0.7rem;
   color: var(--p-text-muted-color);
+}
+.kirim.antar {
+  color: var(--p-green-500);
 }
 .qty {
   display: flex;

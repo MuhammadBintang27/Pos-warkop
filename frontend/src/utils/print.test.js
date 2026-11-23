@@ -38,4 +38,13 @@ describe('gabungTerkirim', () => {
     expect(hasil[0].rows.map((r) => r.id)).toEqual([1, 2])
     expect(hasil[1].id).toBe(3)
   })
+
+  it('baris yang sudah diantar tenant tidak digabung dengan yang belum', () => {
+    const hasil = gabungTerkirim([
+      item({ id: 1, dikirim: true, siapAt: '2026-11-23T10:00:00' }),
+      item({ id: 2, dikirim: true }),
+      item({ id: 3, dikirim: true, siapAt: '2026-11-23T10:05:00' }),
+    ])
+    expect(hasil.map((i) => i.rows.map((r) => r.id))).toEqual([[1, 3], [2]])
+  })
 })

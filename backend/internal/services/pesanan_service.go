@@ -72,14 +72,14 @@ func loadPesanan(q querier, kid, id int64) (*dto.PesananResponse, error) {
 		return nil, err
 	}
 
-	rows, err := q.Query(`SELECT i.id,i.menu_id,i.nama,i.harga,i.qty,i.opsi,i.catatan,i.dikirim,COALESCE(i.tenant_id,0),COALESCE(t.nama,'')
+	rows, err := q.Query(`SELECT i.id,i.menu_id,i.nama,i.harga,i.qty,i.opsi,i.catatan,i.dikirim,COALESCE(i.tenant_id,0),COALESCE(t.nama,''),i.siap_at
 		FROM pesanan_item i LEFT JOIN tenant t ON t.id=i.tenant_id WHERE i.klien_id=? AND i.pesanan_id=? ORDER BY i.id`, kid, id)
 	if err != nil {
 		return nil, err
 	}
 	for rows.Next() {
 		var i dto.ItemResponse
-		if err := rows.Scan(&i.ID, &i.MenuID, &i.Nama, &i.Harga, &i.Qty, &i.Opsi, &i.Catatan, &i.Dikirim, &i.TenantID, &i.TenantNama); err != nil {
+		if err := rows.Scan(&i.ID, &i.MenuID, &i.Nama, &i.Harga, &i.Qty, &i.Opsi, &i.Catatan, &i.Dikirim, &i.TenantID, &i.TenantNama, &i.SiapAt); err != nil {
 			rows.Close()
 			return nil, err
 		}

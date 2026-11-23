@@ -89,6 +89,8 @@ type ItemResponse struct {
 	Opsi       string `json:"opsi"`
 	Catatan    string `json:"catatan"`
 	Dikirim    bool   `json:"dikirim"`
+	// diisi saat tenant menekan Selesai (sudah diantar ke meja)
+	SiapAt *time.Time `json:"siapAt"`
 }
 
 type PembayaranResponse struct {
