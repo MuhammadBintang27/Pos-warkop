@@ -44,6 +44,10 @@ func RegisterUserRoutes(r fiber.Router, h *controllers.UserController) {
 	r.Delete("/users/:id", authed, owner, middleware.Audit("Hapus pengguna"), h.Delete)
 }
 
+func RegisterMenuPublikRoutes(r fiber.Router, h *controllers.MenuPublikController) {
+	r.Get("/publik/menu/:kode", h.Get) // tanpa login: menu untuk pelanggan
+}
+
 func RegisterMenuRoutes(r fiber.Router, h *controllers.MenuController) {
 	r.Get("/menu", authed, h.List)
 	r.Post("/menu", authed, owner, middleware.Audit("Tambah menu"), h.Create)

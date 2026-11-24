@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
+import QRCode from 'qrcode'
 import { get } from '@/api/http'
 import { useRun } from '@/composables/useRun'
 import { applyTheme, isHex, PRIMARY_COLORS, THEMES } from '@/composables/useAppTheme'
@@ -52,6 +53,12 @@ async function save() {
 }
 
 const reset = () => Object.assign(form, store.settings)
+
+// link menu untuk pelanggan dan QR-nya
+const linkMenu = computed(() => (store.settings.kode ? `${location.origin}/m/${store.settings.kode}` : ''))
+const qr = ref('')
+watch(linkMenu, async (url) => (qr.value = url ? await QRCode.toDataURL(url, { width: 600, margin: 2 }) : ''), { immediate: true })
+const salinLink = () => run(() => navigator.clipboard.writeText(linkMenu.value), 'Link disalin')
 </script>
 
 <template>
@@ -119,6 +126,20 @@ const reset = () => Object.assign(form, store.settings)
         </div>
       </section>
 
+      <section v-if="linkMenu" class="panel box">
+        <h3>Menu untuk pelanggan</h3>
+        <div class="stack">
+          <small class="hint">Pelanggan bisa melihat menu dan harga tanpa login. Cetak QR-nya lalu tempel di meja.</small>
+          <InputGroup>
+            <InputText :model-value="linkMenu" readonly />
+            <Button icon="pi pi-copy" severity="secondary" aria-label="Salin link" @click="salinLink" />
+            <Button icon="pi pi-external-link" severity="secondary" aria-label="Buka menu" as="a" :href="linkMenu" target="_blank" />
+          </InputGroup>
+          <img v-if="qr" :src="qr" alt="QR menu" class="qr" />
+          <Button v-if="qr" label="Unduh QR" icon="pi pi-download" severity="secondary" outlined as="a" :href="qr" :download="`qr-menu-${store.settings.kode}.png`" />
+        </div>
+      </section>
+
       <section class="panel box wide">
         <h3>Pratinjau</h3>
         <div class="row">
@@ -145,6 +166,12 @@ const reset = () => Object.assign(form, store.settings)
 }
 .hint {
   color: var(--p-text-muted-color);
+}
+.qr {
+  width: 220px;
+  max-width: 100%;
+  align-self: center;
+  border-radius: 8px;
 }
 .gap {
   gap: 14px;

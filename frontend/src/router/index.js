@@ -9,6 +9,7 @@ const router = createRouter({
   routes: [
     { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue'), meta: { public: true } },
     { path: '/unduh', component: () => import('@/views/UnduhView.vue'), meta: { bebas: true } },
+    { path: '/m/:kode', component: () => import('@/views/MenuPublikView.vue'), meta: { bebas: true } },
     {
       path: '/',
       component: () => import('@/layouts/AppLayout.vue'),

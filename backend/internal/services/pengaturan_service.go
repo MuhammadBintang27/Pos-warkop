@@ -23,17 +23,19 @@ func NewPengaturanService(db *sql.DB, hub *EventHub) *PengaturanService {
 
 func (s *PengaturanService) Get(kid int64) (*dto.PengaturanRequest, error) {
 	var raw string
-	err := s.db.QueryRow("SELECT nilai FROM pengaturan WHERE klien_id=? AND kunci=?", kid, kunciTampilan).Scan(&raw)
-	if err == sql.ErrNoRows {
-		d := defaultPengaturan
-		return &d, nil
-	}
-	if err != nil {
-		return nil, err
-	}
 	out := defaultPengaturan
-	if err := json.Unmarshal([]byte(raw), &out); err != nil {
+	err := s.db.QueryRow("SELECT nilai FROM pengaturan WHERE klien_id=? AND kunci=?", kid, kunciTampilan).Scan(&raw)
+	if err != nil && err != sql.ErrNoRows {
 		return nil, err
+	}
+	if err == nil {
+		if err := json.Unmarshal([]byte(raw), &out); err != nil {
+			return nil, err
+		}
+	}
+	out.Kode = ""
+	if kid > 0 && s.db.QueryRow("SELECT kode FROM klien WHERE id=?", kid).Scan(&out.Kode) != nil {
+		out.Kode = ""
 	}
 	return &out, nil
 }
@@ -45,6 +47,7 @@ func (s *PengaturanService) Update(kid int64, req dto.PengaturanRequest) error {
 			return types.BadRequest("Printer kasir tidak ditemukan")
 		}
 	}
+	req.Kode = ""
 	raw, err := json.Marshal(req)
 	if err != nil {
 		return err

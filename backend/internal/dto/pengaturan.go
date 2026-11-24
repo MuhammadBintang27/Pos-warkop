@@ -12,4 +12,6 @@ type PengaturanRequest struct {
 	PrinterKasirID *int64 `json:"printerKasirId" validate:"omitempty,gt=0"`
 	// DialogDapur: tiket dapur/batal untuk tenant tanpa printer dicetak lewat dialog browser; false berarti tidak dicetak sama sekali.
 	DialogDapur bool `json:"dialogDapur"`
+	// Kode: kode klien untuk link menu publik /m/<kode>; hanya dibaca, tidak disimpan.
+	Kode string `json:"kode,omitempty"`
 }
