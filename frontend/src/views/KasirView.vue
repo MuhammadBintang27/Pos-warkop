@@ -96,14 +96,14 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="kasir">
-    <PageHeader icon="pi pi-shopping-cart" title="Kasir" :subtitle="subtitle">
-      <button class="pill" @click="dlg.denah = true"><i class="pi pi-th-large" /> {{ aktif ? 'Ganti meja' : 'Pilih meja' }}</button>
-      <button class="pill" @click="store.baru('')"><i class="pi pi-shopping-bag" /> Bawa pulang</button>
+    <PageHeader class="kasir-head" icon="pi pi-shopping-cart" title="Kasir" :subtitle="subtitle">
+      <button class="pill" :title="aktif ? 'Ganti meja' : 'Pilih meja'" @click="dlg.denah = true"><i class="pi pi-th-large" /> <span class="lbl">{{ aktif ? 'Ganti meja' : 'Pilih meja' }}</span></button>
+      <button class="pill" title="Bawa pulang" @click="store.baru('')"><i class="pi pi-shopping-bag" /> <span class="lbl">Bawa pulang</span></button>
       <template v-if="auth.isKasir">
-        <button class="pill" @click="dlg.kas = true"><i class="pi pi-wallet" /> Kas Keluar</button>
-        <button class="pill" @click="dlg.kasbon = true"><i class="pi pi-clock" /> Kasbon</button>
-        <span v-if="peringatanCetak" class="chip warn"><i class="pi pi-print" /> {{ peringatanCetak }}</span>
-        <span v-if="store.shift" class="chip ok"><i class="pi pi-check-circle" /> Shift aktif — {{ store.shift.kasir }}</span>
+        <button class="pill" title="Kas Keluar" @click="dlg.kas = true"><i class="pi pi-wallet" /> <span class="lbl">Kas Keluar</span></button>
+        <button class="pill" title="Kasbon" @click="dlg.kasbon = true"><i class="pi pi-clock" /> <span class="lbl">Kasbon</span></button>
+        <span v-if="peringatanCetak" class="chip warn" :title="peringatanCetak"><i class="pi pi-print" /> <span class="lbl">{{ peringatanCetak }}</span></span>
+        <span v-if="store.shift" class="chip ok" :title="`Shift aktif — ${store.shift.kasir}`"><i class="pi pi-check-circle" /> <span class="lbl">Shift aktif — {{ store.shift.kasir }}</span></span>
         <button class="pill warn" @click="dlg.shift = true">
           <i :class="store.shift ? 'pi pi-lock' : 'pi pi-lock-open'" /> {{ store.shift ? 'Tutup Shift' : 'Buka Shift' }}
         </button>
@@ -178,6 +178,43 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 14px;
   min-height: 0;
+}
+/* header tetap satu baris: di ruang sempit (iPad + sidebar) tombol jadi ikon saja, tombol shift tetap berlabel */
+section.kasir-head {
+  container-type: inline-size;
+  flex-wrap: nowrap;
+}
+section.kasir-head :deep(.actions) {
+  flex-wrap: nowrap;
+  flex: none;
+}
+section.kasir-head :deep(.title) {
+  min-width: 0;
+}
+section.kasir-head :deep(.title small) {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 600px) {
+  section.kasir-head,
+  section.kasir-head :deep(.actions) {
+    flex-wrap: wrap;
+  }
+}
+@container (max-width: 1150px) {
+  .kasir-head .lbl {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .kasir-head .pill,
+  .kasir-head .chip {
+    gap: 0;
+  }
 }
 .body {
   flex: 1;
