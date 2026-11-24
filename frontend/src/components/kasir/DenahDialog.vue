@@ -65,9 +65,17 @@ function baru() {
 </template>
 
 <style scoped>
+/* pilihan area tetap terlihat saat daftar meja di-scroll */
 .area {
+  position: sticky;
+  top: 0;
+  display: flex; /* selebar dialog, supaya latarnya menutup meja yang lewat di bawahnya */
+  z-index: 2;
   flex-wrap: wrap;
   margin-bottom: 12px;
+  padding-bottom: 8px;
+  background: var(--p-dialog-background, var(--p-content-background));
+  box-shadow: 0 6px 6px -6px rgb(0 0 0 / 0.15);
 }
 .meja-grid {
   display: grid;
