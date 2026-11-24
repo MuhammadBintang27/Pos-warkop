@@ -25,9 +25,9 @@ Percobaan jalan tanpa installer: `npx tauri dev`.
 
 ## Pemakaian
 
-1. Pasang installer dan buka **POS Warkop**. Isi alamat server (misalnya `https://pos.warkopmu.com`).
+1. Pasang installer dan buka **POS Warkop**. Alamat server sudah tertanam (`SERVER` di `src-tauri/src/main.rs`); pindah domain berarti build ulang.
 2. Di web: Master Data › Printer, tambah printer lalu **Buat token stasiun**.
 3. Klik kanan ikon POS Warkop di system tray › **Stasiun cetak…**, tempel token, centang aktifkan, Simpan.
 4. Di web: Master Data › Tenant, pilih printer untuk tiap tenant, lalu **Tes cetak** di Master Data › Printer.
 
-Pengaturan (alamat server dan token) disimpan di `%APPDATA%\id.warkop.pos\config.json`.
+Pengaturan stasiun (token dan status aktif) disimpan di `%APPDATA%\id.warkop.pos\config.json`.

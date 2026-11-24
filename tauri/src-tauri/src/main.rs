@@ -16,13 +16,15 @@ use serde::{Deserialize, Serialize};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Manager, State, Url, WebviewUrl, WebviewWindowBuilder, WindowEvent,
+    AppHandle, Manager, State, WebviewUrl, WebviewWindowBuilder, WindowEvent,
 };
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 
 const JEDA_POLL: Duration = Duration::from_secs(2);
 const JEDA_ULANG: Duration = Duration::from_secs(15);
 const BATAS_LOG: usize = 30;
+// Alamat server tertanam di aplikasi; pindah domain berarti build ulang installer.
+const SERVER: &str = "https://poswarkop.142-91-103-131.sslip.io";
 
 #[derive(Serialize, Deserialize, Default, Clone)]
 struct Config {
@@ -46,7 +48,6 @@ struct Bersama {
     config: Mutex<Config>,
     status: Mutex<Status>,
     berkas: PathBuf,
-    lokal: Mutex<Option<String>>, // alamat halaman lokal aplikasi, untuk kembali dari halaman server
 }
 
 #[derive(Deserialize)]
@@ -211,18 +212,6 @@ async fn ambil_config(sh: State<'_, Bagi>) -> Result<serde_json::Value, String> 
 }
 
 #[tauri::command]
-async fn simpan_server(sh: State<'_, Bagi>, alamat: String) -> Result<String, String> {
-    let url = Url::parse(alamat.trim()).map_err(|_| "Alamat tidak valid".to_string())?;
-    if !matches!(url.scheme(), "http" | "https") {
-        return Err("Alamat harus diawali http:// atau https://".into());
-    }
-    let asal = url.origin().ascii_serialization();
-    sh.config.lock().unwrap().server = asal.clone();
-    sh.simpan();
-    Ok(asal)
-}
-
-#[tauri::command]
 async fn simpan_stasiun(app: AppHandle, sh: State<'_, Bagi>, aktif: bool, token: String) -> Result<(), String> {
     {
         let mut c = sh.config.lock().unwrap();
@@ -264,23 +253,11 @@ fn buka_stasiun(app: &AppHandle) {
         .build();
 }
 
-fn ganti_server(app: &AppHandle) {
-    let sh = app.state::<Bagi>();
-    sh.config.lock().unwrap().server.clear();
-    sh.simpan();
-    let lokal = sh.lokal.lock().unwrap().clone();
-    if let (Some(w), Some(alamat)) = (app.get_webview_window("main"), lokal) {
-        let _ = w.eval(&format!("window.location.replace({})", serde_json::json!(alamat)));
-    }
-    tampilkan_utama(app);
-}
-
 fn pasang_tray(app: &AppHandle) -> tauri::Result<()> {
     let buka = MenuItem::with_id(app, "buka", "Buka POS Warkop", true, None::<&str>)?;
     let stasiun = MenuItem::with_id(app, "stasiun", "Stasiun cetak…", true, None::<&str>)?;
-    let ganti = MenuItem::with_id(app, "ganti", "Ganti alamat server", true, None::<&str>)?;
     let keluar = MenuItem::with_id(app, "keluar", "Keluar", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&buka, &stasiun, &ganti, &keluar])?;
+    let menu = Menu::with_items(app, &[&buka, &stasiun, &keluar])?;
     TrayIconBuilder::new()
         .icon(app.default_window_icon().unwrap().clone())
         .tooltip("POS Warkop")
@@ -288,7 +265,6 @@ fn pasang_tray(app: &AppHandle) -> tauri::Result<()> {
         .on_menu_event(|app, event| match event.id.as_ref() {
             "buka" => tampilkan_utama(app),
             "stasiun" => buka_stasiun(app),
-            "ganti" => ganti_server(app),
             "keluar" => app.exit(0),
             _ => {}
         })
@@ -305,7 +281,7 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| tampilkan_utama(app)))
         .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, Some(vec!["--sembunyi"])))
-        .invoke_handler(tauri::generate_handler![ambil_config, simpan_server, simpan_stasiun, status_stasiun])
+        .invoke_handler(tauri::generate_handler![ambil_config, simpan_stasiun, status_stasiun])
         .on_window_event(|window, event| {
             // menutup jendela utama hanya menyembunyikannya, supaya stasiun cetak tetap hidup di tray
             if let WindowEvent::CloseRequested { api, .. } = event {
@@ -319,25 +295,24 @@ fn main() {
             let dir = app.path().app_config_dir()?;
             fs::create_dir_all(&dir).ok();
             let berkas = dir.join("config.json");
-            let config: Config = fs::read_to_string(&berkas)
+            let mut config: Config = fs::read_to_string(&berkas)
                 .ok()
                 .and_then(|t| serde_json::from_str(&t).ok())
                 .unwrap_or_default();
+            config.server = SERVER.into(); // menimpa alamat lama yang mungkin tersimpan di config.json
             let sh: Bagi = Arc::new(Bersama {
                 config: Mutex::new(config),
                 status: Mutex::new(Status { pesan: "Mati".into(), ..Default::default() }),
                 berkas,
-                lokal: Mutex::new(None),
             });
             app.manage(sh.clone());
 
             let sembunyi = std::env::args().any(|a| a == "--sembunyi");
-            let utama = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
+            WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
                 .title("POS Warkop")
                 .inner_size(1366.0, 820.0)
                 .visible(!sembunyi)
                 .build()?;
-            *sh.lokal.lock().unwrap() = utama.url().ok().map(|u| u.to_string());
 
             pasang_tray(app.handle())?;
             thread::spawn(move || jalankan_stasiun(sh));

@@ -8,35 +8,20 @@
       body { margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: system-ui, sans-serif; background: #f1f5f9; color: #0f172a; }
       main { width: min(420px, 92vw); padding: 24px; border-radius: 16px; background: #fff; box-shadow: 0 8px 30px rgb(0 0 0 / 0.08); display: flex; flex-direction: column; gap: 10px; }
       h1 { margin: 0 0 4px; font-size: 1.3rem; }
-      input, button { font: inherit; padding: 12px; border-radius: 10px; border: 1px solid #cbd5e1; }
-      button { background: #f59e0b; border-color: #f59e0b; font-weight: 700; }
-      button.biasa { background: #fff; border-color: #cbd5e1; font-weight: 500; }
       p { margin: 0; color: #64748b; font-size: 0.9rem; }
-      #salah { color: #dc2626; }
     </style>
   </head>
   <body>
     <main>
       <h1>POS Warkop</h1>
-      <div id="buka" hidden>
-        <p>Membuka <strong id="tujuan"></strong>…</p>
-        <button id="ganti" class="biasa" type="button">Ganti alamat server</button>
-      </div>
-      <form id="form" hidden>
-        <p>Masukkan alamat server yang diberikan, misalnya https://pos.warkopmu.com</p>
-        <input id="alamat" type="url" placeholder="https://" required />
-        <button type="submit">Hubungkan</button>
-        <p id="salah"></p>
-      </form>
+      <p>Membuka POS Warkop…</p>
     </main>
     <!-- shortcut: salinan dist dari node_modules (tanpa bundler); salin ulang bila versi Capacitor naik -->
     <script src="capacitor-core.js"></script>
     <script src="capacitor-push.js"></script>
     <script>
-      const KUNCI = 'serverUrl'
-      const $ = (id) => document.getElementById(id)
-      const simpan = localStorage.getItem(KUNCI)
-      let batal = false
+      // Alamat server tertanam di APK; pindah domain berarti build ulang APK.
+      const SERVER = 'https://poswarkop.142-91-103-131.sslip.io'
 
       // Token FCM diambil di halaman ini (plugin native pasti tersedia di sini), lalu dibawa ke server lewat ?fcm=.
       // Gagal atau ditolak tetap lanjut membuka server tanpa notifikasi.
@@ -62,33 +47,7 @@
         location.replace(fcm ? `${origin}/?fcm=${encodeURIComponent(fcm)}` : origin)
       }
 
-      function formulir() {
-        batal = true
-        $('buka').hidden = true
-        $('form').hidden = false
-        $('alamat').value = simpan || ''
-      }
-
-      if (simpan) {
-        $('buka').hidden = false
-        $('tujuan').textContent = simpan
-        $('ganti').onclick = formulir
-        setTimeout(() => !batal && buka(simpan), 1200)
-      } else {
-        formulir()
-      }
-
-      $('form').addEventListener('submit', (e) => {
-        e.preventDefault()
-        try {
-          const url = new URL($('alamat').value.trim())
-          if (!['http:', 'https:'].includes(url.protocol)) throw new Error()
-          localStorage.setItem(KUNCI, url.origin)
-          buka(url.origin)
-        } catch {
-          $('salah').textContent = 'Alamat tidak valid. Awali dengan http:// atau https://'
-        }
-      })
+      buka(SERVER)
     </script>
   </body>
 </html>

@@ -19,7 +19,7 @@ Hasilnya: `mobile/android/app/build/outputs/apk/debug/app-debug.apk`.
 
 ## Catatan
 
-- Layar pertama meminta alamat server dan mengingatnya. Untuk menggantinya: hapus data aplikasi (Setelan > Aplikasi > POS Warkop > Hapus data) atau pasang ulang.
+- Alamat server tertanam di `www/index.html` (`SERVER`). Pindah domain berarti build ulang APK.
 - `android:usesCleartextTraffic="true"` di `AndroidManifest.xml` mengizinkan alamat `http://` untuk uji jaringan lokal. **Cabut sebelum produksi** dan pakai HTTPS.
 - `www/capacitor-core.js` dan `www/capacitor-push.js` adalah salinan `dist` dari `@capacitor/core` dan `@capacitor/push-notifications`, karena halaman awal tidak memakai bundler. Salin ulang setelah menaikkan versi Capacitor.
 - Suara notifikasi: `suara/pesanan.wav` (chime buatan sendiri), disalin ke `android/app/src/main/res/raw/` oleh `npm run sync` dan dipakai channel `pesanan_v2`. Mengganti suara berarti harus memakai id channel baru di `www/index.html` dan `backend/internal/services/push.go`, karena Android mengunci suara channel.
