@@ -6,6 +6,7 @@ import { useMobile } from '@/composables/useMobile'
 import { useAuthStore } from '@/stores/auth'
 import { usePengaturanStore } from '@/stores/pengaturan'
 import { useRun } from '@/composables/useRun'
+import { load, save } from '@/utils/storage'
 
 const NAV = [
   { label: 'Klien', icon: 'pi pi-building', to: '/admin', roles: ['superadmin'] },
@@ -60,6 +61,8 @@ const drawer = ref(false)
 const expanded = reactive({})
 const userMenu = ref()
 const online = ref(navigator.onLine)
+const topTutup = ref(load('topTutup', false))
+watch(topTutup, (v) => save('topTutup', v))
 
 const nav = computed(() => {
   const term = q.value.trim().toLowerCase()
@@ -148,10 +151,14 @@ onBeforeUnmount(() => {
     </aside>
 
     <div class="main">
-      <header class="top">
+      <button v-if="topTutup" class="top-mini" aria-label="Tampilkan header" title="Tampilkan header" @click="topTutup = false">
+        <i class="pi pi-angle-down" />
+      </button>
+      <header v-else class="top">
         <Button icon="pi pi-bars" variant="outlined" aria-label="Menu" @click="toggleSide" />
 
         <div class="right">
+          <Button icon="pi pi-angle-up" text severity="secondary" aria-label="Sembunyikan header" title="Sembunyikan header" @click="topTutup = true" />
           <template v-if="auth.isOwner && !mobile">
             <i class="pi pi-palette" />
             <Select
@@ -358,6 +365,23 @@ onBeforeUnmount(() => {
   padding: 0 16px;
   background: color-mix(in srgb, var(--p-primary-color) 9%, var(--p-content-background));
   border-bottom: 1px solid var(--p-content-border-color);
+}
+.top-mini {
+  flex: none;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--p-content-border-color);
+  font-size: 0.75rem;
+  cursor: pointer;
+  color: var(--p-text-muted-color);
+  background: color-mix(in srgb, var(--p-primary-color) 9%, var(--p-content-background));
+}
+.top-mini:hover {
+  color: var(--p-text-color);
+  background: color-mix(in srgb, var(--p-primary-color) 20%, var(--p-content-background));
 }
 .right {
   margin-left: auto;
