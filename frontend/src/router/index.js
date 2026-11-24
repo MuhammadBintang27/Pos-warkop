@@ -36,6 +36,7 @@ const router = createRouter({
         { path: 'audit', component: () => import('@/views/AuditView.vue'), meta: owner },
         { path: 'tenant-saya', component: () => import('@/views/PesananMasukView.vue'), meta: tenant },
         { path: 'tenant-saya/rekap', component: () => import('@/views/RekapTenantView.vue'), meta: tenant },
+        { path: 'panduan', component: () => import('@/views/PanduanView.vue'), meta: { roles: ['pelayan', 'kasir', 'owner', 'tenant'] } },
       ],
     },
     { path: '/:pathMatch(.*)*', redirect: '/' },

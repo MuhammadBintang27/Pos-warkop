@@ -46,6 +46,7 @@ const NAV = [
     ],
   },
   { label: 'Pengaturan', icon: 'pi pi-cog', roles: ['owner'], children: [{ label: 'Tampilan', to: '/pengaturan' }, { label: 'Log Aktivitas', to: '/audit' }] },
+  { label: 'Panduan', icon: 'pi pi-question-circle', to: '/panduan', roles: ['pelayan', 'kasir', 'owner', 'tenant'] },
 ]
 
 const route = useRoute()
