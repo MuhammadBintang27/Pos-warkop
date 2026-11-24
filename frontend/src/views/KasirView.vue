@@ -113,6 +113,7 @@ onBeforeUnmount(() => {
         <button class="pill" title="Kas Keluar" @click="dlg.kas = true"><i class="pi pi-wallet" /> <span class="lbl">Kas Keluar</span></button>
         <button class="pill" title="Kasbon" @click="dlg.kasbon = true"><i class="pi pi-clock" /> <span class="lbl">Kasbon</span></button>
         <span v-if="peringatanCetak" class="chip warn" :title="peringatanCetak"><i class="pi pi-print" /> <span class="lbl">{{ peringatanCetak }}</span></span>
+        <span v-else-if="store.cetak.stasiunAktif" class="chip ok" title="Stasiun cetak terhubung"><i class="pi pi-print" /> <span class="lbl">Printer siap</span></span>
         <button v-if="bisaNyalakanHp" class="pill warn" title="Nyalakan stasiun cetak di perangkat ini" @click="nyalakanHp"><i class="pi pi-power-off" /> <span class="lbl">Nyalakan stasiun</span></button>
         <span v-if="store.shift" class="chip ok" :title="`Shift aktif — ${store.shift.kasir}`"><i class="pi pi-check-circle" /> <span class="lbl">Shift aktif — {{ store.shift.kasir }}</span></span>
         <button class="pill warn" @click="dlg.shift = true">
