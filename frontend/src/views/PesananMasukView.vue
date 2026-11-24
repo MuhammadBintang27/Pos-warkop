@@ -30,16 +30,15 @@ const terbuka = reactive({})
 const tampil = (b, jenis) => (terbuka[b.key] ? b.items : b.items.slice(0, BATAS[jenis]))
 const sisa = (b, jenis) => b.items.length - BATAS[jenis]
 
-// tab Antrean (belum disentuh) dan Diproses (sudah ditekan Proses, belum Selesai)
+// Antrean (belum disentuh) lalu Diproses (sudah ditekan Proses, belum Selesai), bertumpuk di satu halaman
 const antrean = computed(() => kelompok(data.value.items.filter((i) => !i.siapAt && !i.diprosesAt)))
-const diproses = computed(() => kelompok(data.value.items.filter((i) => !i.siapAt && i.diprosesAt)))
-const tab = ref('antrean')
+// key dibedakan supaya "Lihat semua" kartu meja yang sama di Antrean tidak ikut membuka kartunya di Diproses
+const diproses = computed(() => kelompok(data.value.items.filter((i) => !i.siapAt && i.diprosesAt)).map((b) => ({ ...b, key: `proses|${b.key}` })))
 const jumlah = (list) => list.reduce((n, b) => n + b.items.length, 0)
-const TAB = computed(() => [
-  { label: `Antrean (${jumlah(antrean.value)})`, value: 'antrean' },
-  { label: `Diproses (${jumlah(diproses.value)})`, value: 'diproses' },
+const BAGIAN = computed(() => [
+  { jenis: 'antrean', judul: 'Antrean', kosong: 'Belum ada pesanan baru.', kartu: antrean.value },
+  { jenis: 'diproses', judul: 'Diproses', kosong: 'Belum ada pesanan yang sedang dibuat.', kartu: diproses.value },
 ])
-const kartuTab = computed(() => (tab.value === 'antrean' ? antrean.value : diproses.value))
 const siap = computed(() => kelompok(data.value.items.filter((i) => i.siapAt)))
 // satu kartu per kali batal (satu bill bisa batal beberapa item sekaligus)
 const batal = computed(() => {
@@ -98,20 +97,19 @@ onBeforeUnmount(() => {
   <div class="stack gap">
     <PageHeader icon="pi pi-inbox" title="Pesanan Masuk" :subtitle="data.tenant" />
 
-    <SelectButton v-model="tab" :options="TAB" option-label="label" option-value="value" :allow-empty="false" class="tab" />
-    <p v-if="!kartuTab.length" class="kosong">
-      {{ tab === 'antrean' ? 'Belum ada pesanan baru.' : 'Belum ada pesanan yang sedang dibuat.' }}
-    </p>
+    <template v-for="s in BAGIAN" :key="s.jenis">
+    <h3 class="judul">{{ s.judul }} <Tag :value="String(jumlah(s.kartu))" :severity="s.jenis === 'diproses' ? 'warn' : undefined" /></h3>
+    <p v-if="!s.kartu.length" class="kosong">{{ s.kosong }}</p>
     <div class="grid">
       <section
-        v-for="b in kartuTab"
+        v-for="b in s.kartu"
         :key="b.key"
         class="panel kartu antre"
-        :class="{ tambah: b.tambahan, baru: tab === 'antrean' && baru(b), proses: tab === 'diproses' }"
+        :class="{ tambah: b.tambahan, baru: s.jenis === 'antrean' && baru(b), proses: s.jenis === 'diproses' }"
       >
         <div class="jenis">
-          <span v-if="tab === 'antrean' && baru(b)" class="lencana">BARU</span>
-          {{ tab === 'diproses' ? 'Sedang dibuat' : b.tambahan ? 'Pesanan tambahan' : 'Pesanan baru' }}
+          <span v-if="s.jenis === 'antrean' && baru(b)" class="lencana">BARU</span>
+          {{ s.jenis === 'diproses' ? 'Sedang dibuat' : b.tambahan ? 'Pesanan tambahan' : 'Pesanan baru' }}
         </div>
         <header>
           <strong class="meja">{{ b.meja || 'Tanpa meja' }}</strong>
@@ -142,6 +140,7 @@ onBeforeUnmount(() => {
         </button>
       </section>
     </div>
+    </template>
 
     <template v-if="batal.length">
       <h3 class="judul">Dibatalkan <Tag :value="String(batal.reduce((n, b) => n + b.items.length, 0))" severity="danger" /></h3>
@@ -261,9 +260,6 @@ onBeforeUnmount(() => {
 }
 .antre.proses {
   --warna: var(--p-orange-500);
-}
-.tab {
-  align-self: flex-start;
 }
 .antre.baru {
   animation: denyut 1.6s ease-in-out infinite;
