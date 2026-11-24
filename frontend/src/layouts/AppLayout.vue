@@ -351,6 +351,7 @@ onBeforeUnmount(() => {
 }
 
 .main {
+  position: relative;
   flex: 1;
   min-width: 0;
   display: flex;
@@ -366,22 +367,29 @@ onBeforeUnmount(() => {
   background: color-mix(in srgb, var(--p-primary-color) 9%, var(--p-content-background));
   border-bottom: 1px solid var(--p-content-border-color);
 }
+/* tab melayang, cukup besar untuk jari di HP, tidak memakan baris sendiri */
 .top-mini {
-  flex: none;
-  height: 16px;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: 30;
+  width: 72px;
+  height: 32px;
+  transform: translateX(-50%);
   display: grid;
   place-items: center;
   padding: 0;
   border: 0;
-  border-bottom: 1px solid var(--p-content-border-color);
-  font-size: 0.75rem;
+  border-radius: 0 0 14px 14px;
+  font-size: 1.1rem;
   cursor: pointer;
-  color: var(--p-text-muted-color);
-  background: color-mix(in srgb, var(--p-primary-color) 9%, var(--p-content-background));
+  background: var(--p-primary-color);
+  color: var(--p-primary-contrast-color);
+  box-shadow: 0 3px 10px rgb(0 0 0 / 0.25);
+  opacity: 0.9;
 }
 .top-mini:hover {
-  color: var(--p-text-color);
-  background: color-mix(in srgb, var(--p-primary-color) 20%, var(--p-content-background));
+  opacity: 1;
 }
 .right {
   margin-left: auto;
