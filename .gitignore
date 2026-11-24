@@ -8,3 +8,4 @@ tauri/src-tauri/target/
 mobile/android/
 .vscode/
 .idea/
+!frontend/public/dl/*.exe

@@ -8,6 +8,7 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue'), meta: { public: true } },
+    { path: '/unduh', component: () => import('@/views/UnduhView.vue'), meta: { bebas: true } },
     {
       path: '/',
       component: () => import('@/layouts/AppLayout.vue'),
@@ -42,6 +43,7 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   const auth = useAuthStore()
+  if (to.meta.bebas) return true // bisa dibuka sudah login atau belum
   if (to.meta.public) return auth.isLoggedIn ? '/' : true
   if (!auth.isLoggedIn) return '/login'
   if (auth.role === 'superadmin') return to.path.startsWith('/admin') ? true : '/admin'

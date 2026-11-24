@@ -106,6 +106,7 @@ async function submit() {
         <Button type="submit" label="Masuk" icon="pi pi-arrow-right" icon-pos="right" :loading="loading" :disabled="!username || !password" fluid />
 
         <p class="bantuan">Username berawalan nomor usaha, misalnya <b>1-budi</b>. Lupa password? Minta owner meresetnya.</p>
+        <RouterLink to="/unduh" class="bantuan"><i class="pi pi-download" /> Unduh aplikasi Android / Windows</RouterLink>
       </form>
     </main>
   </div>
