@@ -1,4 +1,5 @@
 import { labelKomisi, rp, tgl } from '@/utils/format'
+import { logoStruk } from '@/utils/logoStruk'
 
 const CSS = `@page{size:58mm auto;margin:0}
 body{font:12px/1.4 monospace;width:48mm;margin:0 auto;padding:4mm 0;color:#000}
@@ -7,7 +8,7 @@ h1{font-size:15px;margin:0;text-align:center}.c{text-align:center}.b{font-weight
 .big{font-size:20px;font-weight:bold;text-align:center}.sub{padding-left:10px;font-size:11px}
 .judul{font-size:14px;font-weight:bold;text-align:center;border:2px solid #000;padding:2px;margin-bottom:4px}
 .page{page-break-after:always}.page:last-child{page-break-after:auto}
-.logo{display:block;margin:0 auto 4px;max-width:50%;max-height:20mm;filter:grayscale(1) contrast(100)}`
+.logo{display:block;margin:0 auto 4px;max-width:50%;max-height:20mm}`
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
 
@@ -78,7 +79,8 @@ const barisItem = (i) => `<div class="b">${i.qty}x ${esc(i.nama)}</div>` +
   (i.opsi ? `<div class="sub">${esc(i.opsi)}</div>` : '') +
   (i.catatan ? `<div class="sub b">* ${esc(i.catatan)}</div>` : '')
 
-export function printStruk(p, usaha) {
+export async function printStruk(p, usaha) {
+  const logo = await logoStruk(usaha.logo) // hitam putih dengan aturan printer thermal
   const baris = (i) => `<div class="r"><span>${i.qty}x ${esc(i.nama)}</span><span>${rp(i.harga * i.qty)}</span></div>` +
     (i.opsi ? `<div class="sub">${esc(i.opsi)}</div>` : '')
   const items = gabungItem(p.items).map(baris).join('')
@@ -86,8 +88,7 @@ export function printStruk(p, usaha) {
     .map((b) => `<div class="r"><span>${esc(b.metode)}${b.pelanggan ? ' ' + esc(b.pelanggan) : ''}</span><span>${rp(b.diterima)}</span></div>` +
       (b.kembalian ? `<div class="r"><span>Kembali</span><span>${rp(b.kembalian)}</span></div>` : ''))
     .join('')
-  // logo hitam putih seperti hasil printer thermal (server memakai ambang yang sama)
-  printHtml(`${usaha.logo ? `<img class="logo" src="${esc(usaha.logo)}" alt="">` : ''}<h1>${esc(usaha.namaUsaha)}</h1>
+  printHtml(`${logo ? `<img class="logo" src="${esc(logo)}" alt="">` : ''}<h1>${esc(usaha.namaUsaha)}</h1>
     <div class="c">${esc(usaha.alamat)}</div><hr>
     <div class="r"><span>${esc(p.mejaNama || 'Bawa pulang')}</span><span>#${p.id}</span></div>
     ${p.atasNama ? `<div>${esc(p.atasNama)}</div>` : ''}

@@ -5,6 +5,7 @@ import { get, post } from '@/api/http'
 import { useRun } from '@/composables/useRun'
 import { applyTheme, isHex, PRIMARY_COLORS, THEMES } from '@/composables/useAppTheme'
 import { usePengaturanStore } from '@/stores/pengaturan'
+import { logoStruk } from '@/utils/logoStruk'
 
 const KEYS = ['namaUsaha', 'alamat', 'logo', 'footerStruk', 'printerKasirId', 'dialogDapur', 'theme', 'primary', 'mode']
 const MODES = [
@@ -23,6 +24,8 @@ const saving = ref(false)
 // logo diunggah sebagai file ke server (folder uploads), yang disimpan di pengaturan hanya URL-nya
 const MAKS_LOGO = 1024 * 1024 // sama dengan services.MaksLogo
 const mengunggah = ref(false)
+const logoBW = ref('')
+watch(() => form.logo, async (url) => (logoBW.value = await logoStruk(url)), { immediate: true })
 function pilihLogo(e) {
   const file = e.target.files[0]
   e.target.value = ''
@@ -117,7 +120,7 @@ const salinLink = () => run(() => navigator.clipboard.writeText(linkMenu.value),
                   <figcaption>Layar</figcaption>
                 </figure>
                 <figure>
-                  <img :src="form.logo" alt="" class="struk" />
+                  <img :src="logoBW" alt="" class="struk" />
                   <figcaption>Struk</figcaption>
                 </figure>
               </template>
@@ -275,10 +278,8 @@ h3 {
   height: 88px;
   object-fit: contain;
 }
-/* perkiraan hasil printer thermal: hitam putih di atas kertas putih, sama dengan print.js */
 .pratinjau img.struk {
   background: #fff;
-  filter: grayscale(1) contrast(100);
 }
 .redup {
   color: var(--p-text-muted-color);

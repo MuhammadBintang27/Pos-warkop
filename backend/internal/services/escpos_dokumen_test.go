@@ -82,6 +82,11 @@ func TestRasterHitamPutih(t *testing.T) {
 	if !bytes.Equal(got, want) {
 		t.Errorf("raster = % x, want % x", got, want)
 	}
+	emas := image.NewNRGBA(image.Rect(0, 0, 1, 1))
+	emas.Set(0, 0, color.NRGBA{212, 175, 55, 255})
+	if got := rasterHitamPutih(emas, 100, 100); got[8] != 0x80 {
+		t.Error("logo emas harus tercetak hitam")
+	}
 	if kecil := rasterHitamPutih(image.NewNRGBA(image.Rect(0, 0, 400, 100)), 192, 128); kecil[4] != 24 || kecil[6] != 48 {
 		t.Errorf("gambar besar harus dikecilkan ke 192x48, dapat %d byte x %d baris", kecil[4], kecil[6])
 	}

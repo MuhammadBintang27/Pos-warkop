@@ -8,7 +8,7 @@ export async function cetakStruk(pesanan, usaha) {
     const { antre } = await post(`/pesanan/${pesanan.id}/cetak-struk`)
     if (antre) return true
   }
-  printStruk(pesanan, usaha)
+  await printStruk(pesanan, usaha)
   return false
 }
 

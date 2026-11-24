@@ -29,7 +29,8 @@ func logoRaster(raw []byte, lebarMM int) []byte {
 }
 
 // rasterHitamPutih mengecilkan gambar (tidak pernah membesarkan) lalu memakai ambang 50%: thermal hanya bisa hitam atau putih.
-// Bagian transparan dianggap kertas putih.
+// Yang diukur kanal tergelap, bukan kecerahan, supaya logo berwarna terang (emas, kuning) tetap jadi tinta hitam.
+// Bagian transparan dianggap kertas putih. Aturan yang sama ada di frontend utils/logoStruk.js.
 func rasterHitamPutih(img image.Image, maksW, maksH int) []byte {
 	b := img.Bounds()
 	sw, sh := b.Dx(), b.Dy()
@@ -50,7 +51,7 @@ func rasterHitamPutih(img image.Image, maksW, maksH int) []byte {
 			for sy := y0; sy < y1; sy++ {
 				for sx := x0; sx < x1; sx++ {
 					r, g, bl, a := img.At(b.Min.X+sx, b.Min.Y+sy).RGBA() // sudah dikali alpha
-					jumlah += uint64((299*r+587*g+114*bl)/1000 + (0xffff - a))
+					jumlah += uint64(min(r, g, bl) + (0xffff - a))
 					n++
 				}
 			}
