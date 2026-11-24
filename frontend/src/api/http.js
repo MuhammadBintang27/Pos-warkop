@@ -26,4 +26,5 @@ export const post = (url, body) => http.post(url, body).then(data)
 export const put = (url, body) => http.put(url, body).then(data)
 export const del = (url) => http.delete(url).then(data)
 
-export const errMsg = (e) => e.response?.data?.message || 'Tidak bisa terhubung ke server'
+// error lokal (bukan dari axios) membawa pesannya sendiri, misal logo kebesaran
+export const errMsg = (e) => e.response?.data?.message || (!e.isAxiosError && e.message) || 'Tidak bisa terhubung ke server'
