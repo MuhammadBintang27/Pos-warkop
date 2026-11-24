@@ -24,8 +24,6 @@ const menuDipilih = ref(null)
 const lunas = ref(null)
 const cartTutup = ref(load('cartTutup', false))
 const cartLebar = ref(false)
-const headerTutup = ref(load('headerTutup', false))
-watch(headerTutup, (v) => save('headerTutup', v))
 watch(cartTutup, (v) => {
   save('cartTutup', v)
   if (v) cartLebar.value = false
@@ -98,12 +96,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="kasir">
-    <button v-if="headerTutup" class="header-mini" @click="headerTutup = false">
-      <span><i class="pi pi-shopping-cart" /> Kasir · {{ subtitle }}</span>
-      <span v-if="peringatanCetak"><i class="pi pi-print" /> {{ peringatanCetak }}</span>
-      <i class="pi pi-angle-down" />
-    </button>
-    <PageHeader v-else icon="pi pi-shopping-cart" title="Kasir" :subtitle="subtitle">
+    <PageHeader icon="pi pi-shopping-cart" title="Kasir" :subtitle="subtitle">
       <button class="pill" @click="dlg.denah = true"><i class="pi pi-th-large" /> {{ aktif ? 'Ganti meja' : 'Pilih meja' }}</button>
       <button class="pill" @click="store.baru('')"><i class="pi pi-shopping-bag" /> Bawa pulang</button>
       <template v-if="auth.isKasir">
@@ -115,9 +108,6 @@ onBeforeUnmount(() => {
           <i :class="store.shift ? 'pi pi-lock' : 'pi pi-lock-open'" /> {{ store.shift ? 'Tutup Shift' : 'Buka Shift' }}
         </button>
       </template>
-      <button class="pill" aria-label="Sembunyikan header" title="Sembunyikan header" @click="headerTutup = true">
-        <i class="pi pi-angle-up" />
-      </button>
     </PageHeader>
 
     <div class="body" :class="{ ringkas: cartTutup && !mobile }">
@@ -188,23 +178,6 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 14px;
   min-height: 0;
-}
-.header-mini {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 6px 14px;
-  border: 0;
-  border-radius: 10px;
-  font: inherit;
-  font-size: 0.9rem;
-  text-align: left;
-  cursor: pointer;
-  background: var(--p-primary-color);
-  color: var(--p-primary-contrast-color);
-}
-.header-mini > .pi-angle-down {
-  margin-left: auto;
 }
 .body {
   flex: 1;
