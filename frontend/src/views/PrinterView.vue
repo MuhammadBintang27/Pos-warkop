@@ -29,8 +29,31 @@ const status = ref({ stasiunAktif: false })
 const form = ref(null)
 const token = ref('')
 
+// ada hanya di aplikasi Android (mobile/.../MainActivity.java)
+const hp = window.StasiunAndroid
+const hpStatus = ref(null)
+const muatHp = () => hp && (hpStatus.value = JSON.parse(hp.status()))
+
 async function muat() {
+  muatHp()
   ;[printer.value, riwayat.value, status.value] = await Promise.all([get('/printer'), get('/cetak/riwayat'), get('/cetak/status')])
+}
+
+function jadikanStasiun() {
+  konfirmasi(confirm, {
+    header: 'Jadikan perangkat ini stasiun cetak?',
+    message: 'HP/tablet ini akan mencetak semua tiket ke printer di jaringan. Stasiun lain yang memakai token lama berhenti.',
+    accept: () =>
+      run(async () => {
+        hp.simpan(location.origin, (await post('/stasiun/token')).token, true)
+        muatHp()
+      }, 'Stasiun cetak aktif di perangkat ini'),
+  })
+}
+
+function matikanHp() {
+  hp.simpan(location.origin, '', false)
+  muatHp()
 }
 
 async function simpan() {
@@ -99,7 +122,14 @@ const { cari: cariPrinter, hasil: printerTampil } = useCari(printer, 'nama', 'ip
       <small class="redup">
         Stasiun cetak adalah aplikasi desktop POS Warkop di PC kasir. Ia mengambil tiket dari server lalu mencetaknya ke printer di jaringan.
         Klik kanan ikon POS Warkop di system tray Windows, pilih <strong>Stasiun cetak…</strong>, tempel token di bawah, lalu aktifkan.
+        Tanpa PC, buka halaman ini di aplikasi Android pada HP/tablet kasir lalu tekan <strong>Jadikan perangkat ini stasiun</strong>.
       </small>
+      <div v-if="hp" class="head">
+        <span>Perangkat ini: <strong>{{ hpStatus?.aktif ? hpStatus.pesan : 'bukan stasiun' }}</strong></span>
+        <Button v-if="hpStatus?.aktif" label="Matikan" size="small" severity="danger" outlined class="kanan" @click="matikanHp" />
+        <Button v-else label="Jadikan perangkat ini stasiun" icon="pi pi-mobile" size="small" class="kanan" @click="jadikanStasiun" />
+      </div>
+      <small v-if="hp" class="redup">HP/tablet harus tetap menyala dan tersambung ke WiFi yang sama dengan printer. Boleh logout, stasiun tetap jalan.</small>
       <div v-if="token" class="token">
         <code>{{ token }}</code>
         <Button icon="pi pi-copy" text aria-label="Salin token" @click="salinToken" />

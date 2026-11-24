@@ -24,4 +24,4 @@ Hasilnya: `mobile/android/app/build/outputs/apk/debug/app-debug.apk`.
 - `www/capacitor-core.js` dan `www/capacitor-push.js` adalah salinan `dist` dari `@capacitor/core` dan `@capacitor/push-notifications`, karena halaman awal tidak memakai bundler. Salin ulang setelah menaikkan versi Capacitor.
 - Suara notifikasi: `suara/pesanan.wav` (chime buatan sendiri), disalin ke `android/app/src/main/res/raw/` oleh `npm run sync` dan dipakai channel `pesanan_v2`. Mengganti suara berarti harus memakai id channel baru di `www/index.html` dan `backend/internal/services/push.go`, karena Android mengunci suara channel.
 - Push notifikasi butuh `android/app/google-services.json` dari Firebase (project `pos-warkop-5b964`, package `id.warkop.pos`).
-- Cetak dari HP lewat browser terbatas. Struk dan tiket dicetak di PC kasir oleh stasiun cetak (lihat `tauri/`).
+- Cetak dari HP lewat browser terbatas. Struk dan tiket dicetak oleh stasiun cetak: di PC kasir (lihat `tauri/`) atau di APK ini sendiri (`StasiunService.java`, foreground service, porting dari `tauri/src-tauri/src/main.rs`). Owner menyalakannya dari halaman Printer lewat `window.StasiunAndroid`.
