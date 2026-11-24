@@ -2,6 +2,8 @@ package services
 
 import (
 	"bytes"
+	"image"
+	"image/color"
 	"strings"
 	"testing"
 	"time"
@@ -48,14 +50,43 @@ func strukUji() dto.StrukPayload {
 }
 
 func TestEscposStruk(t *testing.T) {
-	b := escposStruk(strukUji(), 58)
+	b := escposStruk(strukUji(), 58, nil)
 	if !bytes.HasPrefix(b, []byte{0x1b, 0x40}) || !bytes.HasSuffix(b, []byte{0x1d, 0x56, 0x42, 0x00}) {
 		t.Error("struk harus diawali inisialisasi dan diakhiri potong")
+	}
+	if logo := []byte{0x1d, 0x76, 0x30, 0, 1, 0, 1, 0, 0x80}; !bytes.Contains(escposStruk(strukUji(), 58, logo), logo) {
+		t.Error("logo harus ikut tercetak di struk")
 	}
 	for _, want := range []string{"Warkop Maju", "#12", "2x Kopi Susu", "Rp 25.000", "-Rp 5.000", "TOTAL", "Rp 20.000", "Tunai", "Kembali", "Rp 30.000", "Terima kasih"} {
 		if !bytes.Contains(b, []byte(want)) {
 			t.Errorf("struk tidak memuat %q", want)
 		}
+	}
+}
+
+func TestRasterHitamPutih(t *testing.T) {
+	// 10x2: kiri hitam, kanan putih, kolom terakhir transparan (harus jadi putih)
+	img := image.NewNRGBA(image.Rect(0, 0, 10, 2))
+	for y := range 2 {
+		for x := range 10 {
+			switch {
+			case x < 5:
+				img.Set(x, y, color.Black)
+			case x < 9:
+				img.Set(x, y, color.White)
+			}
+		}
+	}
+	got := rasterHitamPutih(img, 100, 100)
+	want := []byte{0x1d, 0x76, 0x30, 0, 2, 0, 2, 0, 0xf8, 0x00, 0xf8, 0x00}
+	if !bytes.Equal(got, want) {
+		t.Errorf("raster = % x, want % x", got, want)
+	}
+	if kecil := rasterHitamPutih(image.NewNRGBA(image.Rect(0, 0, 400, 100)), 192, 128); kecil[4] != 24 || kecil[6] != 48 {
+		t.Errorf("gambar besar harus dikecilkan ke 192x48, dapat %d byte x %d baris", kecil[4], kecil[6])
+	}
+	if logoRaster("bukan data url", 58) != nil || logoRaster("", 58) != nil {
+		t.Error("logo kosong atau rusak harus dilewati")
 	}
 }
 

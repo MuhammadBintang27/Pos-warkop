@@ -156,7 +156,7 @@ func (s *CetakService) CetakStruk(kid, pesananID int64) (bool, error) {
 		payload.Bayar = append(payload.Bayar, dto.StrukBayar{Metode: string(b.Metode), Pelanggan: b.Pelanggan, Diterima: b.Diterima, Kembalian: b.Kembalian})
 	}
 	err = utils.WithTx(s.db, func(tx *sql.Tx) error {
-		return s.simpanData(tx, kid, printerID, jenisStruk, payload, escposStruk(payload, lebarMM))
+		return s.simpanData(tx, kid, printerID, jenisStruk, payload, escposStruk(payload, lebarMM, logoRaster(usaha.Logo, lebarMM)))
 	})
 	if err != nil {
 		return false, err

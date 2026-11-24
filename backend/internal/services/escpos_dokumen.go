@@ -97,8 +97,14 @@ func kapital(s string) string {
 	return strings.ToUpper(s[:1]) + s[1:]
 }
 
-func escposStruk(p dto.StrukPayload, lebarMM int) []byte {
+// logo: hasil logoRaster, nil bila klien tidak punya logo.
+func escposStruk(p dto.StrukPayload, lebarMM int, logo []byte) []byte {
 	w := barisPenulis(lebarMM)
+	if logo != nil {
+		w.rata(1)
+		w.b.Write(logo)
+		w.rata(0)
+	}
 	w.tebal(true)
 	w.ukuran(0x11)
 	w.tengah(p.Usaha, w.lebar/2)

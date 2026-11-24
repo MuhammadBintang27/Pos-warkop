@@ -6,7 +6,8 @@ h1{font-size:15px;margin:0;text-align:center}.c{text-align:center}.b{font-weight
 .r{display:flex;justify-content:space-between;gap:6px}hr{border:0;border-top:1px dashed #000;margin:5px 0}
 .big{font-size:20px;font-weight:bold;text-align:center}.sub{padding-left:10px;font-size:11px}
 .judul{font-size:14px;font-weight:bold;text-align:center;border:2px solid #000;padding:2px;margin-bottom:4px}
-.page{page-break-after:always}.page:last-child{page-break-after:auto}`
+.page{page-break-after:always}.page:last-child{page-break-after:auto}
+.logo{display:block;margin:0 auto 4px;max-width:50%;max-height:20mm;filter:grayscale(1) contrast(100)}`
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
 
@@ -85,7 +86,8 @@ export function printStruk(p, usaha) {
     .map((b) => `<div class="r"><span>${esc(b.metode)}${b.pelanggan ? ' ' + esc(b.pelanggan) : ''}</span><span>${rp(b.diterima)}</span></div>` +
       (b.kembalian ? `<div class="r"><span>Kembali</span><span>${rp(b.kembalian)}</span></div>` : ''))
     .join('')
-  printHtml(`<h1>${esc(usaha.namaUsaha)}</h1>
+  // logo hitam putih seperti hasil printer thermal (server memakai ambang yang sama)
+  printHtml(`${usaha.logo ? `<img class="logo" src="${esc(usaha.logo)}" alt="">` : ''}<h1>${esc(usaha.namaUsaha)}</h1>
     <div class="c">${esc(usaha.alamat)}</div><hr>
     <div class="r"><span>${esc(p.mejaNama || 'Bawa pulang')}</span><span>#${p.id}</span></div>
     ${p.atasNama ? `<div>${esc(p.atasNama)}</div>` : ''}
