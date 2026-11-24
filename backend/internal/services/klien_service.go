@@ -221,7 +221,7 @@ func (s *KlienService) Perpanjang(id int64, bulan int) error {
 func (s *KlienService) ResetOwner(id int64) (*dto.KlienKredensial, error) {
 	var uid int64
 	var username string
-	if s.db.QueryRow("SELECT id,username FROM users WHERE klien_id=? AND role='owner' ORDER BY id LIMIT 1", id).Scan(&uid, &username) != nil {
+	if s.db.QueryRow("SELECT id,username FROM users WHERE klien_id=? AND role='owner' AND dihapus IS NULL ORDER BY id LIMIT 1", id).Scan(&uid, &username) != nil {
 		return nil, types.NotFound("Owner klien")
 	}
 	pw, err := passwordAcak()

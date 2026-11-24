@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS users (
   tenant_id BIGINT NULL,        -- hanya untuk role tenant: tenant yang pesanan dan rekapannya boleh dilihat
   aktif TINYINT(1) NOT NULL DEFAULT 1,
   token_sejak DATETIME NULL,    -- token login yang terbit sebelum ini ditolak (nonaktif, ganti role, ganti password)
+  dihapus DATETIME NULL,        -- hapus lunak: hilang dari daftar, username diberi akhiran agar bisa dipakai lagi
   FOREIGN KEY (klien_id) REFERENCES klien(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

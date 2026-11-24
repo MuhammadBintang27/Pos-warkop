@@ -1,9 +1,11 @@
 <script setup>
 import { onMounted, ref } from 'vue'
+import { useConfirm } from 'primevue/useconfirm'
 import { useCari } from '@/composables/useCari'
-import { get, post, put } from '@/api/http'
+import { del, get, post, put } from '@/api/http'
 import { useRun } from '@/composables/useRun'
 import { useAuthStore } from '@/stores/auth'
+import { konfirmasi } from '@/utils/confirm'
 
 const ROLES = [
   { label: 'Pelayan', value: 'pelayan' },
@@ -14,6 +16,7 @@ const ROLES = [
 const SEVERITY = { pelayan: 'secondary', kasir: 'info', owner: 'warn' }
 
 const run = useRun()
+const confirm = useConfirm()
 const auth = useAuthStore()
 const users = ref([])
 const tenants = ref([])
@@ -39,6 +42,14 @@ async function simpan() {
     form.value = null
     await run(muat)
   }
+}
+
+function hapus(u) {
+  konfirmasi(confirm, {
+    header: 'Hapus pengguna?',
+    message: `Akun "${u.nama}" (${u.username}) tidak bisa login lagi dan hilang dari daftar. Riwayat transaksinya tetap tersimpan.`,
+    accept: async () => (await run(() => del(`/users/${u.id}`), 'Pengguna dihapus')) && run(muat),
+  })
 }
 
 onMounted(() => run(muat))
@@ -72,6 +83,7 @@ const { cari: cariUser, hasil: usersTampil } = useCari(users, 'nama', 'username'
         <Column>
           <template #body="{ data }">
             <Button icon="pi pi-pencil" text severity="secondary" aria-label="Ubah" @click="form = { ...data, password: '' }" />
+            <Button v-if="data.id !== auth.user.id" icon="pi pi-trash" text severity="danger" aria-label="Hapus" @click="hapus(data)" />
           </template>
         </Column>
       </DataTable>

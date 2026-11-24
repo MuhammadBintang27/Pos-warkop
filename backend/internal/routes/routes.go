@@ -41,6 +41,7 @@ func RegisterUserRoutes(r fiber.Router, h *controllers.UserController) {
 	r.Get("/users", authed, owner, h.List)
 	r.Post("/users", authed, owner, middleware.Audit("Tambah pengguna"), h.Create)
 	r.Put("/users/:id", authed, owner, middleware.Audit("Ubah pengguna"), h.Update)
+	r.Delete("/users/:id", authed, owner, middleware.Audit("Hapus pengguna"), h.Delete)
 }
 
 func RegisterMenuRoutes(r fiber.Router, h *controllers.MenuController) {

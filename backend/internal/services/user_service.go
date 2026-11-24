@@ -26,7 +26,7 @@ func NewUserService(db *sql.DB) *UserService {
 }
 
 func (s *UserService) List(kid int64) ([]dto.UserResponse, error) {
-	rows, err := s.db.Query("SELECT id,nama,username,role,aktif,COALESCE(tenant_id,0) FROM users WHERE klien_id=? ORDER BY nama", kid)
+	rows, err := s.db.Query("SELECT id,nama,username,role,aktif,COALESCE(tenant_id,0) FROM users WHERE klien_id=? AND dihapus IS NULL ORDER BY nama", kid)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (s *UserService) Update(kid, actorID, id int64, req dto.UpdateUserRequest) 
 	var roleLama string
 	var aktifLama bool
 	var tenantLama int64
-	if s.db.QueryRow("SELECT role,aktif,COALESCE(tenant_id,0) FROM users WHERE id=? AND klien_id=?", id, kid).Scan(&roleLama, &aktifLama, &tenantLama) != nil {
+	if s.db.QueryRow("SELECT role,aktif,COALESCE(tenant_id,0) FROM users WHERE id=? AND klien_id=? AND dihapus IS NULL", id, kid).Scan(&roleLama, &aktifLama, &tenantLama) != nil {
 		return types.NotFound("User")
 	}
 	if _, err := s.db.Exec("UPDATE users SET nama=?, role=?, aktif=?, tenant_id=? WHERE id=? AND klien_id=?", req.Nama, req.Role, *req.Aktif, tenantID, id, kid); err != nil {
@@ -95,6 +95,22 @@ func (s *UserService) Update(kid, actorID, id int64, req dto.UpdateUserRequest) 
 		return cabutToken(s.db, id)
 	}
 	return nil
+}
+
+// Delete menghapus lunak: akun nonaktif dan disembunyikan, riwayat transaksinya tetap.
+// Username diberi akhiran "~<id>" supaya username yang sama bisa dipakai akun baru.
+func (s *UserService) Delete(kid, actorID, id int64) error {
+	if id == actorID {
+		return types.BadRequest("Tidak bisa menghapus akun sendiri")
+	}
+	res, err := s.db.Exec("UPDATE users SET aktif=0, dihapus=NOW(), username=CONCAT(username,'~',id) WHERE id=? AND klien_id=? AND dihapus IS NULL", id, kid)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return types.NotFound("User")
+	}
+	return cabutToken(s.db, id)
 }
 
 // cabutToken membuat semua token user yang sudah terbit tidak berlaku lagi.

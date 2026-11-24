@@ -50,3 +50,14 @@ func (h *UserController) Update(c *fiber.Ctx) error {
 	}
 	return utils.SendSuccess(c, fiber.StatusOK, "User berhasil diperbarui")
 }
+
+func (h *UserController) Delete(c *fiber.Ctx) error {
+	id, err := utils.ParamID(c, "id")
+	if err != nil {
+		return handleErr(c, err, "")
+	}
+	if err := h.svc.Delete(kid(c), middleware.CurrentUser(c).UserID, id); err != nil {
+		return handleErr(c, err, "DeleteUser error")
+	}
+	return utils.SendSuccess(c, fiber.StatusOK, "User berhasil dihapus")
+}
