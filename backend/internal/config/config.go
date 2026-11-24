@@ -18,6 +18,7 @@ type Config struct {
 	JWTExpiryHours int
 	TZName         string
 	StaticDir      string
+	UploadDir      string // file unggahan (logo); di Docker wajib volume agar tidak hilang saat redeploy
 	// FCMServiceAccount: isi JSON service account Firebase; kosong = push notifikasi tenant mati.
 	FCMServiceAccount string
 }
@@ -40,6 +41,7 @@ func Load() *Config {
 			JWTExpiryHours:    getEnvInt("JWT_EXPIRY_HOURS", 12),
 			TZName:            getEnv("TZ_NAME", "Asia/Jakarta"),
 			StaticDir:         getEnv("STATIC_DIR", "../frontend/dist"),
+			UploadDir:         getEnv("UPLOAD_DIR", "uploads"),
 			FCMServiceAccount: os.Getenv("FCM_SERVICE_ACCOUNT"),
 		}
 		if cfg.DBDSN == "" || len(cfg.JWTSecret) < 16 {

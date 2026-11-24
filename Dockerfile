@@ -18,7 +18,8 @@ RUN apk add --no-cache tzdata ca-certificates
 WORKDIR /app
 COPY --from=api /warkop /superadmin ./
 COPY --from=web /src/dist ./dist
-ENV APP_ENV=production PORT=8080 STATIC_DIR=/app/dist TZ_NAME=Asia/Jakarta
+# UPLOAD_DIR: pasang volume Dokploy di sini, kalau tidak logo hilang setiap redeploy
+ENV APP_ENV=production PORT=8080 STATIC_DIR=/app/dist UPLOAD_DIR=/app/uploads TZ_NAME=Asia/Jakarta
 # diisi workflow GitHub dengan commit SHA; tampil di /health
 ARG VERSI=dev
 ENV VERSI=$VERSI

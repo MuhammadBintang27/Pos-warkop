@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"io"
+
 	"warkop/internal/dto"
 	"warkop/internal/middleware"
 	"warkop/internal/services"
@@ -41,4 +43,28 @@ func (h *PengaturanController) Update(c *fiber.Ctx) error {
 		return handleErr(c, err, "UpdatePengaturan error")
 	}
 	return utils.SendSuccess(c, fiber.StatusOK, "Pengaturan berhasil disimpan", req)
+}
+
+func (h *PengaturanController) UnggahLogo(c *fiber.Ctx) error {
+	fh, err := c.FormFile("logo")
+	if err != nil {
+		return utils.SendError(c, fiber.StatusBadRequest, "File logo wajib diisi")
+	}
+	if fh.Size > services.MaksLogo {
+		return utils.SendError(c, fiber.StatusBadRequest, "Logo maksimal 1 MB")
+	}
+	f, err := fh.Open()
+	if err != nil {
+		return handleErr(c, err, "UnggahLogo error")
+	}
+	defer f.Close()
+	raw, err := io.ReadAll(io.LimitReader(f, services.MaksLogo+1))
+	if err != nil {
+		return handleErr(c, err, "UnggahLogo error")
+	}
+	url, err := h.svc.SimpanLogo(kid(c), raw)
+	if err != nil {
+		return handleErr(c, err, "UnggahLogo error")
+	}
+	return utils.SendSuccess(c, fiber.StatusOK, "Logo terunggah", fiber.Map{"url": url})
 }

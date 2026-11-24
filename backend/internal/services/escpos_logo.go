@@ -2,26 +2,19 @@ package services
 
 import (
 	"bytes"
-	"encoding/base64"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
-	"strings"
 )
 
 // lebarTitik: lebar area cetak printer thermal 203 dpi dalam titik.
 var lebarTitik = map[int]int{58: 384, 80: 576}
 
-// logoRaster mengubah logo klien (data URL) menjadi perintah gambar ESC/POS hitam putih, paling lebar separuh kertas.
-// Format yang tidak bisa dibaca Go (webp, svg) dilewati: struk tetap tercetak tanpa logo.
-func logoRaster(dataURL string, lebarMM int) []byte {
-	i := strings.Index(dataURL, ";base64,")
-	if i < 0 {
-		return nil
-	}
-	raw, err := base64.StdEncoding.DecodeString(dataURL[i+len(";base64,"):])
-	if err != nil {
+// logoRaster mengubah isi file logo klien menjadi perintah gambar ESC/POS hitam putih, paling lebar separuh kertas.
+// Gambar yang tidak bisa dibaca dilewati: struk tetap tercetak tanpa logo.
+func logoRaster(raw []byte, lebarMM int) []byte {
+	if len(raw) == 0 {
 		return nil
 	}
 	img, _, err := image.Decode(bytes.NewReader(raw))

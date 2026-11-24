@@ -62,7 +62,7 @@ func New(db *sql.DB) *App {
 		panic(err)
 	}
 	authSvc := services.NewAuthService(db)
-	pengaturanSvc := services.NewPengaturanService(db, hub)
+	pengaturanSvc := services.NewPengaturanService(db, hub, cfg.UploadDir)
 	cetakSvc := services.NewCetakService(db, hub, pengaturanSvc)
 	pusher := services.NewPusher(db, cfg.FCMServiceAccount)
 	pesananSvc := services.NewPesananService(db, hub, cetakSvc, pusher)
@@ -97,9 +97,10 @@ func New(db *sql.DB) *App {
 		return utils.SendError(c, fiber.StatusNotFound, "Endpoint tidak ditemukan")
 	})
 
+	f.Static("/uploads", cfg.UploadDir, fiber.Static{MaxAge: 31536000}) // nama file unik per unggahan, aman di-cache lama
 	f.Static("/", cfg.StaticDir)
 	f.Use(func(c *fiber.Ctx) error {
-		if strings.HasPrefix(c.Path(), "/api") {
+		if strings.HasPrefix(c.Path(), "/api") || strings.HasPrefix(c.Path(), "/uploads/") {
 			return c.Next()
 		}
 		return c.SendFile(filepath.Join(cfg.StaticDir, "index.html"))

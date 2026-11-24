@@ -24,6 +24,7 @@ func RegisterAuthRoutes(r fiber.Router, h *controllers.AuthController, loginLimi
 func RegisterPengaturanRoutes(r fiber.Router, h *controllers.PengaturanController) {
 	r.Get("/pengaturan", middleware.OptionalAuthenticate, h.Get) // tanpa login: tema bawaan, supaya halaman login tetap bertema
 	r.Put("/pengaturan", authed, owner, middleware.Audit("Ubah pengaturan"), h.Update)
+	r.Post("/pengaturan/logo", authed, owner, h.UnggahLogo)
 }
 
 func RegisterTenantRoutes(r fiber.Router, h *controllers.TenantController) {

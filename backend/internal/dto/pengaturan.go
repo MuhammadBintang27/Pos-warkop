@@ -7,7 +7,7 @@ type PengaturanRequest struct {
 	Theme       string `json:"theme" validate:"required,oneof=aura lara material nora"`
 	Primary     string `json:"primary" validate:"required,primary_color"`
 	Mode        string `json:"mode" validate:"required,oneof=light dark auto"`
-	Logo        string `json:"logo" validate:"max=300000"` // data URL gambar, per klien
+	Logo        string `json:"logo" validate:"max=60000"` // URL /uploads/logo-<klien>-*.png|jpg; data URL hanya sisa data lama
 	// PrinterKasirID: printer yang mencetak struk dan bill closing; kosong berarti lewat dialog cetak browser.
 	PrinterKasirID *int64 `json:"printerKasirId" validate:"omitempty,gt=0"`
 	// DialogDapur: tiket dapur/batal untuk tenant tanpa printer dicetak lewat dialog browser; false berarti tidak dicetak sama sekali.

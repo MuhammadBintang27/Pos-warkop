@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import QRCode from 'qrcode'
-import { get } from '@/api/http'
+import { get, post } from '@/api/http'
 import { useRun } from '@/composables/useRun'
 import { applyTheme, isHex, PRIMARY_COLORS, THEMES } from '@/composables/useAppTheme'
 import { usePengaturanStore } from '@/stores/pengaturan'
@@ -20,15 +20,19 @@ const printers = ref([])
 run(async () => (printers.value = await get('/printer')))
 const saving = ref(false)
 
-const MAKS_LOGO = 200 * 1024
+// logo diunggah sebagai file ke server (folder uploads), yang disimpan di pengaturan hanya URL-nya
+const MAKS_LOGO = 1024 * 1024 // sama dengan services.MaksLogo
+const mengunggah = ref(false)
 function pilihLogo(e) {
   const file = e.target.files[0]
   e.target.value = ''
   if (!file) return
-  if (!file.type.startsWith('image/') || file.size > MAKS_LOGO) return run(() => Promise.reject(new Error('Logo harus gambar dan maksimal 200 KB')))
-  const r = new FileReader()
-  r.onload = () => (form.logo = r.result)
-  r.readAsDataURL(file)
+  if (!['image/png', 'image/jpeg'].includes(file.type)) return run(() => Promise.reject(new Error('Logo harus PNG atau JPG')))
+  if (file.size > MAKS_LOGO) return run(() => Promise.reject(new Error('Logo maksimal 1 MB')))
+  const fd = new FormData()
+  fd.append('logo', file)
+  mengunggah.value = true
+  run(async () => (form.logo = (await post('/pengaturan/logo', fd)).url)).finally(() => (mengunggah.value = false))
 }
 
 const dirty = computed(() => KEYS.some((k) => form[k] !== store.settings[k]))
@@ -104,13 +108,30 @@ const salinLink = () => run(() => navigator.clipboard.writeText(linkMenu.value),
           <label for="nama">Nama usaha</label>
           <InputText id="nama" v-model="form.namaUsaha" maxlength="100" fluid />
           <label>Logo</label>
-          <div class="logorow">
-            <img v-if="form.logo" :src="form.logo" alt="Logo" class="logoimg" />
-            <label class="pill upload">
-              <i class="pi pi-upload" /> {{ form.logo ? 'Ganti' : 'Unggah' }}
-              <input type="file" accept="image/*" hidden @change="pilihLogo" />
-            </label>
-            <Button v-if="form.logo" label="Hapus" text severity="secondary" @click="form.logo = ''" />
+          <div class="logobox">
+            <div class="pratinjau">
+              <i v-if="mengunggah" class="pi pi-spin pi-spinner" />
+              <template v-else-if="form.logo">
+                <figure>
+                  <img :src="form.logo" alt="Logo" />
+                  <figcaption>Layar</figcaption>
+                </figure>
+                <figure>
+                  <img :src="form.logo" alt="" class="struk" />
+                  <figcaption>Struk</figcaption>
+                </figure>
+              </template>
+              <span v-else class="redup">Belum ada logo</span>
+            </div>
+            <div class="logorow">
+              <label class="pill upload">
+                <i :class="mengunggah ? 'pi pi-spin pi-spinner' : 'pi pi-upload'" />
+                {{ mengunggah ? 'Mengunggah…' : form.logo ? 'Ganti' : 'Unggah' }}
+                <input type="file" accept="image/png,image/jpeg" hidden :disabled="mengunggah" @change="pilihLogo" />
+              </label>
+              <Button v-if="form.logo" label="Hapus" text severity="secondary" @click="form.logo = ''" />
+            </div>
+            <small class="redup">PNG atau JPG, maksimal 1 MB. Logo baru dipakai setelah klik Simpan.</small>
           </div>
           <label for="alamat">Alamat (di struk)</label>
           <InputText id="alamat" v-model="form.alamat" maxlength="255" fluid />
@@ -229,12 +250,42 @@ h3 {
   align-items: center;
   gap: 10px;
 }
-.logoimg {
-  width: 44px;
-  height: 44px;
-  object-fit: contain;
+.logobox {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pratinjau {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  min-height: 120px;
+  padding: 12px;
+  border: 1px dashed var(--p-content-border-color);
   border-radius: 8px;
-  border: 1px solid var(--p-content-border-color);
+}
+.pratinjau figure {
+  margin: 0;
+  text-align: center;
+}
+.pratinjau img {
+  display: block;
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
+}
+/* perkiraan hasil printer thermal: hitam putih di atas kertas putih, sama dengan print.js */
+.pratinjau img.struk {
+  background: #fff;
+  filter: grayscale(1) contrast(100);
+}
+.redup {
+  color: var(--p-text-muted-color);
+}
+.pratinjau figcaption {
+  font-size: 12px;
+  color: var(--p-text-muted-color);
 }
 .upload {
   cursor: pointer;

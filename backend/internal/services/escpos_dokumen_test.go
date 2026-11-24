@@ -85,7 +85,7 @@ func TestRasterHitamPutih(t *testing.T) {
 	if kecil := rasterHitamPutih(image.NewNRGBA(image.Rect(0, 0, 400, 100)), 192, 128); kecil[4] != 24 || kecil[6] != 48 {
 		t.Errorf("gambar besar harus dikecilkan ke 192x48, dapat %d byte x %d baris", kecil[4], kecil[6])
 	}
-	if logoRaster("bukan data url", 58) != nil || logoRaster("", 58) != nil {
+	if logoRaster([]byte("bukan gambar"), 58) != nil || logoRaster(nil, 58) != nil {
 		t.Error("logo kosong atau rusak harus dilewati")
 	}
 }
