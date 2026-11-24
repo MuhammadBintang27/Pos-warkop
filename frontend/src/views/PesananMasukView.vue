@@ -30,7 +30,16 @@ const terbuka = reactive({})
 const tampil = (b, jenis) => (terbuka[b.key] ? b.items : b.items.slice(0, BATAS[jenis]))
 const sisa = (b, jenis) => b.items.length - BATAS[jenis]
 
-const antrean = computed(() => kelompok(data.value.items.filter((i) => !i.siapAt)))
+// tab Antrean (belum disentuh) dan Diproses (sudah ditekan Proses, belum Selesai)
+const antrean = computed(() => kelompok(data.value.items.filter((i) => !i.siapAt && !i.diprosesAt)))
+const diproses = computed(() => kelompok(data.value.items.filter((i) => !i.siapAt && i.diprosesAt)))
+const tab = ref('antrean')
+const jumlah = (list) => list.reduce((n, b) => n + b.items.length, 0)
+const TAB = computed(() => [
+  { label: `Antrean (${jumlah(antrean.value)})`, value: 'antrean' },
+  { label: `Diproses (${jumlah(diproses.value)})`, value: 'diproses' },
+])
+const kartuTab = computed(() => (tab.value === 'antrean' ? antrean.value : diproses.value))
 const siap = computed(() => kelompok(data.value.items.filter((i) => i.siapAt)))
 // satu kartu per kali batal (satu bill bisa batal beberapa item sekaligus)
 const batal = computed(() => {
@@ -89,13 +98,20 @@ onBeforeUnmount(() => {
   <div class="stack gap">
     <PageHeader icon="pi pi-inbox" title="Pesanan Masuk" :subtitle="data.tenant" />
 
-    <h3 class="judul">Antrean <Tag :value="String(antrean.reduce((n, b) => n + b.items.length, 0))" /></h3>
-    <p v-if="!antrean.length" class="kosong">Belum ada pesanan yang perlu dibuat.</p>
+    <SelectButton v-model="tab" :options="TAB" option-label="label" option-value="value" :allow-empty="false" class="tab" />
+    <p v-if="!kartuTab.length" class="kosong">
+      {{ tab === 'antrean' ? 'Belum ada pesanan baru.' : 'Belum ada pesanan yang sedang dibuat.' }}
+    </p>
     <div class="grid">
-      <section v-for="b in antrean" :key="b.key" class="panel kartu antre" :class="{ tambah: b.tambahan, baru: baru(b) }">
+      <section
+        v-for="b in kartuTab"
+        :key="b.key"
+        class="panel kartu antre"
+        :class="{ tambah: b.tambahan, baru: tab === 'antrean' && baru(b), proses: tab === 'diproses' }"
+      >
         <div class="jenis">
-          <span v-if="baru(b)" class="lencana">BARU</span>
-          {{ b.tambahan ? 'Pesanan tambahan' : 'Pesanan baru' }}
+          <span v-if="tab === 'antrean' && baru(b)" class="lencana">BARU</span>
+          {{ tab === 'diproses' ? 'Sedang dibuat' : b.tambahan ? 'Pesanan tambahan' : 'Pesanan baru' }}
         </div>
         <header>
           <strong class="meja">{{ b.meja || 'Tanpa meja' }}</strong>
@@ -116,8 +132,8 @@ onBeforeUnmount(() => {
             </div>
           </div>
           <div class="tombol">
-            <Button v-if="!it.diprosesAt" label="Proses" icon="pi pi-play" size="small" outlined @click="proses(it, true)" />
-            <Button label="Selesai" icon="pi pi-check" size="small" @click="tandai(it, true)" />
+            <Button v-if="!it.diprosesAt" label="Proses" icon="pi pi-play" size="small" @click="proses(it, true)" />
+            <Button label="Selesai" icon="pi pi-check" size="small" :outlined="!it.diprosesAt" @click="tandai(it, true)" />
           </div>
         </div>
         <button v-if="sisa(b, 'antrean') > 0" class="lihat" @click="terbuka[b.key] = !terbuka[b.key]">
@@ -242,6 +258,12 @@ onBeforeUnmount(() => {
 }
 .antre.tambah {
   --warna: var(--p-primary-700);
+}
+.antre.proses {
+  --warna: var(--p-orange-500);
+}
+.tab {
+  align-self: flex-start;
 }
 .antre.baru {
   animation: denyut 1.6s ease-in-out infinite;
