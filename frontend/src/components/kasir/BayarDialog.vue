@@ -11,7 +11,10 @@ const METODE = [
   { label: 'Transfer', value: 'transfer' },
   { label: 'Kasbon', value: 'kasbon' },
 ]
-const CEPAT = [20000, 50000, 100000]
+// pecahan uang yang biasa disodorkan pelanggan: jumlah dibulatkan ke atas per pecahan, mis. 167.000 -> 170rb, 180rb, 200rb
+const PECAHAN = [5000, 10000, 20000, 50000, 100000]
+const cepat = (jumlah) =>
+  [...new Set(PECAHAN.map((p) => Math.ceil((jumlah + 1) / p) * p))].sort((a, b) => a - b).slice(0, 4)
 
 const visible = defineModel('visible')
 const emit = defineEmits(['paid'])
@@ -101,7 +104,7 @@ async function bayar() {
           <MoneyInput v-model="b.diterima" />
           <div class="cepat">
             <Button label="Uang pas" severity="secondary" size="small" @click="b.diterima = 0" />
-            <Button v-for="n in CEPAT" :key="n" :label="rp(n)" severity="secondary" size="small" @click="b.diterima = n" />
+            <Button v-for="n in cepat(b.jumlah || 0)" :key="n" :label="rp(n)" severity="secondary" size="small" @click="b.diterima = n" />
           </div>
           <div v-if="kembalian(b)" class="kembali">Kembalian <strong>{{ rp(kembalian(b)) }}</strong></div>
         </template>
