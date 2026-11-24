@@ -32,8 +32,18 @@ watch(cartTutup, (v) => {
 const peringatanCetak = computed(() => {
   const { macet, stasiunAktif } = store.cetak
   if (!macet) return ''
-  return stasiunAktif ? `${macet} tiket belum tercetak, cek printer` : `Stasiun cetak tidak terhubung, ${macet} tiket menunggu`
+  if (stasiunAktif) return `${macet} tiket belum tercetak, cek printer`
+  return `Stasiun cetak tidak terhubung, ${macet} tiket menunggu` + (hp && !hpPunyaToken() ? '. Minta owner mengaktifkan stasiun dari halaman Printer' : '')
 })
+
+// stasiun cetak di HP ini (aplikasi Android); kasir boleh menyalakan ulang dengan token yang sudah disimpan owner
+const hp = window.StasiunAndroid
+const hpPunyaToken = () => JSON.parse(hp.status()).adaToken
+const bisaNyalakanHp = computed(() => hp && !store.cetak.stasiunAktif && hpPunyaToken())
+function nyalakanHp() {
+  hp.simpan(location.origin, '', true)
+  setTimeout(() => store.loadCetak().catch(() => {}), 4000)
+}
 const aktif = computed(() => store.pesanan ?? store.draft)
 const subtitle = computed(() => {
   const p = aktif.value
@@ -103,6 +113,7 @@ onBeforeUnmount(() => {
         <button class="pill" title="Kas Keluar" @click="dlg.kas = true"><i class="pi pi-wallet" /> <span class="lbl">Kas Keluar</span></button>
         <button class="pill" title="Kasbon" @click="dlg.kasbon = true"><i class="pi pi-clock" /> <span class="lbl">Kasbon</span></button>
         <span v-if="peringatanCetak" class="chip warn" :title="peringatanCetak"><i class="pi pi-print" /> <span class="lbl">{{ peringatanCetak }}</span></span>
+        <button v-if="bisaNyalakanHp" class="pill warn" title="Nyalakan stasiun cetak di perangkat ini" @click="nyalakanHp"><i class="pi pi-power-off" /> <span class="lbl">Nyalakan stasiun</span></button>
         <span v-if="store.shift" class="chip ok" :title="`Shift aktif — ${store.shift.kasir}`"><i class="pi pi-check-circle" /> <span class="lbl">Shift aktif — {{ store.shift.kasir }}</span></span>
         <button class="pill warn" @click="dlg.shift = true">
           <i :class="store.shift ? 'pi pi-lock' : 'pi pi-lock-open'" /> {{ store.shift ? 'Tutup Shift' : 'Buka Shift' }}
