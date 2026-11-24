@@ -10,4 +10,6 @@ type PengaturanRequest struct {
 	Logo        string `json:"logo" validate:"max=300000"` // data URL gambar, per klien
 	// PrinterKasirID: printer yang mencetak struk dan bill closing; kosong berarti lewat dialog cetak browser.
 	PrinterKasirID *int64 `json:"printerKasirId" validate:"omitempty,gt=0"`
+	// DialogDapur: tiket dapur/batal untuk tenant tanpa printer dicetak lewat dialog browser; false berarti tidak dicetak sama sekali.
+	DialogDapur bool `json:"dialogDapur"`
 }

@@ -38,6 +38,7 @@ export const DEFAULT_SETTINGS = {
   alamat: '',
   logo: '',
   printerKasirId: null,
+  dialogDapur: true,
   footerStruk: '',
   theme: 'aura',
   primary: 'amber',

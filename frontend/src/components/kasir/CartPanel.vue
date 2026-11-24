@@ -4,6 +4,7 @@ import { useToast } from 'primevue/usetoast'
 import { useRun } from '@/composables/useRun'
 import { useAuthStore } from '@/stores/auth'
 import { useKasirStore } from '@/stores/kasir'
+import { usePengaturanStore } from '@/stores/pengaturan'
 import { rp } from '@/utils/format'
 import { gabungTerkirim, printDapur, sisaLokal } from '@/utils/print'
 
@@ -79,7 +80,7 @@ async function kirim() {
   let tiket
   if (!(await run(async () => (tiket = await store.kirim()), 'Terkirim ke dapur'))) return
   const lokal = sisaLokal(tiket)
-  if (lokal.items.length) printDapur(lokal)
+  if (lokal.items.length && usePengaturanStore().settings.dialogDapur) printDapur(lokal)
 }
 
 </script>

@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRun } from '@/composables/useRun'
 import { useKasirStore } from '@/stores/kasir'
+import { usePengaturanStore } from '@/stores/pengaturan'
 import { printBatalDapur, sisaLokal } from '@/utils/print'
 
 const ALASAN = ['Pelanggan batal', 'Salah input', 'Menu habis', 'Lainnya']
@@ -37,7 +38,7 @@ async function batalkan() {
   if (!ok) return
   visible.value = false
   const lokal = tiket && sisaLokal(tiket)
-  if (lokal?.items.length) printBatalDapur(lokal)
+  if (lokal?.items.length && usePengaturanStore().settings.dialogDapur) printBatalDapur(lokal)
 }
 </script>
 

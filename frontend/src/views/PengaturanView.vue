@@ -5,7 +5,7 @@ import { useRun } from '@/composables/useRun'
 import { applyTheme, isHex, PRIMARY_COLORS, THEMES } from '@/composables/useAppTheme'
 import { usePengaturanStore } from '@/stores/pengaturan'
 
-const KEYS = ['namaUsaha', 'alamat', 'logo', 'footerStruk', 'printerKasirId', 'theme', 'primary', 'mode']
+const KEYS = ['namaUsaha', 'alamat', 'logo', 'footerStruk', 'printerKasirId', 'dialogDapur', 'theme', 'primary', 'mode']
 const MODES = [
   { label: 'Terang', value: 'light' },
   { label: 'Gelap', value: 'dark' },
@@ -109,6 +109,11 @@ const reset = () => Object.assign(form, store.settings)
           <InputText id="alamat" v-model="form.alamat" maxlength="255" fluid />
           <label for="pk">Printer kasir (struk dan bill closing)</label>
           <Select v-model="form.printerKasirId" input-id="pk" :options="printers" option-label="nama" option-value="id" placeholder="Tanpa printer: cetak lewat browser" show-clear fluid />
+          <div class="sw">
+            <ToggleSwitch v-model="form.dialogDapur" input-id="dd" />
+            <label for="dd">Munculkan dialog cetak tiket dapur</label>
+          </div>
+          <small class="hint">Untuk tenant tanpa printer: tiket pesanan dan BATAL dicetak lewat dialog browser di perangkat pengirim. Matikan bila tenant tersebut tidak butuh kertas tiket.</small>
           <label for="footer">Catatan kaki struk</label>
           <InputText id="footer" v-model="form.footerStruk" maxlength="255" placeholder="Terima kasih sudah mampir" fluid />
         </div>
@@ -132,6 +137,15 @@ const reset = () => Object.assign(form, store.settings)
 </template>
 
 <style scoped>
+.sw {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+.hint {
+  color: var(--p-text-muted-color);
+}
 .gap {
   gap: 14px;
 }

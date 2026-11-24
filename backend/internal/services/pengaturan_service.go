@@ -15,7 +15,7 @@ type PengaturanService struct {
 
 const kunciTampilan = "tampilan"
 
-var defaultPengaturan = dto.PengaturanRequest{NamaUsaha: "Warkop", Theme: "aura", Primary: "amber", Mode: "light"}
+var defaultPengaturan = dto.PengaturanRequest{NamaUsaha: "Warkop", Theme: "aura", Primary: "amber", Mode: "light", DialogDapur: true}
 
 func NewPengaturanService(db *sql.DB, hub *EventHub) *PengaturanService {
 	return &PengaturanService{db: db, hub: hub}
