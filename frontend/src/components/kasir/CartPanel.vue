@@ -152,7 +152,8 @@ async function kirim() {
       <li v-for="i in baris" :key="i.id" class="item" :class="{ lebar }">
         <span class="barisnama" :title="[i.nama, i.opsi, i.catatan && `“${i.catatan}”`, `${rp(i.harga)} per porsi`].filter(Boolean).join(' · ')">
           <i v-if="i.siapAt" class="pi pi-check-circle kirim antar" :title="`Sudah diantar tenant ${jam(i.siapAt)}`" />
-          <i v-else-if="i.dikirim" class="pi pi-send kirim" title="Sudah dikirim ke dapur, belum diantar" />
+          <i v-else-if="i.diprosesAt" class="pi pi-hourglass kirim proses" :title="`Sedang dibuat tenant sejak ${jam(i.diprosesAt)}`" />
+          <i v-else-if="i.dikirim" class="pi pi-send kirim" title="Sudah dikirim ke dapur, belum dibuat" />
           <strong>{{ i.nama }}</strong>
           <small v-if="i.opsi">{{ i.opsi }}</small>
           <small v-if="i.catatan" class="note">“{{ i.catatan }}”</small>
@@ -345,6 +346,9 @@ async function kirim() {
 }
 .kirim.antar {
   color: var(--p-green-500);
+}
+.kirim.proses {
+  color: var(--p-orange-500);
 }
 .qty {
   display: flex;

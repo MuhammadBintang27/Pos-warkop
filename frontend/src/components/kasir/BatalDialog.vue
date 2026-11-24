@@ -18,6 +18,12 @@ const lain = ref('')
 const sudahDibuat = ref(false)
 
 const terkirim = computed(() => (props.item ? props.item.dikirim : store.pesanan?.items.some((i) => i.dikirim)))
+// tenant sudah menekan Proses: makanannya dianggap sudah dibuat, tapi kasir tetap boleh mengubahnya
+const diproses = computed(() => (props.item ? [props.item] : store.pesanan?.items ?? []).filter((i) => i.diprosesAt))
+const jamProses = computed(() => {
+  const awal = Math.min(...diproses.value.map((i) => new Date(i.diprosesAt).getTime()))
+  return new Date(awal).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+})
 const alasan = computed(() => (pilih.value === 'Lainnya' ? lain.value.trim() : pilih.value))
 const valid = computed(() => !(props.item || terkirim.value) || !!alasan.value)
 
@@ -26,7 +32,7 @@ watch(visible, (v) => {
   qty.value = props.awal
   pilih.value = ''
   lain.value = ''
-  sudahDibuat.value = false
+  sudahDibuat.value = diproses.value.length > 0
 })
 
 async function batalkan() {
@@ -51,7 +57,10 @@ async function batalkan() {
     :breakpoints="{ '600px': '96vw' }"
   >
     <div class="stack">
-      <Message v-if="terkirim" severity="warn" size="small">
+      <Message v-if="diproses.length" severity="error" size="small">
+        Sudah diproses tenant sejak {{ jamProses }}, makanannya kemungkinan sudah dibuat. Beri tahu pelanggan sebelum membatalkan.
+      </Message>
+      <Message v-else-if="terkirim" severity="warn" size="small">
         Sudah dikirim ke dapur. Tiket BATAL akan dicetak supaya dapur berhenti membuatnya.
       </Message>
 

@@ -36,6 +36,22 @@ func (h *TenantController) SetSiap(c *fiber.Ctx) error {
 	return utils.SendSuccess(c, fiber.StatusOK, "Status item diperbarui")
 }
 
+func (h *TenantController) SetProses(c *fiber.Ctx) error {
+	id, err := utils.ParamID(c, "id")
+	if err != nil {
+		return handleErr(c, err, "")
+	}
+	var req dto.ProsesRequest
+	if err := middleware.ParseAndValidate(c, &req); err != nil {
+		return err
+	}
+	u := middleware.CurrentUser(c)
+	if err := h.svc.SetProses(u.KlienID, u.TenantID, id, *req.Proses); err != nil {
+		return handleErr(c, err, "SetProses error")
+	}
+	return utils.SendSuccess(c, fiber.StatusOK, "Status item diperbarui")
+}
+
 type PerangkatController struct {
 	push *services.Pusher
 }

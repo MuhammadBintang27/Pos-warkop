@@ -73,14 +73,14 @@ func loadPesanan(q querier, kid, id int64) (*dto.PesananResponse, error) {
 		return nil, err
 	}
 
-	rows, err := q.Query(`SELECT i.id,i.menu_id,i.nama,i.harga,i.qty,i.opsi,i.catatan,i.dikirim,COALESCE(i.tenant_id,0),COALESCE(t.nama,''),i.siap_at
+	rows, err := q.Query(`SELECT i.id,i.menu_id,i.nama,i.harga,i.qty,i.opsi,i.catatan,i.dikirim,COALESCE(i.tenant_id,0),COALESCE(t.nama,''),i.diproses_at,i.siap_at
 		FROM pesanan_item i LEFT JOIN tenant t ON t.id=i.tenant_id WHERE i.klien_id=? AND i.pesanan_id=? ORDER BY i.id`, kid, id)
 	if err != nil {
 		return nil, err
 	}
 	for rows.Next() {
 		var i dto.ItemResponse
-		if err := rows.Scan(&i.ID, &i.MenuID, &i.Nama, &i.Harga, &i.Qty, &i.Opsi, &i.Catatan, &i.Dikirim, &i.TenantID, &i.TenantNama, &i.SiapAt); err != nil {
+		if err := rows.Scan(&i.ID, &i.MenuID, &i.Nama, &i.Harga, &i.Qty, &i.Opsi, &i.Catatan, &i.Dikirim, &i.TenantID, &i.TenantNama, &i.DiprosesAt, &i.SiapAt); err != nil {
 			rows.Close()
 			return nil, err
 		}
@@ -497,9 +497,23 @@ func (s *PesananService) Kirim(actor *utils.JWTPayload, id int64) (*dto.KirimRes
 		s.hub.Publish(kid, "cetak")
 	}
 	for tid, items := range itemPerTenant(out.Items) {
-		s.push.KeTenant(kid, tid, pesanTiket(out.MejaNama, out.AtasNama, out.Tambahan[tid], items))
+		judul := "Pesanan baru"
+		if out.Tambahan[tid] {
+			judul = "Pesanan tambahan"
+		}
+		s.push.KeTenant(kid, tid, pesanTiket(judul, out.MejaNama, out.AtasNama, items))
 	}
 	return out, nil
+}
+
+// kabariBatal memberi tahu tenant bahwa item terkirimnya dibatalkan: stasiun cetak dibangunkan bila ada tiket BATAL, HP tenant dapat notifikasi.
+func kabariBatal(hub *EventHub, push *Pusher, kid int64, meja, atasNama string, items []dto.ItemResponse, adaAntrean bool) {
+	if adaAntrean {
+		hub.Publish(kid, "cetak")
+	}
+	for tid, it := range itemPerTenant(items) {
+		push.KeTenant(kid, tid, pesanTiket("Dibatalkan", meja, atasNama, it))
+	}
 }
 
 func itemPerTenant(items []dto.ItemResponse) map[int64][]dto.ItemResponse {
@@ -513,11 +527,7 @@ func itemPerTenant(items []dto.ItemResponse) map[int64][]dto.ItemResponse {
 }
 
 // pesanTiket: isi notifikasi tenant, ringkasan yang sama dengan tiket dapur.
-func pesanTiket(meja, atasNama string, tambahan bool, items []dto.ItemResponse) PesanPush {
-	judul := "Pesanan baru"
-	if tambahan {
-		judul = "Pesanan tambahan"
-	}
+func pesanTiket(judul, meja, atasNama string, items []dto.ItemResponse) PesanPush {
 	if meja == "" {
 		meja = "Tanpa meja"
 	}
@@ -611,6 +621,9 @@ func (s *PesananService) Batal(actor *utils.JWTPayload, id int64, req dto.BatalR
 		return nil, err
 	}
 	s.hub.Publish(kid, "pesanan", "meja", "menu")
+	if tiket != nil {
+		kabariBatal(s.hub, s.push, kid, tiket.MejaNama, tiket.AtasNama, tiket.Items, len(tiket.Antrean) > 0)
+	}
 	p, err := loadPesanan(s.db, kid, id)
 	if err != nil {
 		return nil, err
@@ -681,6 +694,9 @@ func (s *PesananService) BatalItem(actor *utils.JWTPayload, id, itemID int64, re
 		return nil, err
 	}
 	s.hub.Publish(kid, "pesanan", "meja", "menu")
+	if tiket != nil {
+		kabariBatal(s.hub, s.push, kid, tiket.MejaNama, tiket.AtasNama, tiket.Items, len(tiket.Antrean) > 0)
+	}
 	pesanan, err := loadPesanan(s.db, kid, id)
 	if err != nil {
 		return nil, err
@@ -786,8 +802,8 @@ func (s *PesananService) Pisah(actor *utils.JWTPayload, id int64, req dto.PisahR
 			} else if _, err = tx.Exec("UPDATE pesanan_item SET qty=qty-? WHERE id=? AND klien_id=?", x.Qty, x.ItemID, kid); err == nil {
 				var res sql.Result
 				// salin dari baris asal supaya status kirim/siap tenant ikut terbawa
-				res, err = tx.Exec(`INSERT INTO pesanan_item (klien_id,pesanan_id,menu_id,nama,harga,qty,modal,komisi,opsi,catatan,dikirim,tenant_id,siap_at,dikirim_at,dikirim_oleh)
-					SELECT klien_id,?,menu_id,nama,harga,?,modal,komisi,opsi,catatan,dikirim,tenant_id,siap_at,dikirim_at,dikirim_oleh FROM pesanan_item WHERE id=? AND klien_id=?`,
+				res, err = tx.Exec(`INSERT INTO pesanan_item (klien_id,pesanan_id,menu_id,nama,harga,qty,modal,komisi,opsi,catatan,dikirim,tenant_id,diproses_at,siap_at,dikirim_at,dikirim_oleh)
+					SELECT klien_id,?,menu_id,nama,harga,?,modal,komisi,opsi,catatan,dikirim,tenant_id,diproses_at,siap_at,dikirim_at,dikirim_oleh FROM pesanan_item WHERE id=? AND klien_id=?`,
 					newID, x.Qty, x.ItemID, kid)
 				if err == nil {
 					var baruID int64

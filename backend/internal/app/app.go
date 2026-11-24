@@ -67,7 +67,7 @@ func New(db *sql.DB) *App {
 	pusher := services.NewPusher(db, cfg.FCMServiceAccount)
 	pesananSvc := services.NewPesananService(db, hub, cetakSvc, pusher)
 	kasirCtrl := controllers.NewKasirController(
-		services.NewPembayaranService(db, hub),
+		services.NewPembayaranService(db, hub, cetakSvc, pusher),
 		services.NewShiftService(db, hub),
 		services.NewKasbonService(db),
 		services.NewLaporanService(db),

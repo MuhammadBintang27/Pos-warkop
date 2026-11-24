@@ -35,6 +35,7 @@ func RegisterTenantRoutes(r fiber.Router, h *controllers.TenantController) {
 
 	r.Get("/tenant-saya/pesanan", authed, tenantRole, h.PesananMasuk)
 	r.Post("/tenant-saya/item/:id/siap", authed, tenantRole, h.SetSiap)
+	r.Post("/tenant-saya/item/:id/proses", authed, tenantRole, h.SetProses)
 }
 
 func RegisterUserRoutes(r fiber.Router, h *controllers.UserController) {

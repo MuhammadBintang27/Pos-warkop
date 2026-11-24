@@ -14,17 +14,37 @@ type ItemMasuk struct {
 	Catatan   string     `json:"catatan"`
 	DikirimAt time.Time  `json:"dikirimAt"`
 	Oleh      string     `json:"oleh"`
-	Tambahan  bool       `json:"tambahan"` // tenant ini sudah pernah menerima kiriman dari bill yang sama
-	SiapAt    *time.Time `json:"siapAt"`
+	Tambahan   bool       `json:"tambahan"` // tenant ini sudah pernah menerima kiriman dari bill yang sama
+	DiprosesAt *time.Time `json:"diprosesAt"`
+	SiapAt     *time.Time `json:"siapAt"`
+}
+
+// BatalMasuk: item terkirim yang dibatalkan (termasuk refund), supaya tenant tidak melihat pesanannya hilang begitu saja.
+type BatalMasuk struct {
+	PesananID   int64     `json:"pesananId"`
+	MejaNama    string    `json:"mejaNama"`
+	AtasNama    string    `json:"atasNama"`
+	Nama        string    `json:"nama"`
+	Opsi        string    `json:"opsi"`
+	Qty         int       `json:"qty"`
+	Alasan      string    `json:"alasan"`
+	SudahDibuat bool      `json:"sudahDibuat"`
+	Oleh        string    `json:"oleh"`
+	At          time.Time `json:"at"`
 }
 
 type PesananMasukResponse struct {
-	Tenant string      `json:"tenant"`
-	Items  []ItemMasuk `json:"items"`
+	Tenant string       `json:"tenant"`
+	Items  []ItemMasuk  `json:"items"`
+	Batal  []BatalMasuk `json:"batal"`
 }
 
 type SiapRequest struct {
 	Siap *bool `json:"siap" validate:"required"`
+}
+
+type ProsesRequest struct {
+	Proses *bool `json:"proses" validate:"required"`
 }
 
 type PerangkatRequest struct {

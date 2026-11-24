@@ -9,6 +9,7 @@ import { useKasirStore } from '@/stores/kasir'
 import { usePengaturanStore } from '@/stores/pengaturan'
 import { hari, rp, tgl, ymd } from '@/utils/format'
 import { cetakStruk } from '@/utils/cetak'
+import { printBatalDapur, sisaLokal } from '@/utils/print'
 
 const STATUS = [
   { label: 'Semua', value: '' },
@@ -104,11 +105,17 @@ const tunaiDetail = computed(() => (detail.value?.pembayaran ?? []).filter((b) =
 
 async function simpanKoreksi() {
   const { jenis, alasan, sudahDibuat } = koreksi.value
+  let tiket
   const ok = await run(async () => {
-    detail.value = await post(`/pesanan/${detail.value.id}/${jenis}`, { alasan: alasan.trim(), sudahDibuat })
+    const res = await post(`/pesanan/${detail.value.id}/${jenis}`, { alasan: alasan.trim(), sudahDibuat })
+    // refund mengembalikan { pesanan, tiket }; buka ulang mengembalikan pesanan saja
+    detail.value = jenis === 'refund' ? res.pesanan : res
+    tiket = jenis === 'refund' && res.tiket
   }, jenis === 'refund' ? 'Bill direfund' : 'Bill dibuka ulang')
   if (!ok) return
   koreksi.value = null
+  const lokal = tiket && sisaLokal(tiket)
+  if (lokal?.items.length && peng.settings.dialogDapur) printBatalDapur(lokal)
   if (jenis === 'buka-ulang') lanjutkan()
 }
 
@@ -280,6 +287,9 @@ onBeforeUnmount(() => {
           <Checkbox v-model="koreksi.sudahDibuat" input-id="kdibuat" binary />
           <label for="kdibuat">Sudah dibuat/disajikan (stok tidak dikembalikan)</label>
         </div>
+        <small v-if="koreksi.jenis === 'refund'" class="sub">
+          {{ koreksi.sudahDibuat ? 'Tenant diberi tahu lewat layar Pesanan Masuk dan notifikasi.' : 'Tiket BATAL dicetak ke tenant supaya berhenti membuatnya.' }}
+        </small>
       </div>
       <template #footer>
         <Button :label="koreksi?.jenis === 'refund' ? 'Refund' : 'Buka ulang'" :severity="koreksi?.jenis === 'refund' ? 'danger' : undefined" icon="pi pi-check" :disabled="!koreksi?.alasan.trim()" @click="simpanKoreksi" />

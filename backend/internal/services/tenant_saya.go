@@ -18,13 +18,13 @@ func (s *TenantService) PesananMasuk(kid, tenantID int64, tanggal string) (*dto.
 	if err != nil {
 		return nil, err
 	}
-	out := &dto.PesananMasukResponse{Items: []dto.ItemMasuk{}}
+	out := &dto.PesananMasukResponse{Items: []dto.ItemMasuk{}, Batal: []dto.BatalMasuk{}}
 	if s.db.QueryRow("SELECT nama FROM tenant WHERE id=? AND klien_id=?", tenantID, kid).Scan(&out.Tenant) != nil {
 		return nil, types.NotFound("Tenant")
 	}
 	// item lama (sebelum kolom dikirim_at ada) memakai waktu bill dibuat
 	rows, err := s.db.Query(`SELECT i.id,i.pesanan_id,COALESCE(m.nama,''),p.atas_nama,i.nama,i.qty,i.opsi,i.catatan,
-			COALESCE(i.dikirim_at,p.dibuat_at),i.dikirim_oleh,i.siap_at,
+			COALESCE(i.dikirim_at,p.dibuat_at),i.dikirim_oleh,i.diproses_at,i.siap_at,
 			EXISTS(SELECT 1 FROM pesanan_item j WHERE j.pesanan_id=i.pesanan_id AND j.tenant_id=i.tenant_id AND j.dikirim=1 AND j.dikirim_at<i.dikirim_at)
 		FROM pesanan_item i JOIN pesanan p ON p.id=i.pesanan_id LEFT JOIN meja m ON m.id=p.meja_id
 		WHERE i.klien_id=? AND i.tenant_id=? AND i.dikirim=1 AND p.status<>'batal'
@@ -37,22 +37,55 @@ func (s *TenantService) PesananMasuk(kid, tenantID int64, tanggal string) (*dto.
 	defer rows.Close()
 	for rows.Next() {
 		var it dto.ItemMasuk
-		if err := rows.Scan(&it.ID, &it.PesananID, &it.MejaNama, &it.AtasNama, &it.Nama, &it.Qty, &it.Opsi, &it.Catatan, &it.DikirimAt, &it.Oleh, &it.SiapAt, &it.Tambahan); err != nil {
+		if err := rows.Scan(&it.ID, &it.PesananID, &it.MejaNama, &it.AtasNama, &it.Nama, &it.Qty, &it.Opsi, &it.Catatan, &it.DikirimAt, &it.Oleh, &it.DiprosesAt, &it.SiapAt, &it.Tambahan); err != nil {
 			return nil, err
 		}
 		out.Items = append(out.Items, it)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	rows.Close()
+
+	rows, err = s.db.Query(`SELECT b.pesanan_id,COALESCE(m.nama,''),p.atas_nama,b.nama,b.opsi,b.qty,b.alasan,b.sudah_dibuat,u.nama,b.at
+		FROM pembatalan b JOIN pesanan p ON p.id=b.pesanan_id LEFT JOIN meja m ON m.id=p.meja_id JOIN users u ON u.id=b.oleh
+		WHERE b.klien_id=? AND b.tenant_id=? AND b.sudah_dikirim=1 AND b.at>=? AND b.at<? ORDER BY b.at DESC, b.id DESC`,
+		kid, tenantID, dari, sampai)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var b dto.BatalMasuk
+		if err := rows.Scan(&b.PesananID, &b.MejaNama, &b.AtasNama, &b.Nama, &b.Opsi, &b.Qty, &b.Alasan, &b.SudahDibuat, &b.Oleh, &b.At); err != nil {
+			return nil, err
+		}
+		out.Batal = append(out.Batal, b)
+	}
 	return out, rows.Err()
 }
 
-// SetSiap hanya menyentuh item milik tenant itu sendiri.
+// SetSiap hanya menyentuh item milik tenant itu sendiri. Selesai berarti sudah dibuat, jadi diproses_at ikut terisi.
 func (s *TenantService) SetSiap(kid, tenantID, itemID int64, siap bool) error {
-	var at *time.Time
-	if siap {
-		now := time.Now()
-		at = &now
+	at := waktuStatus(siap)
+	return s.setStatus(kid, tenantID, itemID, "siap_at=?, diproses_at=COALESCE(diproses_at,?)", at, at)
+}
+
+// SetProses: tenant mulai membuat item; kasir melihatnya dan pembatalan menganggap makanannya sudah dibuat.
+func (s *TenantService) SetProses(kid, tenantID, itemID int64, proses bool) error {
+	return s.setStatus(kid, tenantID, itemID, "diproses_at=?", waktuStatus(proses))
+}
+
+func waktuStatus(on bool) *time.Time {
+	if !on {
+		return nil
 	}
-	res, err := s.db.Exec("UPDATE pesanan_item SET siap_at=? WHERE id=? AND klien_id=? AND tenant_id=? AND dikirim=1", at, itemID, kid, tenantID)
+	now := time.Now()
+	return &now
+}
+
+func (s *TenantService) setStatus(kid, tenantID, itemID int64, set string, nilai ...any) error {
+	res, err := s.db.Exec("UPDATE pesanan_item SET "+set+" WHERE id=? AND klien_id=? AND tenant_id=? AND dikirim=1", append(nilai, itemID, kid, tenantID)...)
 	if err != nil {
 		return err
 	}

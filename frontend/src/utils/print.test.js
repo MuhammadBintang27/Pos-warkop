@@ -47,4 +47,12 @@ describe('gabungTerkirim', () => {
     ])
     expect(hasil.map((i) => i.rows.map((r) => r.id))).toEqual([[1, 3], [2]])
   })
+
+  it('baris yang sedang diproses tenant tidak digabung dengan yang belum', () => {
+    const hasil = gabungTerkirim([
+      item({ id: 1, dikirim: true, diprosesAt: '2026-11-23T10:00:00' }),
+      item({ id: 2, dikirim: true }),
+    ])
+    expect(hasil).toHaveLength(2)
+  })
 })

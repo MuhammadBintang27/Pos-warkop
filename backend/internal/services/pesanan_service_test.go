@@ -29,12 +29,12 @@ func TestHargaAkhir(t *testing.T) {
 
 func TestPesanTiket(t *testing.T) {
 	items := []dto.ItemResponse{{Nama: "Gorengan", Qty: 2}, {Nama: "Tahu isi", Qty: 1}}
-	got := pesanTiket("Meja 5", "Andi", false, items)
+	got := pesanTiket("Pesanan baru", "Meja 5", "Andi", items)
 	if got.Judul != "Pesanan baru · Meja 5 (Andi)" || got.Isi != "2× Gorengan, 1× Tahu isi" {
 		t.Errorf("pesanTiket = %+v", got)
 	}
-	if got := pesanTiket("", "", true, items[:1]); got.Judul != "Pesanan tambahan · Tanpa meja" {
-		t.Errorf("tambahan tanpa meja = %q", got.Judul)
+	if got := pesanTiket("Dibatalkan", "", "", items[:1]); got.Judul != "Dibatalkan · Tanpa meja" {
+		t.Errorf("batal tanpa meja = %q", got.Judul)
 	}
 	per := itemPerTenant([]dto.ItemResponse{{TenantID: 1}, {TenantID: 0}, {TenantID: 1}, {TenantID: 2}})
 	if len(per) != 2 || len(per[1]) != 2 || len(per[2]) != 1 {

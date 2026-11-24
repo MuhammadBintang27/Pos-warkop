@@ -166,6 +166,7 @@ CREATE TABLE IF NOT EXISTS pesanan_item (
   dikirim TINYINT(1) NOT NULL DEFAULT 0,
   tenant_id BIGINT NULL,        -- disalin dari menu saat dipesan
   closing_id BIGINT NULL,       -- terisi bila sudah ditalangi di closing tenant sebelum bill dibayar; tidak dihitung lagi saat lunas
+  diproses_at DATETIME NULL,    -- ditandai Proses (mulai dibuat) oleh akun tenant; kasir jadi tahu pembatalannya membuang makanan
   siap_at DATETIME NULL,        -- ditandai Selesai (sudah diantar) oleh akun tenant; tampil juga di keranjang kasir/pelayan
   dikirim_at DATETIME NULL,     -- satu kali Kirim = satu tiket; dipakai kartu pesanan masuk tenant
   dikirim_oleh VARCHAR(100) NOT NULL DEFAULT '',

@@ -6,7 +6,7 @@ import { useRun } from '@/composables/useRun'
 import { hari, tgl, ymd } from '@/utils/format'
 
 const run = useRun()
-const data = ref({ tenant: '', items: [] })
+const data = ref({ tenant: '', items: [], batal: [] })
 
 // kartu yang baru masuk (3 menit terakhir) diberi sorotan; now diperbarui supaya sorotannya hilang sendiri
 const BARU_MS = 3 * 60 * 1000
@@ -32,6 +32,16 @@ const sisa = (b, jenis) => b.items.length - BATAS[jenis]
 
 const antrean = computed(() => kelompok(data.value.items.filter((i) => !i.siapAt)))
 const siap = computed(() => kelompok(data.value.items.filter((i) => i.siapAt)))
+// satu kartu per kali batal (satu bill bisa batal beberapa item sekaligus)
+const batal = computed(() => {
+  const map = new Map()
+  for (const b of data.value.batal ?? []) {
+    const key = `batal|${b.pesananId}|${b.at}`
+    if (!map.has(key)) map.set(key, { key, id: b.pesananId, meja: b.mejaNama, atasNama: b.atasNama, at: b.at, oleh: b.oleh, alasan: b.alasan, sudahDibuat: b.sudahDibuat, items: [] })
+    map.get(key).items.push(b)
+  }
+  return [...map.values()]
+})
 
 // riwayat selesai per hari, dipaginasi per kartu
 const PER_HALAMAN = 12
@@ -45,12 +55,16 @@ const suara = new Audio('/pesanan.wav')
 let dikenal = null
 async function muat() {
   data.value = await get('/tenant-saya/pesanan', { params: { tanggal: ymd(tanggal.value) } })
-  const kunci = new Set(antrean.value.map((b) => b.key))
+  const kunci = new Set([...antrean.value, ...batal.value].map((b) => b.key))
   if (dikenal && [...kunci].some((k) => !dikenal.has(k))) suara.play().catch(() => {})
   dikenal = kunci
 }
 const tandai = (it, s) => run(async () => {
   await post(`/tenant-saya/item/${it.id}/siap`, { siap: s })
+  await muat()
+})
+const proses = (it, s) => run(async () => {
+  await post(`/tenant-saya/item/${it.id}/proses`, { proses: s })
   await muat()
 })
 
@@ -96,8 +110,15 @@ onBeforeUnmount(() => {
             <b>{{ it.qty }}×</b> {{ it.nama }}
             <small v-if="it.opsi" class="redup"> · {{ it.opsi }}</small>
             <div v-if="it.catatan" class="catatan"><i class="pi pi-comment" /> {{ it.catatan }}</div>
+            <div v-if="it.diprosesAt" class="selesai-at">
+              <i class="pi pi-hourglass" /> Diproses {{ tgl(it.diprosesAt) }}
+              <button class="urung" @click="proses(it, false)">urungkan</button>
+            </div>
           </div>
-          <Button label="Selesai" icon="pi pi-check" size="small" @click="tandai(it, true)" />
+          <div class="tombol">
+            <Button v-if="!it.diprosesAt" label="Proses" icon="pi pi-play" size="small" outlined @click="proses(it, true)" />
+            <Button label="Selesai" icon="pi pi-check" size="small" @click="tandai(it, true)" />
+          </div>
         </div>
         <button v-if="sisa(b, 'antrean') > 0" class="lihat" @click="terbuka[b.key] = !terbuka[b.key]">
           <i :class="terbuka[b.key] ? 'pi pi-chevron-up' : 'pi pi-chevron-down'" />
@@ -105,6 +126,33 @@ onBeforeUnmount(() => {
         </button>
       </section>
     </div>
+
+    <template v-if="batal.length">
+      <h3 class="judul">Dibatalkan <Tag :value="String(batal.reduce((n, b) => n + b.items.length, 0))" severity="danger" /></h3>
+      <div class="grid">
+        <section v-for="b in batal" :key="b.key" class="panel kartu batal" :class="{ baru: baru(b) }">
+          <div class="jenis">
+            <span v-if="baru(b)" class="lencana">BARU</span>
+            {{ b.sudahDibuat ? 'Dibatalkan, sudah dibuat' : 'Dibatalkan, jangan dibuat' }}
+          </div>
+          <header>
+            <strong class="meja">{{ b.meja || 'Tanpa meja' }}</strong>
+            <small class="redup kanan">#{{ b.id }}</small>
+          </header>
+          <div class="info">
+            <span v-if="b.atasNama"><i class="pi pi-user" /> {{ b.atasNama }}</span>
+            <span><i class="pi pi-times-circle" /> {{ tgl(b.at) }} oleh <b>{{ b.oleh }}</b></span>
+          </div>
+          <div v-for="(it, n) in b.items" :key="n" class="baris">
+            <div class="coret">
+              <b>{{ it.qty }}×</b> {{ it.nama }}
+              <small v-if="it.opsi" class="redup"> · {{ it.opsi }}</small>
+            </div>
+          </div>
+          <div class="catatan"><i class="pi pi-info-circle" /> {{ b.alasan }}</div>
+        </section>
+      </div>
+    </template>
 
     <div class="judul selesai-judul">
       <h3>Selesai <Tag :value="String(siap.reduce((n, b) => n + b.items.length, 0))" severity="secondary" /></h3>
@@ -277,5 +325,42 @@ onBeforeUnmount(() => {
   margin-top: 2px;
   font-size: 0.85rem;
   color: var(--accent-text);
+}
+.tombol {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.urung {
+  margin-left: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-decoration: underline;
+  color: var(--p-text-muted-color);
+  cursor: pointer;
+}
+/* dibatalkan: merah tegas supaya tidak terlewat, item dicoret */
+.batal {
+  --warna: var(--p-red-500);
+  border: 2px solid var(--warna);
+  border-top-width: 6px;
+  background: color-mix(in srgb, var(--warna) 8%, var(--p-content-background));
+}
+.batal .jenis {
+  color: var(--p-red-600);
+}
+.batal.baru {
+  animation: denyut 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .batal.baru {
+    animation: none;
+  }
+}
+.coret {
+  text-decoration: line-through;
 }
 </style>

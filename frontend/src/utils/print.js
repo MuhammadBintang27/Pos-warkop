@@ -49,8 +49,8 @@ export function gabungTerkirim(items) {
       out.push(i)
       continue
     }
-    // yang sudah diantar tenant tidak digabung dengan yang belum, supaya tandanya jelas
-    const kunci = [i.menuId, i.harga, i.opsi, i.catatan, !!i.siapAt].join('|')
+    // beda status tenant (diproses/diantar) tidak digabung, supaya tandanya jelas
+    const kunci = [i.menuId, i.harga, i.opsi, i.catatan, !!i.diprosesAt, !!i.siapAt].join('|')
     const ada = peta.get(kunci)
     if (ada) {
       ada.qty += i.qty

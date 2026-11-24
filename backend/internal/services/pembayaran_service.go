@@ -12,8 +12,10 @@ import (
 )
 
 type PembayaranService struct {
-	db  *sql.DB
-	hub *EventHub
+	db    *sql.DB
+	hub   *EventHub
+	cetak *CetakService
+	push  *Pusher
 }
 
 type pembayaranRow struct {
@@ -24,8 +26,8 @@ type pembayaranRow struct {
 	PelangganID *int64
 }
 
-func NewPembayaranService(db *sql.DB, hub *EventHub) *PembayaranService {
-	return &PembayaranService{db: db, hub: hub}
+func NewPembayaranService(db *sql.DB, hub *EventHub, cetak *CetakService, push *Pusher) *PembayaranService {
+	return &PembayaranService{db: db, hub: hub, cetak: cetak, push: push}
 }
 
 // normalizePembayaran memastikan jumlah semua pembayaran sama persis dengan tagihan dan menghitung kembalian tunai.
@@ -177,9 +179,13 @@ func (s *PembayaranService) BukaUlang(actor *utils.JWTPayload, id int64) (*dto.P
 
 // Refund membatalkan bill lunas. Bagian tunai dicatat sebagai pengeluaran 'refund' di shift aktif (uang keluar dari laci),
 // bagian kasbon dihapus dari utang pelanggan, QRIS/transfer dikembalikan di luar sistem.
-func (s *PembayaranService) Refund(actor *utils.JWTPayload, id int64, req dto.KoreksiRequest) (*dto.PesananResponse, error) {
+// Bila makanannya belum dibuat, tiket BATAL dikirim ke tenant; tenant selalu dikabari lewat notifikasi dan layar Pesanan Masuk.
+func (s *PembayaranService) Refund(actor *utils.JWTPayload, id int64, req dto.KoreksiRequest) (*dto.BatalResponse, error) {
 	kid := actor.KlienID
 	alasan := strings.TrimSpace(req.Alasan)
+	var p *dto.PesananResponse
+	var terkirim []dto.ItemResponse
+	var tiket *dto.KirimResponse
 	err := utils.WithTx(s.db, func(tx *sql.Tx) error {
 		if _, err := lockLunas(tx, kid, id); err != nil {
 			return err
@@ -203,11 +209,14 @@ func (s *PembayaranService) Refund(actor *utils.JWTPayload, id int64, req dto.Ko
 		if _, err := tx.Exec("DELETE FROM pembayaran WHERE pesanan_id=? AND klien_id=? AND metode='kasbon'", id, kid); err != nil {
 			return err
 		}
-		p, err := loadPesanan(tx, kid, id)
-		if err != nil {
+		var err error
+		if p, err = loadPesanan(tx, kid, id); err != nil {
 			return err
 		}
 		for _, i := range p.Items {
+			if i.Dikirim {
+				terkirim = append(terkirim, i)
+			}
 			if !req.SudahDibuat {
 				if err := adjustStok(tx, kid, i.MenuID, i.Qty); err != nil {
 					return err
@@ -220,6 +229,12 @@ func (s *PembayaranService) Refund(actor *utils.JWTPayload, id int64, req dto.Ko
 				return err
 			}
 		}
+		if len(terkirim) > 0 && !req.SudahDibuat {
+			tiket = &dto.KirimResponse{MejaNama: p.MejaNama, AtasNama: p.AtasNama, Oleh: actor.Nama, Items: terkirim}
+			if tiket.Antrean, err = s.cetak.Antrekan(tx, kid, jenisBatal, tiket); err != nil {
+				return err
+			}
+		}
 		_, err = tx.Exec("UPDATE pesanan SET status='batal' WHERE id=? AND klien_id=?", id, kid)
 		return err
 	})
@@ -227,5 +242,9 @@ func (s *PembayaranService) Refund(actor *utils.JWTPayload, id int64, req dto.Ko
 		return nil, err
 	}
 	s.hub.Publish(kid, "pesanan", "meja", "menu", "shift")
-	return loadPesanan(s.db, kid, id)
+	kabariBatal(s.hub, s.push, kid, p.MejaNama, p.AtasNama, terkirim, tiket != nil && len(tiket.Antrean) > 0)
+	if p, err = loadPesanan(s.db, kid, id); err != nil {
+		return nil, err
+	}
+	return &dto.BatalResponse{Pesanan: p, Tiket: tiket}, nil
 }
