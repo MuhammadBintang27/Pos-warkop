@@ -153,8 +153,11 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
             @pointerup="selesaiSeret"
             @pointercancel="selesaiSeret"
           >
-            <strong>{{ m.nama }}</strong>
-            <small>{{ m.pesanan.length ? rp(total(m)) : 'Kosong' }}</small>
+            <i v-for="k in 4" :key="k" class="kursi" :class="`k${k}`" aria-hidden="true" />
+            <span class="papan">
+              <strong>{{ m.nama }}</strong>
+              <small>{{ m.pesanan.length ? rp(total(m)) : 'Kosong' }}</small>
+            </span>
             <span v-if="m.pesanan.length > 1" class="bill">{{ m.pesanan.length }} bill</span>
           </button>
         </div>
@@ -189,9 +192,12 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
   border: 1.5px solid var(--p-content-border-color);
   background: var(--p-content-background);
 }
+.sw {
+  border: 0;
+  background: #cbd5e1;
+}
 .sw.terisi {
-  border-color: var(--p-primary-color);
-  background: color-mix(in srgb, var(--p-primary-color) 22%, var(--p-content-background));
+  background: var(--p-primary-500);
 }
 .scroll {
   padding: 12px;
@@ -205,7 +211,11 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
   position: relative;
   height: calc(var(--h) * 1cqw);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--p-primary-color) 4%, var(--p-content-background));
+  /* lantai ubin */
+  background-color: color-mix(in srgb, var(--p-primary-color) 4%, var(--p-content-background));
+  background-image: linear-gradient(var(--p-content-border-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--p-content-border-color) 1px, transparent 1px);
+  background-size: 5cqw 5cqw;
 }
 .kanvas.edit {
   background-image: radial-gradient(circle, var(--p-content-border-color) 1px, transparent 1px);
@@ -218,32 +228,95 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
   width: 9cqw;
   height: 7cqw;
   padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+  --dudukan: radial-gradient(circle at 40% 35%, #f1f5f9, #cbd5e1 75%);
+  --sandaran: linear-gradient(#94a3b8, #64748b);
+}
+.meja.terisi {
+  --dudukan: radial-gradient(circle at 40% 35%, var(--p-primary-200), var(--p-primary-500) 70%);
+  --sandaran: linear-gradient(var(--p-primary-700), var(--p-primary-900));
+}
+/* kursi tampak atas: sandaran di sisi luar, dudukan menghadap meja */
+.kursi {
+  position: absolute;
+  width: 22%;
+  height: 20%;
+  filter: drop-shadow(0 1px 1.5px rgb(60 40 20 / 0.3));
+}
+.kursi::before,
+.kursi::after {
+  content: '';
+  position: absolute;
+}
+.kursi::before {
+  inset: 0 0 auto;
+  height: 30%;
+  border-radius: 6px 6px 2px 2px;
+  background: var(--sandaran);
+}
+.kursi::after {
+  inset: 38% 8% 0;
+  border-radius: 25%;
+  background: var(--dudukan);
+}
+.k1,
+.k2 {
+  top: 0;
+}
+.k3,
+.k4 {
+  bottom: 0;
+  transform: rotate(180deg);
+}
+.k1,
+.k3 {
+  left: 24%;
+}
+.k2,
+.k4 {
+  left: 54%;
+}
+/* papan meja bermotif kayu */
+.papan {
+  position: absolute;
+  inset: 22% 4%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 2px;
-  border: 1.5px solid var(--p-content-border-color);
-  border-radius: 12px;
-  background: var(--p-content-background);
-  color: var(--p-text-color);
-  font: inherit;
-  cursor: pointer;
+  border: 1px solid #b98a52;
+  border-radius: 0.9cqw;
+  background: repeating-linear-gradient(90deg, rgb(90 55 20 / 0.07) 0 2px, transparent 2px 11px),
+    linear-gradient(160deg, #ead2ad, #d6b384);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.5), inset 0 -3px 0 rgb(90 55 20 / 0.18), 0 4px 10px rgb(60 40 20 / 0.25);
+  white-space: nowrap;
+}
+.meja.terisi .papan {
+  background: repeating-linear-gradient(90deg, rgb(90 55 20 / 0.07) 0 2px, transparent 2px 11px),
+    linear-gradient(160deg, #e6b878, #c98f4a);
+  outline: 3px solid color-mix(in srgb, var(--p-primary-color) 60%, transparent);
+  outline-offset: 2px;
 }
 .meja strong {
-  font-size: max(12px, 1.5cqw);
+  font-size: max(12px, 1.4cqw);
+  font-weight: 800;
+  color: #3f2a14;
 }
 .meja small {
-  font-size: max(10px, 1.15cqw);
-  color: var(--p-text-muted-color);
-}
-.meja.terisi {
-  border-color: var(--p-primary-color);
-  background: color-mix(in srgb, var(--p-primary-color) 18%, var(--p-content-background));
+  font-size: max(10px, 1.1cqw);
+  font-weight: 600;
+  color: #6b4f2c;
 }
 .meja.terisi small {
-  color: var(--accent-text);
-  font-weight: 700;
+  padding: 0 0.5cqw;
+  border-radius: 999px;
+  background: #fff;
+  color: #92400e;
+  font-weight: 800;
 }
 .bill {
   position: absolute;
@@ -258,7 +331,9 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
 }
 .kanvas.edit .meja {
   cursor: grab;
-  border-style: dashed;
+  outline: 1.5px dashed var(--p-content-border-color);
+  outline-offset: 2px;
+  border-radius: 8px;
   touch-action: none;
   user-select: none;
 }
