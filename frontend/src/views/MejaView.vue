@@ -6,11 +6,13 @@ import { useToast } from 'primevue/usetoast'
 import { del, get, post, put } from '@/api/http'
 import { SEMUA, UTAMA, useArea } from '@/composables/useArea'
 import { useRun } from '@/composables/useRun'
+import { useAuthStore } from '@/stores/auth'
 import { konfirmasi } from '@/utils/confirm'
 
 const confirm = useConfirm()
 const toast = useToast()
 const run = useRun()
+const auth = useAuthStore()
 
 const denah = ref({ area: [], meja: [] })
 const form = ref(null)
@@ -108,7 +110,7 @@ const { cari: cariMeja, hasil: mejaTampil } = useCari(meja, 'nama')
         <span v-for="a in denah.area" :key="a.id" class="area-chip">
           {{ a.nama }} <small>{{ jumlahMeja(a) }} meja</small>
           <Button icon="pi pi-pencil" text rounded size="small" severity="secondary" aria-label="Ubah area" @click="areaForm = { id: a.id, nama: a.nama, urutan: a.urutan }" />
-          <Button icon="pi pi-trash" text rounded size="small" severity="danger" aria-label="Hapus area" @click="hapusArea(a)" />
+          <Button v-if="auth.isOwner" icon="pi pi-trash" text rounded size="small" severity="danger" aria-label="Hapus area" @click="hapusArea(a)" />
         </span>
       </div>
     </section>
@@ -137,7 +139,7 @@ const { cari: cariMeja, hasil: mejaTampil } = useCari(meja, 'nama')
         <Column>
           <template #body="{ data }">
             <Button icon="pi pi-pencil" text severity="secondary" aria-label="Ubah" @click="form = { id: data.id, nama: data.nama, areaId: data.areaId ?? null }" />
-            <Button icon="pi pi-trash" text severity="danger" aria-label="Hapus" @click="hapus(data)" />
+            <Button v-if="auth.isOwner" icon="pi pi-trash" text severity="danger" aria-label="Hapus" @click="hapus(data)" />
           </template>
         </Column>
       </DataTable>

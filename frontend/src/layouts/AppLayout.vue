@@ -25,6 +25,17 @@ const NAV = [
   // owner membukanya dari grup Laporan › Tenant
   { label: 'Closing Tenant', icon: 'pi pi-lock', to: '/laporan/tenant', roles: ['kasir'] },
   {
+    label: 'Master Data',
+    icon: 'pi pi-database',
+    roles: ['kasir'],
+    children: [
+      { label: 'Menu', to: '/menu' },
+      { label: 'Tenant', to: '/tenant' },
+      { label: 'Printer', to: '/printer' },
+      { label: 'Meja', to: '/meja' },
+    ],
+  },
+  {
     label: 'Laporan',
     icon: 'pi pi-chart-line',
     roles: ['owner'],

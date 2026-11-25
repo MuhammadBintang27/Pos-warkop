@@ -6,6 +6,7 @@ import { useToast } from 'primevue/usetoast'
 import { del, get, post, put } from '@/api/http'
 import { onEvent } from '@/composables/useEvents'
 import { useRun } from '@/composables/useRun'
+import { useAuthStore } from '@/stores/auth'
 import { konfirmasi } from '@/utils/confirm'
 import { tgl } from '@/utils/format'
 
@@ -23,6 +24,7 @@ const STATUS = {
 const confirm = useConfirm()
 const toast = useToast()
 const run = useRun()
+const auth = useAuthStore()
 
 const printer = ref([])
 const riwayat = ref([])
@@ -118,7 +120,7 @@ const { cari: cariPrinter, hasil: printerTampil } = useCari(printer, 'nama', 'ip
       <div class="head">
         <h3>Stasiun cetak</h3>
         <Tag :value="status.stasiunAktif ? 'Terhubung' : 'Tidak terhubung'" :severity="status.stasiunAktif ? 'success' : 'danger'" />
-        <Button label="Buat token stasiun" icon="pi pi-key" size="small" severity="secondary" outlined class="kanan" @click="buatToken" />
+        <Button v-if="auth.isOwner" label="Buat token stasiun" icon="pi pi-key" size="small" severity="secondary" outlined class="kanan" @click="buatToken" />
       </div>
       <small class="redup">
         Stasiun cetak adalah aplikasi desktop PSD POS di PC kasir. Ia mengambil tiket dari server lalu mencetaknya ke printer di jaringan.
@@ -128,7 +130,7 @@ const { cari: cariPrinter, hasil: printerTampil } = useCari(printer, 'nama', 'ip
       <div v-if="hp" class="head">
         <span>Perangkat ini: <strong>{{ hpStatus?.aktif ? hpStatus.pesan : 'bukan stasiun' }}</strong></span>
         <Button v-if="hpStatus?.aktif" label="Matikan" size="small" severity="danger" outlined class="kanan" @click="matikanHp" />
-        <Button v-else label="Jadikan perangkat ini stasiun" icon="pi pi-mobile" size="small" class="kanan" @click="jadikanStasiun" />
+        <Button v-else-if="auth.isOwner" label="Jadikan perangkat ini stasiun" icon="pi pi-mobile" size="small" class="kanan" @click="jadikanStasiun" />
       </div>
       <small v-if="hp" class="redup">HP/tablet harus tetap menyala dan tersambung ke WiFi yang sama dengan printer. Boleh logout, stasiun tetap jalan.</small>
       <div v-if="token" class="token">
@@ -155,7 +157,7 @@ const { cari: cariPrinter, hasil: printerTampil } = useCari(printer, 'nama', 'ip
           <template #body="{ data }">
             <Button label="Tes cetak" size="small" outlined severity="secondary" @click="tes(data)" />
             <Button icon="pi pi-pencil" text severity="secondary" aria-label="Ubah" @click="form = { ...data }" />
-            <Button icon="pi pi-trash" text severity="danger" aria-label="Hapus" @click="hapus(data)" />
+            <Button v-if="auth.isOwner" icon="pi pi-trash" text severity="danger" aria-label="Hapus" @click="hapus(data)" />
           </template>
         </Column>
       </DataTable>

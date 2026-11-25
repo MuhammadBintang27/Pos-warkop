@@ -3,12 +3,14 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useConfirm } from 'primevue/useconfirm'
 import { del, get, post, put } from '@/api/http'
 import { useRun } from '@/composables/useRun'
+import { useAuthStore } from '@/stores/auth'
 import { konfirmasi } from '@/utils/confirm'
 import { hargaTampil, rp } from '@/utils/format'
 import { load, save } from '@/utils/storage'
 
 const confirm = useConfirm()
 const run = useRun()
+const auth = useAuthStore()
 
 const kategori = ref([])
 const aktif = ref(0)
@@ -147,7 +149,7 @@ onMounted(() => run(muat))
         <div v-for="k in kategori" :key="k.id" class="krow">
           <button class="k" :class="{ on: aktif === k.id }" @click="aktif = k.id">{{ k.nama }} <small>{{ jumlahDi(k) }}</small></button>
           <Button icon="pi pi-pencil" text size="small" severity="secondary" aria-label="Ubah" @click="kat = { id: k.id, nama: k.nama, urutan: k.urutan }" />
-          <Button icon="pi pi-trash" text size="small" severity="danger" aria-label="Hapus" @click="hapusKat(k)" />
+          <Button v-if="auth.isOwner" icon="pi pi-trash" text size="small" severity="danger" aria-label="Hapus" @click="hapusKat(k)" />
         </div>
         <p v-if="!kategori.length" class="none">Buat kategori dulu, misalnya Kopi, Makanan, Gorengan.</p>
       </aside>
@@ -187,7 +189,7 @@ onMounted(() => run(muat))
           <Column>
             <template #body="{ data }">
               <Button icon="pi pi-pencil" text severity="secondary" aria-label="Ubah" @click="bukaMenu(data)" />
-              <Button icon="pi pi-trash" text severity="danger" aria-label="Hapus" @click="hapusMenu(data)" />
+              <Button v-if="auth.isOwner" icon="pi pi-trash" text severity="danger" aria-label="Hapus" @click="hapusMenu(data)" />
             </template>
           </Column>
         </DataTable>

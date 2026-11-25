@@ -4,11 +4,13 @@ import { useCari } from '@/composables/useCari'
 import { useConfirm } from 'primevue/useconfirm'
 import { del, get, post, put } from '@/api/http'
 import { useRun } from '@/composables/useRun'
+import { useAuthStore } from '@/stores/auth'
 import { konfirmasi } from '@/utils/confirm'
 import { rp } from '@/utils/format'
 
 const confirm = useConfirm()
 const run = useRun()
+const auth = useAuthStore()
 
 const tenant = ref([])
 const form = ref(null)
@@ -90,7 +92,7 @@ const { cari: cariTenant, hasil: tenantTampil } = useCari(tenant, 'nama')
         <Column>
           <template #body="{ data }">
             <Button icon="pi pi-pencil" text severity="secondary" aria-label="Ubah" @click="ubah(data)" />
-            <Button icon="pi pi-trash" text severity="danger" aria-label="Hapus" @click="hapus(data)" />
+            <Button v-if="auth.isOwner" icon="pi pi-trash" text severity="danger" aria-label="Hapus" @click="hapus(data)" />
           </template>
         </Column>
       </DataTable>

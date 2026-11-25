@@ -29,8 +29,8 @@ func RegisterPengaturanRoutes(r fiber.Router, h *controllers.PengaturanControlle
 
 func RegisterTenantRoutes(r fiber.Router, h *controllers.TenantController) {
 	r.Get("/tenant", authed, h.List)
-	r.Post("/tenant", authed, owner, middleware.Audit("Tambah tenant"), h.Create)
-	r.Put("/tenant/:id", authed, owner, middleware.Audit("Ubah tenant"), h.Update)
+	r.Post("/tenant", authed, kasir, middleware.Audit("Tambah tenant"), h.Create)
+	r.Put("/tenant/:id", authed, kasir, middleware.Audit("Ubah tenant"), h.Update)
 	r.Post("/tenant/:id/buka", authed, kasir, h.Buka)
 	r.Delete("/tenant/:id", authed, owner, middleware.Audit("Hapus tenant"), h.Delete)
 
@@ -51,26 +51,27 @@ func RegisterMenuPublikRoutes(r fiber.Router, h *controllers.MenuPublikControlle
 }
 
 func RegisterMenuRoutes(r fiber.Router, h *controllers.MenuController) {
+	// master data (menu, tenant, meja, printer): kasir boleh tambah & ubah; hapus tetap hanya owner
 	r.Get("/menu", authed, h.List)
-	r.Post("/menu", authed, owner, middleware.Audit("Tambah menu"), h.Create)
-	r.Put("/menu/:id", authed, owner, middleware.Audit("Ubah menu"), h.Update)
+	r.Post("/menu", authed, kasir, middleware.Audit("Tambah menu"), h.Create)
+	r.Put("/menu/:id", authed, kasir, middleware.Audit("Ubah menu"), h.Update)
 	r.Delete("/menu/:id", authed, owner, middleware.Audit("Hapus menu"), h.Delete)
 	r.Post("/menu/:id/stok", authed, kasir, middleware.Audit("Ubah stok menu"), h.SetStok)
 
-	r.Post("/kategori", authed, owner, h.CreateKategori)
-	r.Put("/kategori/:id", authed, owner, h.UpdateKategori)
+	r.Post("/kategori", authed, kasir, h.CreateKategori)
+	r.Put("/kategori/:id", authed, kasir, h.UpdateKategori)
 	r.Delete("/kategori/:id", authed, owner, h.DeleteKategori)
 }
 
 func RegisterMejaRoutes(r fiber.Router, h *controllers.MejaController) {
 	r.Get("/meja", authed, h.Denah)
-	r.Post("/meja", authed, owner, h.Create)
-	r.Post("/meja/generate", authed, owner, h.Generate)
-	r.Put("/meja/posisi", authed, owner, h.Posisi)
-	r.Put("/meja/:id", authed, owner, h.Update)
+	r.Post("/meja", authed, kasir, h.Create)
+	r.Post("/meja/generate", authed, kasir, h.Generate)
+	r.Put("/meja/posisi", authed, kasir, h.Posisi)
+	r.Put("/meja/:id", authed, kasir, h.Update)
 	r.Delete("/meja/:id", authed, owner, h.Delete)
-	r.Post("/area", authed, owner, h.SimpanArea)
-	r.Put("/area/:id", authed, owner, h.SimpanArea)
+	r.Post("/area", authed, kasir, h.SimpanArea)
+	r.Put("/area/:id", authed, kasir, h.SimpanArea)
 	r.Delete("/area/:id", authed, owner, h.HapusArea)
 }
 
@@ -112,13 +113,13 @@ func RegisterKasirRoutes(r fiber.Router, h *controllers.KasirController) {
 }
 
 func RegisterCetakRoutes(r fiber.Router, h *controllers.CetakController, stasiun fiber.Handler) {
-	r.Get("/printer", authed, owner, h.ListPrinter)
-	r.Post("/printer", authed, owner, h.CreatePrinter)
-	r.Put("/printer/:id", authed, owner, h.UpdatePrinter)
+	r.Get("/printer", authed, kasir, h.ListPrinter)
+	r.Post("/printer", authed, kasir, h.CreatePrinter)
+	r.Put("/printer/:id", authed, kasir, h.UpdatePrinter)
 	r.Delete("/printer/:id", authed, owner, h.DeletePrinter)
-	r.Post("/printer/:id/tes", authed, owner, h.TesPrinter)
+	r.Post("/printer/:id/tes", authed, kasir, h.TesPrinter)
 	r.Post("/stasiun/token", authed, owner, h.BuatToken)
-	r.Get("/cetak/riwayat", authed, owner, h.Riwayat)
+	r.Get("/cetak/riwayat", authed, kasir, h.Riwayat)
 	r.Post("/cetak/:id/ulang", authed, kasir, middleware.Audit("Cetak ulang"), h.Ulang)
 	r.Post("/pesanan/:id/cetak-struk", authed, h.CetakStruk)
 	r.Post("/cetak/closing", authed, kasir, h.CetakClosing)

@@ -111,7 +111,7 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
       title="Denah Meja"
       :subtitle="edit ? 'Seret meja untuk mengatur letaknya' : 'Ketuk meja untuk mulai memesan'"
     >
-      <template v-if="auth.isOwner">
+      <template v-if="auth.isKasir">
         <button v-if="!edit" class="pill" @click="edit = true"><i class="pi pi-pencil" /> Atur denah</button>
         <template v-else>
           <button class="pill" @click="susun"><i class="pi pi-th-large" /> Susun otomatis</button>
