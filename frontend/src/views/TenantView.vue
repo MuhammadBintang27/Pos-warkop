@@ -17,7 +17,10 @@ const printer = ref([])
 const menu = ref([])
 const isiSemua = ref(null)
 // warna penanda kartu tenant di modal kasir; tingkat 500-600 supaya garisnya jelas di mode terang maupun gelap
-const WARNA = ['#ef4444', '#f97316', '#d97706', '#65a30d', '#16a34a', '#0d9488', '#0891b2', '#2563eb', '#4f46e5', '#9333ea', '#db2777', '#78716c']
+const WARNA = [
+  '#ef4444', '#f97316', '#d97706', '#65a30d', '#16a34a', '#0d9488', '#0891b2', '#2563eb', '#4f46e5', '#9333ea', '#db2777', '#78716c',
+  '#b91c1c', '#c2410c', '#ca8a04', '#4d7c0f', '#059669', '#0f766e', '#0284c7', '#1d4ed8', '#7c3aed', '#c026d3', '#e11d48', '#475569',
+]
 
 async function muat() {
   ;[tenant.value, printer.value, menu.value] = await Promise.all([
