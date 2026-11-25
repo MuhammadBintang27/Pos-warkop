@@ -211,7 +211,8 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
   position: relative;
   height: calc(var(--h) * 1cqw);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--p-primary-color) 4%, var(--p-content-background));
+  /* lantai lebih gelap dari alas meja supaya meja menonjol (ikut mode gelap karena dicampur dari warna teks) */
+  background: color-mix(in srgb, var(--p-text-color) 9%, var(--p-content-background));
 }
 .kanvas.edit {
   background-image: radial-gradient(circle, var(--p-content-border-color) 1px, transparent 1px);
@@ -228,7 +229,7 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
   border: 1px solid var(--p-content-border-color);
   border-radius: 1cqw;
   background: var(--p-content-background);
-  box-shadow: 0 1px 4px rgb(0 0 0 / 0.06);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.12);
   font: inherit;
   cursor: pointer;
   --dudukan: radial-gradient(circle at 40% 35%, #f1f5f9, #cbd5e1 75%);
@@ -289,16 +290,18 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
   align-items: center;
   justify-content: center;
   gap: 2px;
-  border: 1px solid #b98a52;
+  /* meja kosong kayu pucat, supaya hanya meja terisi yang berwarna kuat */
+  border: 1px solid #c9b79c;
   border-radius: 0.9cqw;
-  background: repeating-linear-gradient(90deg, rgb(90 55 20 / 0.07) 0 2px, transparent 2px 11px),
-    linear-gradient(160deg, #ead2ad, #d6b384);
+  background: repeating-linear-gradient(90deg, rgb(90 55 20 / 0.05) 0 2px, transparent 2px 11px),
+    linear-gradient(160deg, #f1e9dd, #dfd2bf);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.5), inset 0 -3px 0 rgb(90 55 20 / 0.18), 0 4px 10px rgb(60 40 20 / 0.25);
   white-space: nowrap;
 }
 .meja.terisi .papan {
   background: repeating-linear-gradient(90deg, rgb(90 55 20 / 0.07) 0 2px, transparent 2px 11px),
     linear-gradient(160deg, #e6b878, #c98f4a);
+  border-color: #b98a52;
   outline: 3px solid color-mix(in srgb, var(--p-primary-color) 60%, transparent);
   outline-offset: 2px;
 }
