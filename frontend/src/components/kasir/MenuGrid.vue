@@ -53,11 +53,13 @@ const menus = computed(() => {
 
     <div v-if="menus.length" class="cards">
       <button v-for="m in menus" :key="m.id" class="card" :disabled="habis(m) || tutup(m)" @click="emit('pick', m)">
-        <strong class="nama" :title="m.nama">{{ m.nama }}</strong>
-        <span class="price">{{ hargaTampil(m) }}</span>
-        <span class="meta">
-          <i v-if="m.varian.length" class="pi pi-sliders-h" title="Ada pilihan" />
-          <small v-if="m.trackStok && m.stok > 0">Sisa {{ m.stok }}</small>
+        <strong class="nama" :class="{ panjang: m.nama.length > 22 }" :title="m.nama">{{ m.nama }}</strong>
+        <span class="bawah">
+          <span class="price">{{ hargaTampil(m) }}</span>
+          <span class="meta">
+            <i v-if="m.varian.length" class="pi pi-sliders-h" title="Ada pilihan" />
+            <small v-if="m.trackStok && m.stok > 0">Sisa {{ m.stok }}</small>
+          </span>
         </span>
         <span v-if="habis(m) || tutup(m)" class="sold">{{ tutup(m) ? 'Tutup' : 'Habis' }}</span>
       </button>
@@ -129,7 +131,8 @@ const menus = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  min-height: 96px;
+  /* tinggi tetap: kartu tidak ikut memanjang sendiri, jadi isi diatur supaya muat */
+  height: 112px;
   padding: 12px;
   text-align: left;
   border: 1px solid var(--p-content-border-color);
@@ -152,15 +155,29 @@ const menus = computed(() => {
   min-width: 0;
   overflow: hidden;
 }
-/* nama panjang dipotong di 3 baris supaya harga tetap di dalam kartu */
+/* nama maks 2 baris; nama panjang hurufnya dikecilkan dan boleh 3 baris, supaya harga tetap terlihat */
 .nama {
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
   overflow-wrap: anywhere;
   flex: none;
+  font-size: 0.95rem;
+  line-height: 1.3;
+}
+.nama.panjang {
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  font-size: 0.8rem;
+}
+.bawah {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
 }
 .price {
   flex: none;
@@ -168,7 +185,6 @@ const menus = computed(() => {
   font-weight: 700;
 }
 .meta {
-  margin-top: auto;
   display: flex;
   align-items: center;
   gap: 8px;
