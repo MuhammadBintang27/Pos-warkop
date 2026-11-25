@@ -17,6 +17,14 @@ gradlew.bat assembleDebug
 
 Hasilnya: `mobile/android/app/build/outputs/apk/debug/app-debug.apk`.
 
+## Merilis APK baru (pembaruan dari dalam aplikasi)
+
+1. Naikkan `versionCode` (dan `versionName`) di `frontend/public/dl/versi.json`, lalu isi `catatan`. Gradle membaca versi dari file ini, jadi tidak ada angka versi lain yang perlu diubah.
+2. Build APK seperti di atas, lalu salin ke `frontend/public/dl/pos-warkop.apk`.
+3. Commit dan deploy. Saat aplikasi dibuka, HP dengan versi lebih lama melihat dialog **Perbarui**: APK diunduh, lalu layar pasang Android muncul dan pengguna cukup menekan **Install**.
+
+APK harus selalu ditandatangani dengan kunci yang sama, karena Android menolak update dengan kunci berbeda. Saat ini dipakai kunci debug laptop pembuat (`%USERPROFILE%\.android\debug.keystore`). **Cadangkan file itu.** Kalau hilang, semua HP harus uninstall lalu pasang ulang secara manual.
+
 ## Catatan
 
 - Alamat server tertanam di `www/index.html` (`SERVER`). Pindah domain berarti build ulang APK.

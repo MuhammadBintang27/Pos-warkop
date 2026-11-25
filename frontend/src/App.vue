@@ -41,5 +41,6 @@ onEvent('pengaturan', pengaturan.fetch)
 <template>
   <Toast position="top-center" />
   <ConfirmDialog />
+  <PembaruanApk />
   <RouterView />
 </template>
