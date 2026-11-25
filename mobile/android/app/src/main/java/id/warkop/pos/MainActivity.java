@@ -68,6 +68,16 @@ public class MainActivity extends BridgeActivity {
             }
         }
 
+        /** versionName APK yang terpasang, untuk ditampilkan di sidebar. */
+        @JavascriptInterface
+        public String versiNama() {
+            try {
+                return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+            } catch (Exception e) {
+                return "";
+            }
+        }
+
         /**
          * Unduh APK lalu buka layar pasang Android (pengguna tetap menekan Install: aturan Android di luar Play Store).
          * Hasil: "izin" bila pengguna harus mengizinkan pemasangan dari aplikasi ini dulu, "unduh" bila mulai mengunduh.

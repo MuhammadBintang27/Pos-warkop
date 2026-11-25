@@ -100,6 +100,10 @@ function logout() {
 
 const setOnline = () => (online.value = navigator.onLine)
 
+// versi APK Android yang terpasang (aplikasi 1.1 belum punya versiNama, jadi pakai nomor build-nya)
+const hp = window.StasiunAndroid
+const versiApk = hp?.versiNama ? hp.versiNama() : hp?.versi ? `build ${hp.versi()}` : ''
+
 watch(() => route.path, () => (drawer.value = false))
 
 onMounted(() => {
@@ -148,7 +152,10 @@ onBeforeUnmount(() => {
         </template>
       </nav>
 
-      <div class="status"><i class="dot" :class="online ? 'on' : 'off'" /> {{ online ? 'Online' : 'Offline' }}</div>
+      <div class="status">
+        <i class="dot" :class="online ? 'on' : 'off'" /> {{ online ? 'Online' : 'Offline' }}
+        <span v-if="versiApk" class="versi">· v{{ versiApk }}</span>
+      </div>
     </aside>
 
     <div class="main">
@@ -349,6 +356,10 @@ onBeforeUnmount(() => {
 }
 .status .off {
   background: var(--p-red-500, #ef4444);
+}
+.status .versi {
+  font-weight: 400;
+  color: var(--p-text-muted-color);
 }
 
 .main {
