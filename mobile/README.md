@@ -21,7 +21,7 @@ Hasilnya: `mobile/android/app/build/outputs/apk/debug/app-debug.apk`.
 
 1. Naikkan `versionCode` (dan `versionName`) di `frontend/public/dl/versi.json`, lalu isi `catatan`. Gradle membaca versi dari file ini, jadi tidak ada angka versi lain yang perlu diubah.
 2. Build APK seperti di atas, lalu salin ke `frontend/public/dl/pos-warkop.apk`.
-3. Commit dan deploy. Saat aplikasi dibuka, HP dengan versi lebih lama melihat dialog **Perbarui**: APK diunduh, lalu layar pasang Android muncul dan pengguna cukup menekan **Install**.
+3. Commit dan deploy. Pembaruan bersifat wajib. Saat aplikasi dibuka, HP dengan versi lebih lama langsung mengunduh APK di balik dialog yang tidak bisa ditutup. Setelah itu layar pasang Android muncul, dan pengguna cukup menekan **Install**.
 
 APK harus selalu ditandatangani dengan kunci yang sama, karena Android menolak update dengan kunci berbeda. Saat ini dipakai kunci debug laptop pembuat (`%USERPROFILE%\.android\debug.keystore`). **Cadangkan file itu.** Kalau hilang, semua HP harus uninstall lalu pasang ulang secara manual.
 
