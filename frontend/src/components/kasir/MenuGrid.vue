@@ -11,7 +11,10 @@ const run = useRun()
 const q = ref('')
 const aktif = ref(0)
 const tenantAktif = ref(0)
+const dlgTenant = ref(false)
 const opsiTenant = computed(() => [{ id: 0, nama: 'Semua tenant' }, ...store.tenant])
+const namaTenant = computed(() => opsiTenant.value.find((t) => t.id === tenantAktif.value)?.nama ?? 'Semua tenant')
+const LARIS = -1 // nilai "aktif" untuk chip Terlaris
 
 const habis = (m) => !m.tersedia || (m.trackStok && m.stok <= 0) || m.porsiBahan === 0
 const tutup = (m) => store.tenant.some((t) => t.id === m.tenantId && !t.buka)
@@ -24,12 +27,24 @@ const ket = (m) =>
 
 const menus = computed(() => {
   const term = q.value.trim().toLowerCase()
-  return store.kategori
-    .filter((k) => !aktif.value || k.id === aktif.value)
+  const daftar = store.kategori
+    .filter((k) => aktif.value <= 0 || k.id === aktif.value)
     .flatMap((k) => k.menu)
     .filter((m) => !tenantAktif.value || m.tenantId === tenantAktif.value)
     .filter((m) => !term || m.nama.toLowerCase().includes(term))
+  if (aktif.value !== LARIS) return daftar
+  return daftar.filter((m) => m.laku > 0).sort((a, b) => b.laku - a.laku).slice(0, 20)
 })
+
+function pick(m) {
+  emit('pick', m)
+  q.value = ''
+}
+
+function pilihTenant(id) {
+  tenantAktif.value = id
+  dlgTenant.value = false
+}
 </script>
 
 <template>
@@ -39,26 +54,27 @@ const menus = computed(() => {
         <InputIcon class="pi pi-search" />
         <InputText v-model="q" placeholder="Cari menu…" fluid />
       </IconField>
-      <Select
+      <Button
         v-if="store.tenant.length > 1"
-        v-model="tenantAktif"
-        :options="opsiTenant"
-        option-label="nama"
-        option-value="id"
+        :label="namaTenant"
+        icon="pi pi-shop"
+        :variant="tenantAktif ? undefined : 'outlined'"
         class="tenant"
+        @click="dlgTenant = true"
       />
       <Button icon="pi pi-refresh" variant="outlined" aria-label="Muat ulang" @click="run(store.loadMenu)" />
     </div>
 
     <div class="chips">
       <button class="chip-btn" :class="{ on: !aktif }" @click="aktif = 0">Semua</button>
+      <button class="chip-btn" :class="{ on: aktif === LARIS }" @click="aktif = LARIS"><i class="pi pi-star-fill" /> Terlaris</button>
       <button v-for="k in store.kategori" :key="k.id" class="chip-btn" :class="{ on: aktif === k.id }" @click="aktif = k.id">
         {{ k.nama }}
       </button>
     </div>
 
     <div v-if="menus.length" class="cards">
-      <button v-for="m in menus" :key="m.id" class="card" :disabled="habis(m) || tutup(m)" @click="emit('pick', m)">
+      <button v-for="m in menus" :key="m.id" class="card" :disabled="habis(m) || tutup(m)" @click="pick(m)">
         <strong class="nama" :class="{ panjang: m.nama.length > 22 }" :title="m.nama">{{ m.nama }}</strong>
         <span class="bawah">
           <span class="harga">
@@ -74,8 +90,17 @@ const menus = computed(() => {
     </div>
     <div v-else class="empty">
       <i class="pi pi-inbox" />
-      <span>{{ q ? 'Menu tidak ditemukan' : 'Belum ada menu' }}</span>
+      <span>{{ q ? 'Menu tidak ditemukan' : aktif === LARIS ? 'Belum ada penjualan 30 hari terakhir' : 'Belum ada menu' }}</span>
     </div>
+
+    <Dialog v-model:visible="dlgTenant" modal header="Pilih tenant" :style="{ width: '40rem' }" :breakpoints="{ '760px': '96vw' }">
+      <div class="cards tenant-cards">
+        <button v-for="t in opsiTenant" :key="t.id" class="card tenant-card" :class="{ on: t.id === tenantAktif }" @click="pilihTenant(t.id)">
+          <strong class="nama">{{ t.nama }}</strong>
+          <span v-if="t.id && !t.buka" class="sold">Tutup</span>
+        </button>
+      </div>
+    </Dialog>
   </section>
 </template>
 
@@ -98,6 +123,15 @@ const menus = computed(() => {
 }
 .tenant {
   min-width: 160px;
+  max-width: 40%;
+}
+.tenant-card {
+  height: 80px;
+  justify-content: center;
+}
+.tenant-card.on {
+  border-color: var(--p-primary-color);
+  border-width: 2px;
 }
 .chips {
   flex: none;

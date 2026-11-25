@@ -69,6 +69,7 @@ type MenuResponse struct {
 	Varian     []*GrupResponse `json:"varian"`
 	Resep      []ResepItem     `json:"resep"`
 	PorsiBahan *int            `json:"porsiBahan"` // porsi yang masih bisa dibuat dari stok bahan; kosong bila menu tanpa resep
+	Laku       int             `json:"laku"`       // porsi terjual 30 hari terakhir, untuk daftar "Terlaris" di kasir
 }
 
 type KategoriResponse struct {

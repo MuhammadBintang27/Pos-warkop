@@ -96,6 +96,24 @@ func (s *MenuService) List(kid int64) ([]*dto.KategoriResponse, error) {
 	}
 	rows.Close()
 
+	rows, err = s.db.Query(`SELECT i.menu_id, SUM(i.qty) FROM pesanan_item i JOIN pesanan p ON p.id=i.pesanan_id
+		WHERE p.klien_id=? AND p.status='lunas' AND p.lunas_at >= NOW() - INTERVAL 30 DAY GROUP BY i.menu_id`, kid)
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var id int64
+		var n int
+		if err := rows.Scan(&id, &n); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		if m := menuByID[id]; m != nil {
+			m.Laku = n
+		}
+	}
+	rows.Close()
+
 	grupByID := map[int64]*dto.GrupResponse{}
 	rows, err = s.db.Query(`SELECT g.id,g.menu_id,g.nama,g.wajib,g.multi,g.ganti_harga FROM varian_grup g
 		JOIN menu m ON m.id=g.menu_id WHERE g.klien_id=? AND m.aktif=1 ORDER BY g.id`, kid)
