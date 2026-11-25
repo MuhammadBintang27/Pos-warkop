@@ -7,6 +7,8 @@ import { konfirmasi } from '@/utils/confirm'
 import { printBatalDapur, printDapur } from '@/utils/print'
 
 const visible = defineModel('visible')
+// tiket satu meja yang dipilih di halaman Belum Tercetak
+const props = defineProps({ judul: { type: String, default: '' }, daftar: { type: Array, default: () => [] } })
 const store = useKasirStore()
 const run = useRun()
 const confirm = useConfirm()
@@ -45,14 +47,14 @@ function tanyaAbaikan(j) {
 </script>
 
 <template>
-  <Dialog v-model:visible="visible" modal header="Tiket belum tercetak" :style="{ width: '34rem' }" :breakpoints="{ '600px': '96vw' }">
+  <Dialog v-model:visible="visible" modal :header="judul || 'Tiket belum tercetak'" :style="{ width: '34rem' }" :breakpoints="{ '600px': '96vw' }">
     <p v-if="!store.cetak.stasiunAktif" class="info warn">
       <i class="pi pi-exclamation-triangle" /> Stasiun cetak tidak terhubung. Pastikan HP/PC stasiun menyala dan ada internet.
     </p>
     <p v-else class="info">Stasiun mencoba lagi tiap 15 detik. Tiket keluar sendiri begitu masalah printernya beres.</p>
 
-    <div v-if="store.cetak.daftar?.length" class="daftar">
-      <div v-for="j in store.cetak.daftar" :key="j.id" class="tiket">
+    <div v-if="props.daftar.length" class="daftar">
+      <div v-for="j in props.daftar" :key="j.id" class="tiket">
         <div class="atas">
           <strong>{{ JENIS[j.jenis] ?? j.jenis }} · {{ j.mejaNama || 'Bawa pulang' }}</strong>
           <small>{{ menit(j.dibuatAt) }} mnt lalu</small>
@@ -67,9 +69,6 @@ function tanyaAbaikan(j) {
       </div>
     </div>
     <p v-else class="redup">Semua tiket sudah tercetak.</p>
-    <small v-if="store.cetak.macet > (store.cetak.daftar?.length ?? 0)" class="redup">
-      Ditampilkan {{ store.cetak.daftar.length }} dari {{ store.cetak.macet }} tiket.
-    </small>
   </Dialog>
 </template>
 

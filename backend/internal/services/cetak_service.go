@@ -348,8 +348,15 @@ func (s *CetakService) Selesai(kid, id int64) error {
 }
 
 func (s *CetakService) Gagal(kid, id int64, galat string) error {
-	_, err := s.db.Exec("UPDATE cetak_job SET percobaan=percobaan+1, galat=? WHERE id=? AND klien_id=? AND status='antri'", galat, id, kid)
-	return err
+	if _, err := s.db.Exec("UPDATE cetak_job SET percobaan=percobaan+1, galat=? WHERE id=? AND klien_id=? AND status='antri'", galat, id, kid); err != nil {
+		return err
+	}
+	// kabari layar hanya di kegagalan pertama; stasiun mencoba ulang tiap 15 detik dan tidak perlu memicu muat ulang tiap kali
+	var n int
+	if s.db.QueryRow("SELECT percobaan FROM cetak_job WHERE id=? AND klien_id=?", id, kid).Scan(&n) == nil && n == 1 {
+		s.hub.Publish(kid, "cetak")
+	}
+	return nil
 }
 
 // ---- tampilan owner dan kasir ----
@@ -413,18 +420,19 @@ func (s *CetakService) Abaikan(kid, id int64, oleh string) error {
 	return nil
 }
 
-const maksDaftarMacet = 20
+const maksDaftarMacet = 50
 
 func (s *CetakService) Status(kid int64) (*dto.CetakStatus, error) {
 	st := dto.CetakStatus{Daftar: []dto.CetakMacet{}}
 	batasMacet := time.Now().Add(-macetSetelah)
-	if err := s.db.QueryRow(`SELECT COUNT(*), COALESCE(SUM(dibuat_at<?),0) FROM cetak_job WHERE klien_id=? AND status='antri' AND dibuat_at>?`,
+	// tiket yang sudah gagal dicoba langsung dihitung macet, tanpa menunggu batas waktu
+	if err := s.db.QueryRow(`SELECT COUNT(*), COALESCE(SUM(dibuat_at<? OR galat<>''),0) FROM cetak_job WHERE klien_id=? AND status='antri' AND dibuat_at>?`,
 		batasMacet, kid, batasAktif()).Scan(&st.Antri, &st.Macet); err != nil {
 		return nil, err
 	}
 	if st.Macet > 0 {
 		rows, err := s.db.Query(`SELECT j.id,j.jenis,p.nama,j.payload,j.percobaan,j.galat,j.dibuat_at FROM cetak_job j JOIN printer p ON p.id=j.printer_id
-			WHERE j.klien_id=? AND j.status='antri' AND j.dibuat_at>? AND j.dibuat_at<? ORDER BY j.id LIMIT ?`, kid, batasAktif(), batasMacet, maksDaftarMacet)
+			WHERE j.klien_id=? AND j.status='antri' AND j.dibuat_at>? AND (j.dibuat_at<? OR j.galat<>'') ORDER BY j.id LIMIT ?`, kid, batasAktif(), batasMacet, maksDaftarMacet)
 		if err != nil {
 			return nil, err
 		}

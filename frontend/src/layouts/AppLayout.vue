@@ -1,9 +1,12 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useToast } from 'primevue/usetoast'
+import { onEvent } from '@/composables/useEvents'
 import { THEMES } from '@/composables/useAppTheme'
 import { useMobile } from '@/composables/useMobile'
 import { useAuthStore } from '@/stores/auth'
+import { useKasirStore } from '@/stores/kasir'
 import { usePengaturanStore } from '@/stores/pengaturan'
 import { useRun } from '@/composables/useRun'
 import { load, save } from '@/utils/storage'
@@ -15,6 +18,7 @@ const NAV = [
   { label: 'Rekapan', icon: 'pi pi-chart-bar', to: '/tenant-saya/rekap', roles: ['tenant'] },
   { label: 'Kasir', icon: 'pi pi-shopping-cart', to: '/', roles: ['pelayan', 'kasir', 'owner'] },
   { label: 'Denah Meja', icon: 'pi pi-map', to: '/denah', roles: ['pelayan', 'kasir', 'owner'] },
+  { label: 'Belum Tercetak', icon: 'pi pi-print', to: '/belum-tercetak', roles: ['pelayan', 'kasir', 'owner'], badge: 'cetak' },
   { label: 'Riwayat', icon: 'pi pi-history', to: '/riwayat', roles: ['pelayan', 'kasir', 'owner'] },
   { label: 'Ketersediaan', icon: 'pi pi-power-off', to: '/ketersediaan', roles: ['kasir', 'owner'] },
   { label: 'Stok Bahan', icon: 'pi pi-box', to: '/bahan', roles: ['kasir', 'owner'] },
@@ -101,6 +105,36 @@ function logout() {
 
 const setOnline = () => (online.value = navigator.onLine)
 
+// Tiket yang belum tercetak dipantau di semua halaman: badge di menu, dan toast sekali untuk tiap tiket yang baru macet.
+const kasir = useKasirStore()
+const toast = useToast()
+const pantauCetak = ['pelayan', 'kasir', 'owner'].includes(auth.role)
+const dikenal = new Set()
+const muatCetak = () => kasir.loadCetak().catch(() => {})
+let timerCetak, offCetak
+
+watch(
+  () => kasir.cetak.daftar,
+  (daftar = []) => {
+    const baru = daftar.filter((j) => !dikenal.has(j.id))
+    baru.forEach((j) => dikenal.add(j.id))
+    if (!baru.length || route.path === '/belum-tercetak') return
+    const j = baru[0]
+    toast.add({
+      group: 'cetak',
+      severity: 'warn',
+      summary: baru.length === 1 ? `Tiket ${j.mejaNama || 'tanpa meja'} (${j.printer}) belum tercetak` : `${baru.length} tiket belum tercetak`,
+      detail: [j.galat || (!kasir.cetak.stasiunAktif && 'Stasiun cetak tidak terhubung'), 'Ketuk untuk melihat'].filter(Boolean).join(' — '),
+      life: 8000,
+    })
+  },
+)
+
+function bukaBelumTercetak(msg) {
+  toast.remove(msg)
+  router.push('/belum-tercetak')
+}
+
 // versi APK Android yang terpasang (aplikasi 1.1 belum punya versiNama, jadi pakai nomor build-nya)
 const hp = window.StasiunAndroid
 const versiApk = hp?.versiNama ? hp.versiNama() : hp?.versi ? `build ${hp.versi()}` : ''
@@ -108,10 +142,17 @@ const versiApk = hp?.versiNama ? hp.versiNama() : hp?.versi ? `build ${hp.versi(
 watch(() => route.path, () => (drawer.value = false))
 
 onMounted(() => {
+  if (pantauCetak) {
+    muatCetak()
+    offCetak = onEvent('cetak', muatCetak)
+    timerCetak = setInterval(muatCetak, 10000) // status stasiun & tiket macet berubah tanpa event
+  }
   window.addEventListener('online', setOnline)
   window.addEventListener('offline', setOnline)
 })
 onBeforeUnmount(() => {
+  offCetak?.()
+  clearInterval(timerCetak)
   window.removeEventListener('online', setOnline)
   window.removeEventListener('offline', setOnline)
 })
@@ -119,6 +160,14 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="shell">
+    <Toast group="cetak" position="top-center">
+      <template #message="{ message }">
+        <button class="toast-cetak" @click="bukaBelumTercetak(message)">
+          <i class="pi pi-print" />
+          <span><strong>{{ message.summary }}</strong><small>{{ message.detail }}</small></span>
+        </button>
+      </template>
+    </Toast>
     <div v-if="mobile && drawer" class="scrim" @click="drawer = false" />
 
     <aside class="side" :class="{ open: showSide, floating: mobile }">
@@ -138,6 +187,7 @@ onBeforeUnmount(() => {
         <template v-for="n in nav" :key="n.label">
           <RouterLink v-if="n.to" :to="n.to" class="item" active-class="active" exact-active-class="active">
             <i :class="n.icon" /> <span>{{ n.label }}</span>
+            <span v-if="n.badge && kasir.cetak.macet" class="badge">{{ kasir.cetak.macet }}</span>
           </RouterLink>
           <template v-else>
             <button class="item" :class="{ parent: inRoute(n) }" @click="expanded[n.label] = !isOpen(n)">
@@ -299,6 +349,39 @@ onBeforeUnmount(() => {
 }
 .item.parent {
   color: var(--accent-text);
+}
+.badge {
+  margin-left: auto;
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: center;
+  background: var(--p-red-600, #dc2626);
+  color: #fff;
+}
+.toast-cetak {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.toast-cetak .pi {
+  font-size: 1.3rem;
+  margin-top: 2px;
+}
+.toast-cetak span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 .chev {
   margin-left: auto;

@@ -18,6 +18,7 @@ const router = createRouter({
         { path: 'admin', component: () => import('@/views/AdminView.vue'), meta: { roles: ['superadmin'] } },
         { path: 'admin/pengguna', component: () => import('@/views/AdminPenggunaView.vue'), meta: { roles: ['superadmin'] } },
         { path: 'denah', component: () => import('@/views/DenahView.vue') },
+        { path: 'belum-tercetak', component: () => import('@/views/BelumTercetakView.vue'), meta: { roles: ['pelayan', 'kasir', 'owner'] } },
         { path: 'riwayat', component: () => import('@/views/RiwayatView.vue') },
         // satu route untuk semua tab laporan supaya halaman (dan data yang sudah dimuat) dipakai ulang saat pindah menu
         { path: 'laporan/:tab(waktu|karyawan|kasbon)?', component: () => import('@/views/LaporanView.vue'), meta: owner },

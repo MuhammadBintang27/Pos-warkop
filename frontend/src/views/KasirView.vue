@@ -18,7 +18,7 @@ const mobile = useMobile()
 
 const dlg = reactive({
   denah: false, opsi: false, bayar: false, pisah: false, pindah: false,
-  gabung: false, shift: false, kas: false, kasbon: false, struk: false, cart: false, macet: false,
+  gabung: false, shift: false, kas: false, kasbon: false, struk: false, cart: false,
 })
 const menuDipilih = ref(null)
 const lunas = ref(null)
@@ -84,7 +84,6 @@ function selesaiBayar(p) {
 }
 
 const offs = []
-let timerCetak
 onMounted(async () => {
   offs.push(
     onEvent('pesanan', () => {
@@ -96,17 +95,12 @@ onMounted(async () => {
     onEvent('meja', store.loadDenah),
     onEvent('menu', () => Promise.all([store.loadMenu(), store.loadTenant()])),
     onEvent('shift', () => auth.isKasir && store.loadShift()),
-    onEvent('cetak', () => store.loadCetak().catch(() => {})),
   )
   await run(() => Promise.all([store.loadMenu(), store.loadTenant(), store.loadDenah(), auth.isKasir && store.loadShift()]))
   if (!aktif.value) dlg.denah = true
-  // pelayan juga dipantau: tiket dapur yang ia kirim bisa macet di printer
-  store.loadCetak().catch(() => {})
-  timerCetak = setInterval(() => store.loadCetak().catch(() => {}), 10000) // status stasiun & tiket macet berubah tanpa event
 })
 onBeforeUnmount(() => {
   offs.forEach((off) => off())
-  clearInterval(timerCetak)
 })
 </script>
 
@@ -115,7 +109,7 @@ onBeforeUnmount(() => {
     <PageHeader class="kasir-head" icon="pi pi-shopping-cart" title="Kasir" :subtitle="subtitle">
       <button class="pill" :title="aktif ? 'Ganti meja' : 'Pilih meja'" @click="dlg.denah = true"><i class="pi pi-th-large" /> <span class="lbl">{{ aktif ? 'Ganti meja' : 'Pilih meja' }}</span></button>
       <button class="pill" title="Bawa pulang" @click="store.baru('')"><i class="pi pi-shopping-bag" /> <span class="lbl">Bawa pulang</span></button>
-      <button v-if="peringatanCetak" class="chip warn macet" :title="peringatanCetak" @click="dlg.macet = true"><i class="pi pi-print" /> <span class="lbl">{{ peringatanCetak }}</span></button>
+      <RouterLink v-if="peringatanCetak" to="/belum-tercetak" class="macet" :title="peringatanCetak" :aria-label="peringatanCetak"><i class="pi pi-print" /><span class="badge">{{ store.cetak.macet }}</span></RouterLink>
       <template v-if="auth.isKasir">
         <button class="pill" title="Kas Keluar" @click="dlg.kas = true"><i class="pi pi-wallet" /> <span class="lbl">Kas Keluar</span></button>
         <button class="pill" title="Kasbon" @click="dlg.kasbon = true"><i class="pi pi-clock" /> <span class="lbl">Kasbon</span></button>
@@ -185,7 +179,6 @@ onBeforeUnmount(() => {
     <PengeluaranDialog v-model:visible="dlg.kas" />
     <KasbonDialog v-model:visible="dlg.kasbon" />
     <StrukDialog v-model:visible="dlg.struk" :pesanan="lunas" />
-    <CetakMacetDialog v-model:visible="dlg.macet" />
   </div>
 </template>
 
@@ -235,17 +228,29 @@ section.kasir-head :deep(.title small) {
     gap: 0;
   }
 }
-/* peringatan cetak bisa diklik; teks panjang dipotong supaya header tetap satu baris */
-.chip.macet {
-  max-width: 340px;
-  border: 0;
-  font: inherit;
-  cursor: pointer;
+/* peringatan cetak cukup ikon + jumlah supaya hemat tempat; pesan lengkap di title dan halaman Belum Tercetak */
+.macet {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--p-red-500, #ef4444) 15%, var(--p-content-background));
+  color: var(--p-red-600, #dc2626);
 }
-.chip.macet .lbl {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.macet .badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-align: center;
+  background: var(--p-red-600, #dc2626);
+  color: #fff;
 }
 .body {
   flex: 1;
