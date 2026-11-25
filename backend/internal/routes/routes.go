@@ -118,7 +118,7 @@ func RegisterCetakRoutes(r fiber.Router, h *controllers.CetakController, stasiun
 	r.Put("/printer/:id", authed, kasir, h.UpdatePrinter)
 	r.Delete("/printer/:id", authed, owner, h.DeletePrinter)
 	r.Post("/printer/:id/tes", authed, kasir, h.TesPrinter)
-	r.Post("/stasiun/token", authed, owner, h.BuatToken)
+	r.Post("/stasiun/token", authed, kasir, h.BuatToken)
 	r.Get("/cetak/riwayat", authed, kasir, h.Riwayat)
 	r.Post("/cetak/:id/ulang", authed, kasir, middleware.Audit("Cetak ulang"), h.Ulang)
 	r.Post("/pesanan/:id/cetak-struk", authed, h.CetakStruk)

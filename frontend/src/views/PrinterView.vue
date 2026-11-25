@@ -130,7 +130,7 @@ const { cari: cariPrinter, hasil: printerTampil } = useCari(printer, 'nama', 'ip
       <div v-if="hp" class="head">
         <span>Perangkat ini: <strong>{{ hpStatus?.aktif ? hpStatus.pesan : 'bukan stasiun' }}</strong></span>
         <Button v-if="hpStatus?.aktif" label="Matikan" size="small" severity="danger" outlined class="kanan" @click="matikanHp" />
-        <Button v-else-if="auth.isOwner" label="Jadikan perangkat ini stasiun" icon="pi pi-mobile" size="small" class="kanan" @click="jadikanStasiun" />
+        <Button v-else label="Jadikan perangkat ini stasiun" icon="pi pi-mobile" size="small" class="kanan" @click="jadikanStasiun" />
       </div>
       <small v-if="hp" class="redup">HP/tablet harus tetap menyala dan tersambung ke WiFi yang sama dengan printer. Boleh logout, stasiun tetap jalan.</small>
       <div v-if="token" class="token">
