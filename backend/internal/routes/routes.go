@@ -121,8 +121,8 @@ func RegisterCetakRoutes(r fiber.Router, h *controllers.CetakController, stasiun
 	r.Get("/cetak/riwayat", authed, owner, h.Riwayat)
 	r.Post("/cetak/:id/ulang", authed, kasir, middleware.Audit("Cetak ulang"), h.Ulang)
 	r.Post("/pesanan/:id/cetak-struk", authed, h.CetakStruk)
-	r.Post("/cetak/closing", authed, owner, h.CetakClosing)
-	r.Post("/cetak/rekap-tenant", authed, owner, h.CetakRekapTenant)
+	r.Post("/cetak/closing", authed, kasir, h.CetakClosing)
+	r.Post("/cetak/rekap-tenant", authed, kasir, h.CetakRekapTenant)
 	r.Post("/shift/:id/cetak", authed, owner, h.CetakShift)
 	// pelayan juga perlu tahu tiket dapurnya macet, dan boleh menutupnya setelah dicetak lewat browser
 	r.Get("/cetak/status", authed, h.Status)
@@ -134,12 +134,13 @@ func RegisterCetakRoutes(r fiber.Router, h *controllers.CetakController, stasiun
 }
 
 func RegisterLaporanTenantRoutes(r fiber.Router, h *controllers.LaporanTenantController) {
-	r.Get("/laporan/tenant/harian", authed, owner, h.Harian)
-	r.Get("/laporan/tenant/detail", authed, owner, h.Detail)
-	r.Get("/laporan/tenant/belum-bayar", authed, owner, h.BelumBayar)
-	r.Post("/closing", authed, owner, middleware.Audit("Closing tenant"), h.Closing)
-	r.Post("/closing/setor-periode", authed, owner, middleware.Audit("Setor closing periode"), h.SetorPeriode)
-	r.Post("/closing/:id/setor", authed, owner, middleware.Audit("Setor closing"), h.Setor)
+	// kasir boleh closing tenant dan menandai setoran; membatalkan closing tetap hanya owner
+	r.Get("/laporan/tenant/harian", authed, kasir, h.Harian)
+	r.Get("/laporan/tenant/detail", authed, kasir, h.Detail)
+	r.Get("/laporan/tenant/belum-bayar", authed, kasir, h.BelumBayar)
+	r.Post("/closing", authed, kasir, middleware.Audit("Closing tenant"), h.Closing)
+	r.Post("/closing/setor-periode", authed, kasir, middleware.Audit("Setor closing periode"), h.SetorPeriode)
+	r.Post("/closing/:id/setor", authed, kasir, middleware.Audit("Setor closing"), h.Setor)
 	r.Delete("/closing/:id", authed, owner, middleware.Audit("Batal closing"), h.BatalClosing)
 
 	// Rekapan untuk akun tenant: handler yang sama, tenant dipaksa dari token.

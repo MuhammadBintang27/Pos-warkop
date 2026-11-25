@@ -22,6 +22,8 @@ const NAV = [
   { label: 'Riwayat', icon: 'pi pi-history', to: '/riwayat', roles: ['pelayan', 'kasir', 'owner'] },
   { label: 'Ketersediaan', icon: 'pi pi-power-off', to: '/ketersediaan', roles: ['kasir', 'owner'] },
   { label: 'Stok Bahan', icon: 'pi pi-box', to: '/bahan', roles: ['kasir', 'owner'] },
+  // owner membukanya dari grup Laporan › Tenant
+  { label: 'Closing Tenant', icon: 'pi pi-lock', to: '/laporan/tenant', roles: ['kasir'] },
   {
     label: 'Laporan',
     icon: 'pi pi-chart-line',

@@ -9,6 +9,7 @@ import { konfirmasi } from '@/utils/confirm'
 import { hari, labelKomisi, rp, tgl, ymd } from '@/utils/format'
 import { cetakRekapTenant } from '@/utils/cetak'
 import { usePengaturanStore } from '@/stores/pengaturan'
+import { useAuthStore } from '@/stores/auth'
 
 const STATUS = {
   belum: { label: 'Belum closing', severity: 'secondary' },
@@ -59,6 +60,7 @@ const barisDetail = computed(() =>
 )
 // ---- setor periode (mis. mingguan): satu struk dan satu kali tandai disetor untuk banyak hari ----
 const peng = usePengaturanStore()
+const auth = useAuthStore()
 const tenantPilih = computed(() => tenant.value.find((t) => t.id === filterTenant.value) ?? null)
 const multiHari = computed(() => {
   const [dari, sampai] = rentang.value
@@ -319,7 +321,7 @@ const { cari: cariBaris, hasil: barisTampil } = useCari(baris, 'nama', 'tanggal'
                       <Button icon="pi pi-file" size="small" text severity="secondary" aria-label="Lihat bill closing" @click="bukaBill(b)" />
                       <Button v-if="b.status === 'closing' && !b.milikSendiri" label="Tandai disetor" size="small" outlined @click="setor(b)" />
                       <Button
-                        v-if="b.status !== 'disetor'"
+                        v-if="b.status !== 'disetor' && auth.isOwner"
                         icon="pi pi-undo"
                         size="small"
                         text
