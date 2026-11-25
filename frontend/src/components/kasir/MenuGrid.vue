@@ -15,6 +15,12 @@ const opsiTenant = computed(() => [{ id: 0, nama: 'Semua tenant' }, ...store.ten
 
 const habis = (m) => !m.tersedia || (m.trackStok && m.stok <= 0) || m.porsiBahan === 0
 const tutup = (m) => store.tenant.some((t) => t.id === m.tenantId && !t.buka)
+// "mulai Rp20.000" dipecah: kata "mulai" pindah ke baris kecil di atas harga, bersama sisa stok
+const nilai = (m) => hargaTampil(m).replace(/^mulai /, '')
+const ket = (m) =>
+  [hargaTampil(m).startsWith('mulai ') && 'mulai dari', m.trackStok && m.stok > 0 && `Sisa ${m.stok}`]
+    .filter(Boolean)
+    .join(' · ')
 
 const menus = computed(() => {
   const term = q.value.trim().toLowerCase()
@@ -55,10 +61,12 @@ const menus = computed(() => {
       <button v-for="m in menus" :key="m.id" class="card" :disabled="habis(m) || tutup(m)" @click="emit('pick', m)">
         <strong class="nama" :class="{ panjang: m.nama.length > 22 }" :title="m.nama">{{ m.nama }}</strong>
         <span class="bawah">
-          <span class="price">{{ hargaTampil(m) }}</span>
-          <span class="meta">
-            <i v-if="m.varian.length" class="pi pi-sliders-h" title="Ada pilihan" />
-            <small v-if="m.trackStok && m.stok > 0">Sisa {{ m.stok }}</small>
+          <span class="harga">
+            <small v-if="ket(m)">{{ ket(m) }}</small>
+            <span class="price">{{ nilai(m) }}</span>
+          </span>
+          <span class="aksi" :title="m.varian.length ? 'Ada pilihan' : 'Tambah'">
+            <i :class="m.varian.length ? 'pi pi-sliders-h' : 'pi pi-plus'" />
           </span>
         </span>
         <span v-if="habis(m) || tutup(m)" class="sold">{{ tutup(m) ? 'Tutup' : 'Habis' }}</span>
@@ -173,22 +181,38 @@ const menus = computed(() => {
   font-size: 0.8rem;
 }
 .bawah {
-  margin-top: auto;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 6px;
+}
+.harga {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.harga small {
+  font-size: 0.7rem;
+  line-height: 1.2;
+  color: var(--p-text-muted-color);
+}
+.aksi {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--p-primary-color);
+  color: var(--p-primary-contrast-color);
+}
+.aksi .pi {
+  font-size: 0.8rem;
 }
 .price {
   flex: none;
   color: var(--accent-text);
   font-weight: 700;
-}
-.meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--p-text-muted-color);
 }
 .sold {
   position: absolute;
