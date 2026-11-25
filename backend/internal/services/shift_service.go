@@ -3,6 +3,7 @@ package services
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"warkop/internal/config"
@@ -123,6 +124,80 @@ func (s *ShiftService) CreatePengeluaran(kid, userID int64, req dto.PengeluaranR
 	}
 	_, err = s.db.Exec("INSERT INTO pengeluaran (klien_id,shift_id,keterangan,jumlah,kategori,dicatat_oleh,at) VALUES (?,?,?,?,?,?,?)",
 		kid, shiftID, req.Keterangan, req.Jumlah, kategori, userID, time.Now())
+	return err
+}
+
+const pengeluaranPerHalaman = 50
+
+// RiwayatPengeluaran: pengeluaran pada rentang tanggal per halaman, untuk halaman owner.
+func (s *ShiftService) RiwayatPengeluaran(kid int64, q dto.PengeluaranQuery) (*dto.RiwayatPengeluaranResponse, error) {
+	from, to, err := parseRange(q.Dari, q.Sampai, time.Now())
+	if err != nil {
+		return nil, err
+	}
+	where := " FROM pengeluaran p LEFT JOIN users u ON u.id=p.dicatat_oleh WHERE p.klien_id=? AND p.at>=? AND p.at<?"
+	args := []any{kid, from, to}
+	if q.Kategori != "" {
+		where += " AND p.kategori=?"
+		args = append(args, q.Kategori)
+	}
+	if c := strings.TrimSpace(q.Cari); c != "" {
+		where += " AND p.keterangan LIKE ?"
+		args = append(args, "%"+c+"%")
+	}
+	out := &dto.RiwayatPengeluaranResponse{Items: []dto.PengeluaranResponse{}}
+	if err := s.db.QueryRow("SELECT COUNT(*), COALESCE(SUM(p.jumlah),0)"+where, args...).Scan(&out.Total, &out.TotalJumlah); err != nil {
+		return nil, err
+	}
+	sql := "SELECT p.id,p.keterangan,p.jumlah,p.kategori,p.at,COALESCE(u.nama,''),p.shift_id" + where + " ORDER BY p.at DESC, p.id DESC"
+	if !q.Semua {
+		sql += " LIMIT ? OFFSET ?"
+		args = append(args, pengeluaranPerHalaman, q.Page*pengeluaranPerHalaman)
+	}
+	rows, err := s.db.Query(sql, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var p dto.PengeluaranResponse
+		if err := rows.Scan(&p.ID, &p.Keterangan, &p.Jumlah, &p.Kategori, &p.At, &p.Oleh, &p.ShiftID); err != nil {
+			return nil, err
+		}
+		out.Items = append(out.Items, p)
+	}
+	return out, rows.Err()
+}
+
+// pengeluaranBisaDiubah: refund terikat ke bill yang di-refund, jadi tidak boleh dikoreksi dari sini.
+func (s *ShiftService) pengeluaranBisaDiubah(kid, id int64) error {
+	var kategori string
+	if s.db.QueryRow("SELECT kategori FROM pengeluaran WHERE id=? AND klien_id=?", id, kid).Scan(&kategori) != nil {
+		return types.NotFound("Pengeluaran")
+	}
+	if kategori == "refund" {
+		return types.BadRequest("Pengeluaran refund tercatat otomatis dari refund bill dan tidak bisa diubah")
+	}
+	return nil
+}
+
+func (s *ShiftService) UpdatePengeluaran(kid, id int64, req dto.PengeluaranRequest) error {
+	if err := s.pengeluaranBisaDiubah(kid, id); err != nil {
+		return err
+	}
+	kategori := req.Kategori
+	if kategori == "" {
+		kategori = "lainnya"
+	}
+	_, err := s.db.Exec("UPDATE pengeluaran SET keterangan=?, jumlah=?, kategori=? WHERE id=? AND klien_id=?", req.Keterangan, req.Jumlah, kategori, id, kid)
+	return err
+}
+
+func (s *ShiftService) DeletePengeluaran(kid, id int64) error {
+	if err := s.pengeluaranBisaDiubah(kid, id); err != nil {
+		return err
+	}
+	_, err := s.db.Exec("DELETE FROM pengeluaran WHERE id=? AND klien_id=?", id, kid)
 	return err
 }
 

@@ -29,6 +29,7 @@ const NAV = [
       { label: 'Kasbon & Stok', to: '/laporan/kasbon' },
       { label: 'Riwayat Shift', to: '/laporan/shift' },
       { label: 'Tenant', to: '/laporan/tenant' },
+      { label: 'Riwayat Pengeluaran', to: '/pengeluaran' },
       { label: 'Laba Rugi', to: '/laba-rugi' },
     ],
   },

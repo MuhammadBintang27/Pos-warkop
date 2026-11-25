@@ -45,6 +45,21 @@ type PengeluaranRequest struct {
 	Kategori   string `json:"kategori" validate:"omitempty,oneof=bahan operasional sewa transport perawatan lainnya"`
 }
 
+type PengeluaranQuery struct {
+	Dari     string `query:"dari"`
+	Sampai   string `query:"sampai"`
+	Kategori string `query:"kategori" validate:"max=20"`
+	Cari     string `query:"cari" validate:"max=100"`
+	Page     int    `query:"page" validate:"gte=0"`
+	Semua    bool   `query:"semua"` // untuk unduh Excel: tanpa batas halaman
+}
+
+type RiwayatPengeluaranResponse struct {
+	Items       []PengeluaranResponse `json:"items"`
+	Total       int                   `json:"total"`       // jumlah baris
+	TotalJumlah int                   `json:"totalJumlah"` // jumlah rupiah semua baris yang cocok filter
+}
+
 type PengeluaranResponse struct {
 	Oleh       string    `json:"oleh"`
 	ID         int64     `json:"id"`
@@ -52,6 +67,7 @@ type PengeluaranResponse struct {
 	Jumlah     int       `json:"jumlah"`
 	Kategori   string    `json:"kategori"`
 	At         time.Time `json:"at"`
+	ShiftID    int64     `json:"shiftId"`
 }
 
 type MetodeTotal struct {

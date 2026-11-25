@@ -23,6 +23,7 @@ const router = createRouter({
         { path: 'laporan/:tab(waktu|karyawan|kasbon)?', component: () => import('@/views/LaporanView.vue'), meta: owner },
         { path: 'laporan/shift', component: () => import('@/views/ShiftView.vue'), meta: owner },
         { path: 'laporan/tenant', component: () => import('@/views/LaporanTenantView.vue'), meta: owner },
+        { path: 'pengeluaran', component: () => import('@/views/PengeluaranView.vue'), meta: owner },
         { path: 'laba-rugi', component: () => import('@/views/LabaRugiView.vue'), meta: owner },
         { path: 'karyawan', component: () => import('@/views/KaryawanView.vue'), meta: owner },
         { path: 'ketersediaan', component: () => import('@/views/KetersediaanView.vue'), meta: { roles: ['kasir', 'owner'] } },

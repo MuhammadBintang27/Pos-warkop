@@ -81,6 +81,44 @@ func (h *KasirController) ListPengeluaran(c *fiber.Ctx) error {
 	return utils.SendSuccess(c, fiber.StatusOK, "Pengeluaran berhasil diambil", list)
 }
 
+func (h *KasirController) RiwayatPengeluaran(c *fiber.Ctx) error {
+	var q dto.PengeluaranQuery
+	if err := middleware.ParseQuery(c, &q); err != nil {
+		return err
+	}
+	list, err := h.shift.RiwayatPengeluaran(kid(c), q)
+	if err != nil {
+		return handleErr(c, err, "RiwayatPengeluaran error")
+	}
+	return utils.SendSuccess(c, fiber.StatusOK, "Riwayat pengeluaran berhasil diambil", list)
+}
+
+func (h *KasirController) UpdatePengeluaran(c *fiber.Ctx) error {
+	id, err := utils.ParamID(c, "id")
+	if err != nil {
+		return handleErr(c, err, "")
+	}
+	var req dto.PengeluaranRequest
+	if err := middleware.ParseAndValidate(c, &req); err != nil {
+		return err
+	}
+	if err := h.shift.UpdatePengeluaran(kid(c), id, req); err != nil {
+		return handleErr(c, err, "UpdatePengeluaran error")
+	}
+	return utils.SendSuccess(c, fiber.StatusOK, "Pengeluaran diperbarui")
+}
+
+func (h *KasirController) DeletePengeluaran(c *fiber.Ctx) error {
+	id, err := utils.ParamID(c, "id")
+	if err != nil {
+		return handleErr(c, err, "")
+	}
+	if err := h.shift.DeletePengeluaran(kid(c), id); err != nil {
+		return handleErr(c, err, "DeletePengeluaran error")
+	}
+	return utils.SendSuccess(c, fiber.StatusOK, "Pengeluaran dihapus")
+}
+
 func (h *KasirController) CreatePengeluaran(c *fiber.Ctx) error {
 	var req dto.PengeluaranRequest
 	if err := middleware.ParseAndValidate(c, &req); err != nil {
