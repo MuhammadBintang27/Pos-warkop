@@ -211,11 +211,7 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
   position: relative;
   height: calc(var(--h) * 1cqw);
   border-radius: 12px;
-  /* lantai ubin */
-  background-color: color-mix(in srgb, var(--p-primary-color) 4%, var(--p-content-background));
-  background-image: linear-gradient(var(--p-content-border-color) 1px, transparent 1px),
-    linear-gradient(90deg, var(--p-content-border-color) 1px, transparent 1px);
-  background-size: 5cqw 5cqw;
+  background: color-mix(in srgb, var(--p-primary-color) 4%, var(--p-content-background));
 }
 .kanvas.edit {
   background-image: radial-gradient(circle, var(--p-content-border-color) 1px, transparent 1px);
@@ -228,22 +224,27 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
   width: 9cqw;
   height: 7cqw;
   padding: 0;
-  border: 0;
-  background: none;
+  /* alas berbingkai: batas jelas meja + kursinya milik siapa */
+  border: 1px solid var(--p-content-border-color);
+  border-radius: 1cqw;
+  background: var(--p-content-background);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.06);
   font: inherit;
   cursor: pointer;
   --dudukan: radial-gradient(circle at 40% 35%, #f1f5f9, #cbd5e1 75%);
   --sandaran: linear-gradient(#94a3b8, #64748b);
 }
 .meja.terisi {
+  border-color: var(--p-primary-color);
+  background: color-mix(in srgb, var(--p-primary-color) 14%, var(--p-content-background));
   --dudukan: radial-gradient(circle at 40% 35%, var(--p-primary-200), var(--p-primary-500) 70%);
   --sandaran: linear-gradient(var(--p-primary-700), var(--p-primary-900));
 }
 /* kursi tampak atas: sandaran di sisi luar, dudukan menghadap meja */
 .kursi {
   position: absolute;
-  width: 22%;
-  height: 20%;
+  width: 20%;
+  height: 17%;
   filter: drop-shadow(0 1px 1.5px rgb(60 40 20 / 0.3));
 }
 .kursi::before,
@@ -264,16 +265,16 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
 }
 .k1,
 .k2 {
-  top: 0;
+  top: 5%;
 }
 .k3,
 .k4 {
-  bottom: 0;
+  bottom: 5%;
   transform: rotate(180deg);
 }
 .k1,
 .k3 {
-  left: 24%;
+  left: 26%;
 }
 .k2,
 .k4 {
@@ -282,7 +283,7 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
 /* papan meja bermotif kayu */
 .papan {
   position: absolute;
-  inset: 22% 4%;
+  inset: 23% 7%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -331,9 +332,7 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
 }
 .kanvas.edit .meja {
   cursor: grab;
-  outline: 1.5px dashed var(--p-content-border-color);
-  outline-offset: 2px;
-  border-radius: 8px;
+  border-style: dashed;
   touch-action: none;
   user-select: none;
 }
