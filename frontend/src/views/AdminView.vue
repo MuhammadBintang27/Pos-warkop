@@ -134,7 +134,7 @@ const { cari: cariKlien, hasil: klienTampil } = useCari(list, 'nama', 'kode', 'i
 
 <template>
   <div class="stack gap">
-    <PageHeader icon="pi pi-building" title="Klien" subtitle="Warkop yang memakai sistem ini">
+    <PageHeader icon="pi pi-building" title="Klien" subtitle="Usaha yang memakai sistem ini">
       <button class="pill" @click="bukaBaru"><i class="pi pi-plus" /> Tambah klien</button>
     </PageHeader>
 

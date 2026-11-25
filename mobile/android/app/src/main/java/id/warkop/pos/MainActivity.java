@@ -98,7 +98,7 @@ public class MainActivity extends BridgeActivity {
         tujuan.delete(); // DownloadManager tidak menimpa file lama
         DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
         long id = dm.enqueue(new DownloadManager.Request(Uri.parse(url))
-                .setTitle("Pembaruan POS Warkop")
+                .setTitle("Pembaruan PSD POS")
                 .setMimeType(APK)
                 .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                 .setDestinationUri(Uri.fromFile(tujuan)));

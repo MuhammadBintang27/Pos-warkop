@@ -1,4 +1,4 @@
-# Pemasangan Printer POS Warkop
+# Pemasangan Printer PSD POS
 
 Panduan memasang printer thermal di warung, dari printernya sampai tersambung ke aplikasi, baik lewat HP/tablet Android maupun PC Windows.
 
@@ -19,7 +19,7 @@ Panduan memasang printer thermal di warung, dari printernya sampai tersambung ke
                               Printer kasir   Printer dapur A   Printer dapur B
 ```
 
-Server ada di internet, sedangkan printer ada di jaringan lokal warung. Server tidak bisa menjangkau printer secara langsung. Karena itu harus ada satu **stasiun cetak** di warung, yaitu HP/tablet Android atau PC yang menjalankan aplikasi POS Warkop. Stasiun mengambil tiket dari server lalu meneruskannya ke printer yang benar.
+Server ada di internet, sedangkan printer ada di jaringan lokal warung. Server tidak bisa menjangkau printer secara langsung. Karena itu harus ada satu **stasiun cetak** di warung, yaitu HP/tablet Android atau PC yang menjalankan aplikasi PSD POS. Stasiun mengambil tiket dari server lalu meneruskannya ke printer yang benar.
 
 **Satu stasiun cukup untuk semua printer.** Setiap tiket sudah membawa alamat printer tujuannya.
 
@@ -71,7 +71,7 @@ Aplikasi Android (APK) dan installer Windows bisa diunduh di halaman `/unduh` pa
 
 ### Pilihan A: HP/tablet Android (tanpa PC)
 
-1. Pasang APK POS Warkop di HP/tablet kasir.
+1. Pasang APK PSD POS di HP/tablet kasir.
 2. Sambungkan HP/tablet ke **WiFi warung yang sama** dengan printer.
 3. Buka aplikasinya, login sebagai **owner**, lalu buka **Master Data › Printer**.
 4. Tekan **Jadikan perangkat ini stasiun**, lalu konfirmasi.
@@ -80,7 +80,7 @@ Aplikasi Android (APK) dan installer Windows bisa diunduh di halaman `/unduh` pa
 7. Sesudah itu boleh logout dan ganti ke akun kasir. Stasiun tetap jalan, dan menyala lagi sendiri saat HP dinyalakan ulang.
 
 **Khusus HP Xiaomi, Oppo, Vivo, Realme, dan Huawei:** merek-merek ini punya pembunuh aplikasi sendiri. Agar stasiun tidak mati diam-diam:
-- nyalakan **Autostart** untuk POS Warkop (di Setelan › Aplikasi › POS Warkop),
+- nyalakan **Autostart** untuk PSD POS (di Setelan › Aplikasi › PSD POS),
 - setel penghemat baterai aplikasi ke **Tanpa batasan**,
 - kunci aplikasi di daftar aplikasi terbaru (ikon gembok).
 
@@ -90,9 +90,9 @@ Untuk mematikan stasiun: buka **Master Data › Printer** di perangkat itu, lalu
 
 ### Pilihan B: PC Windows
 
-1. Pasang installer POS Warkop di PC kasir. PC harus tersambung ke jaringan yang sama dengan printer, boleh lewat kabel atau WiFi.
+1. Pasang installer PSD POS di PC kasir. PC harus tersambung ke jaringan yang sama dengan printer, boleh lewat kabel atau WiFi.
 2. Di browser atau aplikasinya, login sebagai **owner**, buka **Master Data › Printer**, lalu tekan **Buat token stasiun**. Salin tokennya. Token hanya ditampilkan sekali.
-3. Klik kanan ikon POS Warkop di *system tray* Windows (pojok kanan bawah), lalu pilih **Stasiun cetak…**.
+3. Klik kanan ikon PSD POS di *system tray* Windows (pojok kanan bawah), lalu pilih **Stasiun cetak…**.
 4. Tempel token, centang **Aktifkan stasiun cetak di PC ini**, lalu tekan **Simpan**.
 5. Statusnya harus menjadi **Terhubung**. Menutup jendela aplikasi tidak mematikan stasiun, karena ia tetap berjalan di tray dan menyala sendiri saat Windows dihidupkan.
 

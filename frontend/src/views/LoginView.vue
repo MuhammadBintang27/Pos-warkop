@@ -66,7 +66,7 @@ async function submit() {
         </ul>
       </div>
 
-      <small class="foot">&copy; {{ new Date().getFullYear() }} POS Warkop</small>
+      <small class="foot">&copy; {{ new Date().getFullYear() }} PSD POS</small>
     </aside>
 
     <main class="side">

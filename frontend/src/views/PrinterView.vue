@@ -121,8 +121,8 @@ const { cari: cariPrinter, hasil: printerTampil } = useCari(printer, 'nama', 'ip
         <Button label="Buat token stasiun" icon="pi pi-key" size="small" severity="secondary" outlined class="kanan" @click="buatToken" />
       </div>
       <small class="redup">
-        Stasiun cetak adalah aplikasi desktop POS Warkop di PC kasir. Ia mengambil tiket dari server lalu mencetaknya ke printer di jaringan.
-        Klik kanan ikon POS Warkop di system tray Windows, pilih <strong>Stasiun cetak…</strong>, tempel token di bawah, lalu aktifkan.
+        Stasiun cetak adalah aplikasi desktop PSD POS di PC kasir. Ia mengambil tiket dari server lalu mencetaknya ke printer di jaringan.
+        Klik kanan ikon PSD POS di system tray Windows, pilih <strong>Stasiun cetak…</strong>, tempel token di bawah, lalu aktifkan.
         Tanpa PC, buka halaman ini di aplikasi Android pada HP/tablet kasir lalu tekan <strong>Jadikan perangkat ini stasiun</strong>.
       </small>
       <div v-if="hp" class="head">

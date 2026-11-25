@@ -28,7 +28,7 @@ const APP = [
 <template>
   <div class="unduh">
     <header>
-      <h1>Unduh POS Warkop</h1>
+      <h1>Unduh PSD POS</h1>
       <p>Pasang aplikasi kasir di HP atau komputer. Akun tetap dari owner.</p>
     </header>
 

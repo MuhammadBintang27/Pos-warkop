@@ -1,7 +1,7 @@
 [package]
 name = "pos-warkop"
 version = "1.0.0"
-description = "Aplikasi desktop POS Warkop dan stasiun cetak"
+description = "Aplikasi desktop PSD POS dan stasiun cetak"
 edition = "2021"
 
 [build-dependencies]

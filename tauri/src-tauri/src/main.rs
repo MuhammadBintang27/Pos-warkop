@@ -24,7 +24,7 @@ const JEDA_POLL: Duration = Duration::from_secs(2);
 const JEDA_ULANG: Duration = Duration::from_secs(15);
 const BATAS_LOG: usize = 30;
 // Alamat server tertanam di aplikasi; pindah domain berarti build ulang installer.
-const SERVER: &str = "https://poswarkop.142-91-103-131.sslip.io";
+const SERVER: &str = "https://psdpos.paripurnasentosadigital.id";
 
 #[derive(Serialize, Deserialize, Default, Clone)]
 struct Config {
@@ -303,13 +303,13 @@ fn buka_stasiun(app: &AppHandle) {
 }
 
 fn pasang_tray(app: &AppHandle) -> tauri::Result<()> {
-    let buka = MenuItem::with_id(app, "buka", "Buka POS Warkop", true, None::<&str>)?;
+    let buka = MenuItem::with_id(app, "buka", "Buka PSD POS", true, None::<&str>)?;
     let stasiun = MenuItem::with_id(app, "stasiun", "Stasiun cetak…", true, None::<&str>)?;
     let keluar = MenuItem::with_id(app, "keluar", "Keluar", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&buka, &stasiun, &keluar])?;
     TrayIconBuilder::new()
         .icon(app.default_window_icon().unwrap().clone())
-        .tooltip("POS Warkop")
+        .tooltip("PSD POS")
         .menu(&menu)
         .on_menu_event(|app, event| match event.id.as_ref() {
             "buka" => tampilkan_utama(app),
@@ -358,7 +358,7 @@ fn main() {
 
             let sembunyi = std::env::args().any(|a| a == "--sembunyi");
             WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
-                .title("POS Warkop")
+                .title("PSD POS")
                 .inner_size(1366.0, 820.0)
                 .visible(!sembunyi)
                 .build()?;
@@ -368,5 +368,5 @@ fn main() {
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("gagal menjalankan aplikasi POS Warkop");
+        .expect("gagal menjalankan aplikasi PSD POS");
 }

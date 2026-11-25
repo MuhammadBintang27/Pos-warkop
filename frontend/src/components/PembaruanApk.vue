@@ -26,7 +26,7 @@ onMounted(async () => {
 function perbarui() {
   const hasil = hp.perbarui(`${location.origin}/dl/pos-warkop.apk`)
   if (hasil === 'izin') {
-    pesan.value = 'Izinkan "Instal aplikasi tidak dikenal" untuk POS Warkop, lalu kembali dan tekan Perbarui.'
+    pesan.value = 'Izinkan "Instal aplikasi tidak dikenal" untuk PSD POS, lalu kembali dan tekan Perbarui.'
     return
   }
   pesan.value = 'Mengunduh pembaruan… Layar pemasangan muncul otomatis setelah selesai, lalu tekan Install.'
@@ -35,7 +35,7 @@ function perbarui() {
 
 <template>
   <Dialog v-model:visible="tampil" modal header="Memperbarui aplikasi" :closable="false" :close-on-escape="false" :style="{ width: '26rem' }" :breakpoints="{ '600px': '94vw' }">
-    <p class="judul">POS Warkop {{ baru?.versionName }}</p>
+    <p class="judul">PSD POS {{ baru?.versionName }}</p>
     <p v-if="baru?.catatan" class="redup">{{ baru.catatan }}</p>
     <p v-if="pesan" class="pesan">{{ pesan }}</p>
     <template #footer>

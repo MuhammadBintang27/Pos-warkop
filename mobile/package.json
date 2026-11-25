@@ -1,7 +1,7 @@
 {
   "name": "pos-warkop-mobile",
   "version": "1.0.0",
-  "description": "Cangkang Android POS Warkop (Capacitor): membuka server",
+  "description": "Cangkang Android PSD POS (Capacitor): membuka server",
   "private": true,
   "scripts": {
     "sync": "node -e \"const fs=require('fs');fs.mkdirSync('android/app/src/main/res/raw',{recursive:true});fs.copyFileSync('suara/pesanan.wav','android/app/src/main/res/raw/pesanan.wav')\" && cap sync"

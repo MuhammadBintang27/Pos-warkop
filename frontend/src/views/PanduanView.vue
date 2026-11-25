@@ -169,7 +169,7 @@ const TOPIK = [
       {
         sub: 'Supaya notifikasi masuk',
         langkah: [
-          'Pasang aplikasi Android POS Warkop dari halaman **/unduh**, lalu login dengan akun tenant.',
+          'Pasang aplikasi Android PSD POS dari halaman **/unduh**, lalu login dengan akun tenant.',
           'Izinkan notifikasi. Pesanan baru dan pembatalan masuk ke HP walau layar mati.',
         ],
       },

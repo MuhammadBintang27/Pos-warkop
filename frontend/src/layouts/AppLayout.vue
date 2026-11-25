@@ -81,7 +81,7 @@ const nav = computed(() => {
 const showSide = computed(() => (mobile.value ? drawer.value : !hidden.value))
 const inRoute = (n) => n.children?.some((c) => c.to === route.path)
 const isOpen = (n) => expanded[n.label] ?? inRoute(n)
-const brand = computed(() => (auth.role === 'superadmin' ? 'POS Warkop' : peng.settings.namaUsaha))
+const brand = computed(() => (auth.role === 'superadmin' ? 'PSD POS' : peng.settings.namaUsaha))
 const initial = computed(() => (brand.value || 'W').trim()[0].toUpperCase())
 const userItems = [{ label: 'Keluar', icon: 'pi pi-sign-out', command: logout }]
 

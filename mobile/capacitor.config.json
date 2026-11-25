@@ -1,6 +1,6 @@
 {
   "appId": "id.warkop.pos",
-  "appName": "POS Warkop",
+  "appName": "PSD POS",
   "webDir": "www",
   "server": {
     "androidScheme": "https",

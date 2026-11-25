@@ -2,7 +2,7 @@
   "name": "pos-warkop-tauri",
   "version": "1.0.0",
   "private": true,
-  "description": "Aplikasi desktop POS Warkop: membuka server dan menjalankan stasiun cetak di latar belakang",
+  "description": "Aplikasi desktop PSD POS: membuka server dan menjalankan stasiun cetak di latar belakang",
   "scripts": {
     "tauri": "tauri",
     "dev": "tauri dev",
