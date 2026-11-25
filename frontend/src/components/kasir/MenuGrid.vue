@@ -53,7 +53,7 @@ const menus = computed(() => {
 
     <div v-if="menus.length" class="cards">
       <button v-for="m in menus" :key="m.id" class="card" :disabled="habis(m) || tutup(m)" @click="emit('pick', m)">
-        <strong>{{ m.nama }}</strong>
+        <strong class="nama" :title="m.nama">{{ m.nama }}</strong>
         <span class="price">{{ hargaTampil(m) }}</span>
         <span class="meta">
           <i v-if="m.varian.length" class="pi pi-sliders-h" title="Ada pilihan" />
@@ -148,7 +148,22 @@ const menus = computed(() => {
   cursor: not-allowed;
   opacity: 0.55;
 }
+.card {
+  min-width: 0;
+  overflow: hidden;
+}
+/* nama panjang dipotong di 3 baris supaya harga tetap di dalam kartu */
+.nama {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  flex: none;
+}
 .price {
+  flex: none;
   color: var(--accent-text);
   font-weight: 700;
 }
