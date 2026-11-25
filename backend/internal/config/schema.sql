@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS tenant (
   buka TINYINT(1) NOT NULL DEFAULT 1,             -- tenant tutup: semua menunya tidak bisa dipesan
   milik_sendiri TINYINT(1) NOT NULL DEFAULT 0,    -- milik pemilik tempat: komisi 100%, tidak ada setoran
   printer_id BIGINT NULL,                         -- printer tiket dapur tenant ini
+  warna VARCHAR(7) NOT NULL DEFAULT '',           -- hex, penanda kartu tenant di kasir; kosong = tanpa warna
   aktif TINYINT(1) NOT NULL DEFAULT 1,
   FOREIGN KEY (klien_id) REFERENCES klien(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

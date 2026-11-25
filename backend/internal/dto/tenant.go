@@ -6,6 +6,7 @@ type TenantRequest struct {
 	KomisiPerMenu bool         `json:"komisiPerMenu"`
 	MilikSendiri  bool         `json:"milikSendiri"`
 	PrinterID     *int64       `json:"printerId"`
+	Warna         string       `json:"warna" validate:"omitempty,hexcolor,len=7"`
 	KomisiMenu    []KomisiMenu `json:"komisiMenu" validate:"max=500,dive"` // tarif Rp per porsi menu tenant ini; kosong = tidak diubah
 }
 
@@ -22,6 +23,7 @@ type TenantResponse struct {
 	Buka          bool    `json:"buka"`
 	MilikSendiri  bool    `json:"milikSendiri"`
 	PrinterID     *int64  `json:"printerId"`
+	Warna         string  `json:"warna"`
 }
 
 type BukaRequest struct {

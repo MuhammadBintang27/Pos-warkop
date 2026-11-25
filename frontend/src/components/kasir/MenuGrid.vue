@@ -95,7 +95,7 @@ function pilihTenant(id) {
 
     <Dialog v-model:visible="dlgTenant" modal header="Pilih tenant" :style="{ width: '40rem' }" :breakpoints="{ '760px': '96vw' }">
       <div class="cards tenant-cards">
-        <button v-for="t in opsiTenant" :key="t.id" class="card tenant-card" :class="{ on: t.id === tenantAktif }" @click="pilihTenant(t.id)">
+        <button v-for="t in opsiTenant" :key="t.id" class="card tenant-card" :class="{ on: t.id === tenantAktif, berwarna: t.warna }" :style="t.warna && { '--warna': t.warna }" @click="pilihTenant(t.id)">
           <strong class="nama">{{ t.nama }}</strong>
           <span v-if="t.id && !t.buka" class="sold">Tutup</span>
         </button>
@@ -132,6 +132,11 @@ function pilihTenant(id) {
 .tenant-card.on {
   border-color: var(--p-primary-color);
   border-width: 2px;
+}
+/* setelah .on supaya garis kiri warna tenant tetap tebal saat terpilih */
+.tenant-card.berwarna {
+  border-left: 6px solid var(--warna);
+  background: color-mix(in srgb, var(--warna) 12%, var(--p-content-background));
 }
 .chips {
   flex: none;

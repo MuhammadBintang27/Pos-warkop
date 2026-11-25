@@ -18,7 +18,7 @@ func NewTenantService(db *sql.DB, hub *EventHub) *TenantService {
 }
 
 func (s *TenantService) List(kid int64) ([]dto.TenantResponse, error) {
-	rows, err := s.db.Query("SELECT id,nama,komisi_persen,komisi_per_menu,buka,milik_sendiri,printer_id FROM tenant WHERE klien_id=? AND aktif=1 ORDER BY id", kid)
+	rows, err := s.db.Query("SELECT id,nama,komisi_persen,komisi_per_menu,buka,milik_sendiri,printer_id,warna FROM tenant WHERE klien_id=? AND aktif=1 ORDER BY id", kid)
 	if err != nil {
 		return nil, err
 	}
@@ -26,7 +26,7 @@ func (s *TenantService) List(kid int64) ([]dto.TenantResponse, error) {
 	out := []dto.TenantResponse{}
 	for rows.Next() {
 		var t dto.TenantResponse
-		if err := rows.Scan(&t.ID, &t.Nama, &t.KomisiPersen, &t.KomisiPerMenu, &t.Buka, &t.MilikSendiri, &t.PrinterID); err != nil {
+		if err := rows.Scan(&t.ID, &t.Nama, &t.KomisiPersen, &t.KomisiPerMenu, &t.Buka, &t.MilikSendiri, &t.PrinterID, &t.Warna); err != nil {
 			return nil, err
 		}
 		out = append(out, t)
@@ -62,8 +62,8 @@ func (s *TenantService) Create(kid int64, req dto.TenantRequest) error {
 	if err := s.cekPrinter(kid, req.PrinterID); err != nil {
 		return err
 	}
-	if _, err := s.db.Exec("INSERT INTO tenant (klien_id,nama,komisi_persen,komisi_per_menu,milik_sendiri,printer_id) VALUES (?,?,?,?,?,?)",
-		kid, req.Nama, komisiEfektif(req), perMenuEfektif(req), req.MilikSendiri, req.PrinterID); err != nil {
+	if _, err := s.db.Exec("INSERT INTO tenant (klien_id,nama,komisi_persen,komisi_per_menu,milik_sendiri,printer_id,warna) VALUES (?,?,?,?,?,?,?)",
+		kid, req.Nama, komisiEfektif(req), perMenuEfektif(req), req.MilikSendiri, req.PrinterID, req.Warna); err != nil {
 		return err
 	}
 	s.hub.Publish(kid, "menu")
@@ -79,8 +79,8 @@ func (s *TenantService) Update(kid, id int64, req dto.TenantRequest) error {
 		if tx.QueryRow("SELECT 1 FROM tenant WHERE id=? AND klien_id=? AND aktif=1 FOR UPDATE", id, kid).Scan(&ada) != nil {
 			return types.NotFound("Tenant")
 		}
-		if _, err := tx.Exec("UPDATE tenant SET nama=?, komisi_persen=?, komisi_per_menu=?, milik_sendiri=?, printer_id=? WHERE id=? AND klien_id=?",
-			req.Nama, komisiEfektif(req), perMenuEfektif(req), req.MilikSendiri, req.PrinterID, id, kid); err != nil {
+		if _, err := tx.Exec("UPDATE tenant SET nama=?, komisi_persen=?, komisi_per_menu=?, milik_sendiri=?, printer_id=?, warna=? WHERE id=? AND klien_id=?",
+			req.Nama, komisiEfektif(req), perMenuEfektif(req), req.MilikSendiri, req.PrinterID, req.Warna, id, kid); err != nil {
 			return err
 		}
 		// tarif disimpan walau tenant kembali ke persen, supaya tidak perlu diisi ulang bila dipindah lagi ke per menu

@@ -16,6 +16,8 @@ const form = ref(null)
 const printer = ref([])
 const menu = ref([])
 const isiSemua = ref(null)
+// warna penanda kartu tenant di modal kasir; tingkat 500-600 supaya garisnya jelas di mode terang maupun gelap
+const WARNA = ['#ef4444', '#f97316', '#d97706', '#65a30d', '#16a34a', '#0d9488', '#0891b2', '#2563eb', '#4f46e5', '#9333ea', '#db2777', '#78716c']
 
 async function muat() {
   ;[tenant.value, printer.value, menu.value] = await Promise.all([
@@ -34,13 +36,14 @@ function ubah(t) {
 const namaPrinter = (id) => printer.value.find((p) => p.id === id)?.nama
 
 async function simpan() {
-  const { id, nama, komisiPersen, komisiPerMenu, milikSendiri, printerId } = form.value
+  const { id, nama, komisiPersen, komisiPerMenu, milikSendiri, printerId, warna } = form.value
   const body = {
     nama: nama.trim(),
     komisiPersen: komisiPersen || 0,
     komisiPerMenu,
     milikSendiri,
     printerId: printerId ?? null,
+    warna: warna || '',
     komisiMenu: (form.value.menu ?? []).map((m) => ({ menuId: m.id, komisi: m.komisi || 0 })),
   }
   if (await run(() => (id ? put(`/tenant/${id}`, body) : post('/tenant', body)), 'Tenant disimpan')) {
@@ -64,7 +67,7 @@ const { cari: cariTenant, hasil: tenantTampil } = useCari(tenant, 'nama')
 <template>
   <div class="stack gap">
     <PageHeader icon="pi pi-shop" title="Tenant" subtitle="Penjual di tempatmu dan bagi hasilnya">
-      <button class="pill" @click="form = { nama: '', komisiPersen: 0, komisiPerMenu: false, milikSendiri: false, printerId: null }"><i class="pi pi-plus" /> Tambah tenant</button>
+      <button class="pill" @click="form = { nama: '', komisiPersen: 0, komisiPerMenu: false, milikSendiri: false, printerId: null, warna: '' }"><i class="pi pi-plus" /> Tambah tenant</button>
     </PageHeader>
 
     <section class="panel box">
@@ -154,6 +157,20 @@ const { cari: cariTenant, hasil: tenantTampil } = useCari(tenant, 'nama')
           placeholder="Tanpa printer (dicetak di kasir)"
           fluid
         />
+        <label>Warna kartu di kasir</label>
+        <div class="warna">
+          <button type="button" class="swatch kosong" :class="{ on: !form.warna }" title="Tanpa warna" @click="form.warna = ''"><i class="pi pi-ban" /></button>
+          <button
+            v-for="w in WARNA"
+            :key="w"
+            type="button"
+            class="swatch"
+            :class="{ on: form.warna === w }"
+            :style="{ background: w }"
+            :aria-label="`Warna ${w}`"
+            @click="form.warna = w"
+          />
+        </div>
       </div>
       <template #footer>
         <Button label="Simpan" icon="pi pi-check" :disabled="!form?.nama.trim()" @click="simpan" />
@@ -174,6 +191,30 @@ const { cari: cariTenant, hasil: tenantTampil } = useCari(tenant, 'nama')
 }
 .hint {
   color: var(--p-text-muted-color);
+}
+.warna {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.swatch {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  cursor: pointer;
+}
+.swatch.on {
+  outline-color: var(--p-text-color);
+}
+.swatch.kosong {
+  background: var(--p-content-background);
+  border-color: var(--p-content-border-color);
+  color: var(--p-text-muted-color);
+  display: grid;
+  place-items: center;
 }
 .sw {
   display: flex;
