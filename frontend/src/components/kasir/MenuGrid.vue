@@ -181,6 +181,7 @@ const menus = computed(() => {
   font-size: 0.8rem;
 }
 .bawah {
+  margin-top: auto;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
