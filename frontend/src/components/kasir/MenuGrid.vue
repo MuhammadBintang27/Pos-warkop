@@ -125,6 +125,10 @@ function pilihTenant(id) {
   min-width: 160px;
   max-width: 40%;
 }
+/* maks 3 baris kartu (tinggi .card 112px, gap 10px, padding 2px atas-bawah), sisanya digulir */
+.tenant-cards {
+  max-height: calc(3 * 112px + 2 * 10px + 4px);
+}
 .tenant-card {
   height: 80px;
   justify-content: center;
