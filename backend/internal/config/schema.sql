@@ -300,6 +300,7 @@ CREATE TABLE IF NOT EXISTS cetak_job (
   galat VARCHAR(255) NOT NULL DEFAULT '',
   dibuat_at DATETIME NOT NULL,
   selesai_at DATETIME NULL,
+  diabaikan_oleh VARCHAR(100) NULL, -- diisi bila tiket macet ditutup tanpa dicetak printer
   INDEX (status, dibuat_at),
   FOREIGN KEY (printer_id) REFERENCES printer(id),
   FOREIGN KEY (klien_id) REFERENCES klien(id)

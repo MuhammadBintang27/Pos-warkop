@@ -21,6 +21,7 @@ var kolomBaru = []struct{ tabel, kolom, definisi string }{
 	{"closing_tenant_bill", "komisi", "INT NOT NULL DEFAULT 0 AFTER diskon"},
 	{"users", "dihapus", "DATETIME NULL AFTER token_sejak"},
 	{"pesanan_item", "diproses_at", "DATETIME NULL AFTER closing_id"},
+	{"cetak_job", "diabaikan_oleh", "VARCHAR(100) NULL AFTER selesai_at"},
 }
 
 func tambahKolom(db *sql.DB) error {

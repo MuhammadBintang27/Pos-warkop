@@ -121,7 +121,9 @@ func RegisterCetakRoutes(r fiber.Router, h *controllers.CetakController, stasiun
 	r.Post("/cetak/closing", authed, owner, h.CetakClosing)
 	r.Post("/cetak/rekap-tenant", authed, owner, h.CetakRekapTenant)
 	r.Post("/shift/:id/cetak", authed, owner, h.CetakShift)
-	r.Get("/cetak/status", authed, kasir, h.Status)
+	// pelayan juga perlu tahu tiket dapurnya macet, dan boleh menutupnya setelah dicetak lewat browser
+	r.Get("/cetak/status", authed, h.Status)
+	r.Post("/cetak/:id/abaikan", authed, middleware.Audit("Abaikan tiket cetak"), h.Abaikan)
 
 	r.Get("/stasiun/jobs", stasiun, h.StasiunJobs)
 	r.Post("/stasiun/jobs/:id/selesai", stasiun, h.StasiunSelesai)

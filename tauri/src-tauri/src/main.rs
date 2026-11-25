@@ -3,7 +3,7 @@
 use std::{
     collections::{HashMap, HashSet},
     fs,
-    io::Write,
+    io::{Read, Write},
     net::{TcpStream, ToSocketAddrs},
     path::PathBuf,
     sync::{Arc, Mutex},
@@ -128,8 +128,57 @@ fn kirim_ke_printer(ip: &str, port: u16, data: &[u8]) -> Result<(), String> {
     let mut soket = TcpStream::connect_timeout(&alamat, Duration::from_secs(5))
         .map_err(|e| format!("Tidak bisa terhubung ke {ip}:{port} ({e})"))?;
     soket.set_write_timeout(Some(Duration::from_secs(5))).ok();
+    cek_status(&mut soket)?;
     soket.write_all(data).map_err(|e| format!("Gagal mengirim ke printer: {e}"))?;
     soket.flush().map_err(|e| e.to_string())
+}
+
+// Printer tetap menerima data walau kertas habis/tutup terbuka, jadi tanya dulu statusnya (ESC/POS DLE EOT).
+// Printer yang tidak menjawab dianggap siap, supaya printer murah tanpa fitur status tetap bisa mencetak.
+fn cek_status(soket: &mut TcpStream) -> Result<(), String> {
+    soket.set_read_timeout(Some(Duration::from_millis(800))).ok();
+    let mut tanya = |n: u8| -> Option<u8> {
+        soket.write_all(&[0x10, 0x04, n]).ok()?;
+        let mut b = [0u8; 1];
+        soket.read_exact(&mut b).ok()?;
+        // byte status ESC/POS selalu berpola 0xx1 0x10 (bit 1 & 4 = 1, bit 0 & 7 = 0); selain itu bukan jawaban status
+        (b[0] & 0x93 == 0x12).then_some(b[0])
+    };
+    if let Some(b) = tanya(2) {
+        let galat = galat_offline(b);
+        if !galat.is_empty() {
+            return Err(galat.into());
+        }
+    }
+    if tanya(4).is_some_and(|b| b & 0x60 == 0x60) {
+        return Err("Kertas printer habis".into());
+    }
+    Ok(())
+}
+
+fn galat_offline(b: u8) -> &'static str {
+    if b & 0x04 != 0 {
+        "Tutup printer terbuka"
+    } else if b & 0x20 != 0 {
+        "Kertas printer habis"
+    } else if b & 0x40 != 0 {
+        "Printer error (cek kertas macet/pemotong)"
+    } else {
+        ""
+    }
+}
+
+#[cfg(test)]
+mod tes {
+    use super::galat_offline;
+
+    #[test]
+    fn baca_status_offline() {
+        assert_eq!(galat_offline(0x12), "");
+        assert_eq!(galat_offline(0x16), "Tutup printer terbuka");
+        assert_eq!(galat_offline(0x32), "Kertas printer habis");
+        assert_eq!(galat_offline(0x52), "Printer error (cek kertas macet/pemotong)");
+    }
 }
 
 fn ringkas(p: &serde_json::Value) -> String {

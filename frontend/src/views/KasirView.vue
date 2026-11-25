@@ -18,7 +18,7 @@ const mobile = useMobile()
 
 const dlg = reactive({
   denah: false, opsi: false, bayar: false, pisah: false, pindah: false,
-  gabung: false, shift: false, kas: false, kasbon: false, struk: false, cart: false,
+  gabung: false, shift: false, kas: false, kasbon: false, struk: false, cart: false, macet: false,
 })
 const menuDipilih = ref(null)
 const lunas = ref(null)
@@ -30,10 +30,17 @@ watch(cartTutup, (v) => {
 })
 
 const peringatanCetak = computed(() => {
-  const { macet, stasiunAktif } = store.cetak
+  const { macet, stasiunAktif, daftar = [] } = store.cetak
   if (!macet) return ''
-  if (stasiunAktif) return `${macet} tiket belum tercetak, cek printer`
-  return `Stasiun cetak tidak terhubung, ${macet} tiket menunggu` + (hp && !hpPunyaToken() ? '. Minta owner mengaktifkan stasiun dari halaman Printer' : '')
+  if (!stasiunAktif) {
+    return `Stasiun cetak tidak terhubung, ${macet} tiket menunggu` + (hp && !hpPunyaToken() ? '. Minta owner mengaktifkan stasiun dari halaman Printer' : '')
+  }
+  // sebut tiket dan printernya, supaya kasir/pelayan tahu harus ke mana tanpa membuka halaman Printer
+  const j = daftar[0]
+  if (!j) return `${macet} tiket belum tercetak, cek printer`
+  const apa = `${j.mejaNama || 'Bawa pulang'} (${j.printer})`
+  const sebab = j.galat ? `: ${j.galat}` : ''
+  return macet === 1 ? `Tiket ${apa} belum tercetak${sebab}` : `${macet} tiket belum tercetak, a.l. ${apa}${sebab}`
 })
 
 // stasiun cetak di HP ini (aplikasi Android); kasir boleh menyalakan ulang dengan token yang sudah disimpan owner
@@ -89,14 +96,13 @@ onMounted(async () => {
     onEvent('meja', store.loadDenah),
     onEvent('menu', () => Promise.all([store.loadMenu(), store.loadTenant()])),
     onEvent('shift', () => auth.isKasir && store.loadShift()),
-    onEvent('cetak', () => auth.isKasir && store.loadCetak()),
+    onEvent('cetak', () => store.loadCetak().catch(() => {})),
   )
   await run(() => Promise.all([store.loadMenu(), store.loadTenant(), store.loadDenah(), auth.isKasir && store.loadShift()]))
   if (!aktif.value) dlg.denah = true
-  if (auth.isKasir) {
-    store.loadCetak().catch(() => {})
-    timerCetak = setInterval(() => store.loadCetak().catch(() => {}), 10000) // status stasiun berubah tanpa event
-  }
+  // pelayan juga dipantau: tiket dapur yang ia kirim bisa macet di printer
+  store.loadCetak().catch(() => {})
+  timerCetak = setInterval(() => store.loadCetak().catch(() => {}), 10000) // status stasiun & tiket macet berubah tanpa event
 })
 onBeforeUnmount(() => {
   offs.forEach((off) => off())
@@ -109,11 +115,11 @@ onBeforeUnmount(() => {
     <PageHeader class="kasir-head" icon="pi pi-shopping-cart" title="Kasir" :subtitle="subtitle">
       <button class="pill" :title="aktif ? 'Ganti meja' : 'Pilih meja'" @click="dlg.denah = true"><i class="pi pi-th-large" /> <span class="lbl">{{ aktif ? 'Ganti meja' : 'Pilih meja' }}</span></button>
       <button class="pill" title="Bawa pulang" @click="store.baru('')"><i class="pi pi-shopping-bag" /> <span class="lbl">Bawa pulang</span></button>
+      <button v-if="peringatanCetak" class="chip warn macet" :title="peringatanCetak" @click="dlg.macet = true"><i class="pi pi-print" /> <span class="lbl">{{ peringatanCetak }}</span></button>
       <template v-if="auth.isKasir">
         <button class="pill" title="Kas Keluar" @click="dlg.kas = true"><i class="pi pi-wallet" /> <span class="lbl">Kas Keluar</span></button>
         <button class="pill" title="Kasbon" @click="dlg.kasbon = true"><i class="pi pi-clock" /> <span class="lbl">Kasbon</span></button>
-        <span v-if="peringatanCetak" class="chip warn" :title="peringatanCetak"><i class="pi pi-print" /> <span class="lbl">{{ peringatanCetak }}</span></span>
-        <span v-else-if="store.cetak.stasiunAktif" class="chip ok" title="Stasiun cetak terhubung"><i class="pi pi-print" /> <span class="lbl">Printer siap</span></span>
+        <span v-if="!peringatanCetak && store.cetak.stasiunAktif" class="chip ok" title="Stasiun cetak terhubung"><i class="pi pi-print" /> <span class="lbl">Printer siap</span></span>
         <button v-if="bisaNyalakanHp" class="pill warn" title="Nyalakan stasiun cetak di perangkat ini" @click="nyalakanHp"><i class="pi pi-power-off" /> <span class="lbl">Nyalakan stasiun</span></button>
         <span v-if="store.shift" class="chip ok" :title="`Shift aktif — ${store.shift.kasir}`"><i class="pi pi-check-circle" /> <span class="lbl">Shift aktif — {{ store.shift.kasir }}</span></span>
         <button class="pill warn" @click="dlg.shift = true">
@@ -179,6 +185,7 @@ onBeforeUnmount(() => {
     <PengeluaranDialog v-model:visible="dlg.kas" />
     <KasbonDialog v-model:visible="dlg.kasbon" />
     <StrukDialog v-model:visible="dlg.struk" :pesanan="lunas" />
+    <CetakMacetDialog v-model:visible="dlg.macet" />
   </div>
 </template>
 
@@ -227,6 +234,18 @@ section.kasir-head :deep(.title small) {
   .kasir-head .chip {
     gap: 0;
   }
+}
+/* peringatan cetak bisa diklik; teks panjang dipotong supaya header tetap satu baris */
+.chip.macet {
+  max-width: 340px;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+.chip.macet .lbl {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .body {
   flex: 1;

@@ -111,9 +111,12 @@ Lihat **Riwayat cetak** di halaman Printer. Tiket yang gagal menampilkan jumlah 
 |---|---|---|
 | Stasiun **Tidak terhubung** | Stasiun mati, tidak ada internet, atau token sudah diganti | Pastikan HP/PC menyala dan ada internet. Di Android, cek notifikasinya. Kalau token pernah dibuat ulang, nyalakan lagi stasiunnya. |
 | "Tidak bisa terhubung ke 192.168.x.x:9100" | IP printer berubah, printer mati, atau beda jaringan | Cetak self-test lagi dan cocokkan IP-nya. Pastikan stasiun tidak tersambung ke WiFi tamu. Kunci IP printer (langkah 2.4). |
+| "Kertas printer habis" / "Tutup printer terbuka" / "Printer error" | Stasiun menanyakan status printer sebelum mencetak | Ganti kertas, tutup rapat penutupnya, atau cabut kertas yang macet. Tiket keluar sendiri setelahnya. Printer yang tidak mendukung tanya-status tetap dicetak seperti biasa, jadi kondisi ini tidak terdeteksi di printer tersebut. |
 | Tiket keluar tapi huruf acak | Printer bukan ESC/POS atau mode emulasinya salah | Setel printer ke mode ESC/POS (lihat manual printer). |
 | Teks terpotong atau terlalu sempit | Lebar kertas salah | Ubah lebar kertas printer di aplikasi (58/80 mm). |
 | Tiket tercetak dobel | Seharusnya tidak terjadi, karena hanya satu stasiun yang bisa aktif | Laporkan ke pengembang. |
 | Tiket lama tidak tercetak | Tiket lebih dari 6 jam dianggap kedaluwarsa | Pakai **Cetak ulang** di Riwayat cetak. |
 
 Tiket yang gagal dicoba lagi otomatis setiap 15 detik selama stasiun menyala, jadi setelah masalahnya beres tiket yang tertunda akan keluar sendiri.
+
+Di layar Kasir (juga di HP pelayan) muncul peringatan merah yang menyebut meja, printer, dan penyebabnya bila ada tiket belum tercetak lebih dari 20 detik. Klik peringatan itu untuk melihat daftarnya. Tiket dapur bisa dicetak lewat browser sebagai cadangan, atau **Abaikan** bila isinya sudah disampaikan lisan. Tiket yang diabaikan tidak akan tercetak lagi walau printernya menyala.

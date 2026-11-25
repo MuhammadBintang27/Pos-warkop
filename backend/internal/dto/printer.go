@@ -54,9 +54,24 @@ type CetakJob struct {
 }
 
 type CetakStatus struct {
-	Antri        int  `json:"antri"`
-	Macet        int  `json:"macet"`
-	StasiunAktif bool `json:"stasiunAktif"`
+	Antri        int          `json:"antri"`
+	Macet        int          `json:"macet"`
+	StasiunAktif bool         `json:"stasiunAktif"`
+	Daftar       []CetakMacet `json:"daftar"`
+}
+
+// CetakMacet: tiket yang sudah lewat batas macet tapi belum tercetak, untuk peringatan di layar kasir/pelayan.
+type CetakMacet struct {
+	ID        int64           `json:"id"`
+	Jenis     string          `json:"jenis"`
+	Printer   string          `json:"printer"`
+	Judul     string          `json:"judul"`
+	Tenant    string          `json:"tenant"`
+	MejaNama  string          `json:"mejaNama"`
+	Percobaan int             `json:"percobaan"`
+	Galat     string          `json:"galat"`
+	DibuatAt  time.Time       `json:"dibuatAt"`
+	Payload   json.RawMessage `json:"payload"` // isi tiket, untuk cetak cadangan lewat browser
 }
 
 type TokenStasiun struct {

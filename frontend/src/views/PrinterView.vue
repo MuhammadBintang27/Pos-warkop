@@ -17,6 +17,7 @@ const STATUS = {
   antri: { label: 'Menunggu', severity: 'warn' },
   selesai: { label: 'Tercetak', severity: 'success' },
   kedaluwarsa: { label: 'Kedaluwarsa', severity: 'secondary' },
+  diabaikan: { label: 'Diabaikan', severity: 'secondary' },
 }
 
 const confirm = useConfirm()
@@ -173,6 +174,7 @@ const { cari: cariPrinter, hasil: printerTampil } = useCari(printer, 'nama', 'ip
           <template #body="{ data }">
             <Tag :value="STATUS[data.status].label" :severity="STATUS[data.status].severity" />
             <small v-if="data.status === 'antri' && data.percobaan" class="redup"><br />coba {{ data.percobaan }}× · {{ data.galat }}</small>
+            <small v-else-if="data.status === 'diabaikan'" class="redup"><br />{{ data.galat }}</small>
           </template>
         </Column>
         <Column>

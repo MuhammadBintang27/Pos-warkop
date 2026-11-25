@@ -5,7 +5,7 @@ import { del, get, post, put } from '@/api/http'
 export const useKasirStore = defineStore('kasir', () => {
   const kategori = ref([])
   const tenant = ref([])
-  const cetak = ref({ antri: 0, macet: 0, stasiunAktif: true })
+  const cetak = ref({ antri: 0, macet: 0, stasiunAktif: true, daftar: [] })
   const denah = ref({ meja: [], takeaway: [] })
   const pesanan = ref(null)
   const draft = ref(null)

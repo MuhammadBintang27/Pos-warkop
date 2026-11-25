@@ -185,10 +185,42 @@ public class StasiunService extends Service {
             } catch (Exception e) {
                 throw new Exception("Tidak bisa terhubung ke " + ip + ":" + port + " (" + e.getMessage() + ")");
             }
-            s.setSoTimeout(5000);
             OutputStream out = s.getOutputStream();
+            cekStatus(s, out);
+            s.setSoTimeout(5000);
             out.write(data);
             out.flush();
+        }
+    }
+
+    /**
+     * Printer tetap menerima data walau kertas habis/tutup terbuka, jadi tanya dulu statusnya (ESC/POS DLE EOT).
+     * Printer yang tidak menjawab dianggap siap, supaya printer tanpa fitur status tetap bisa mencetak.
+     * Sama dengan cek_status di tauri/src-tauri/src/main.rs.
+     */
+    private static void cekStatus(Socket s, OutputStream out) throws Exception {
+        s.setSoTimeout(800);
+        InputStream in = s.getInputStream();
+        int b = tanya(out, in, 2);
+        if (b >= 0) {
+            if ((b & 0x04) != 0) throw new Exception("Tutup printer terbuka");
+            if ((b & 0x20) != 0) throw new Exception("Kertas printer habis");
+            if ((b & 0x40) != 0) throw new Exception("Printer error (cek kertas macet/pemotong)");
+        }
+        b = tanya(out, in, 4);
+        if (b >= 0 && (b & 0x60) == 0x60) throw new Exception("Kertas printer habis");
+    }
+
+    /** Mengembalikan byte status, atau -1 bila printer tidak menjawab/jawabannya bukan byte status. */
+    private static int tanya(OutputStream out, InputStream in, int n) {
+        try {
+            out.write(new byte[]{0x10, 0x04, (byte) n});
+            out.flush();
+            int b = in.read();
+            // byte status ESC/POS selalu berpola 0xx1 0x10 (bit 1 & 4 = 1, bit 0 & 7 = 0)
+            return b >= 0 && (b & 0x93) == 0x12 ? b : -1;
+        } catch (Exception e) {
+            return -1;
         }
     }
 

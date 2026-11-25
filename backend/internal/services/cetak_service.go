@@ -355,7 +355,7 @@ func (s *CetakService) Gagal(kid, id int64, galat string) error {
 // ---- tampilan owner dan kasir ----
 
 func (s *CetakService) Riwayat(kid int64) ([]dto.CetakJob, error) {
-	rows, err := s.db.Query(`SELECT j.id,p.nama,j.jenis,j.payload,j.status,j.percobaan,j.galat,j.dibuat_at,j.selesai_at
+	rows, err := s.db.Query(`SELECT j.id,p.nama,j.jenis,j.payload,j.status,j.percobaan,j.galat,j.dibuat_at,j.selesai_at,j.diabaikan_oleh
 		FROM cetak_job j JOIN printer p ON p.id=j.printer_id WHERE j.klien_id=? ORDER BY j.id DESC LIMIT 50`, kid)
 	if err != nil {
 		return nil, err
@@ -366,8 +366,12 @@ func (s *CetakService) Riwayat(kid int64) ([]dto.CetakJob, error) {
 	for rows.Next() {
 		var j dto.CetakJob
 		var payload string
-		if err := rows.Scan(&j.ID, &j.Printer, &j.Jenis, &payload, &j.Status, &j.Percobaan, &j.Galat, &j.DibuatAt, &j.SelesaiAt); err != nil {
+		var diabaikan sql.NullString
+		if err := rows.Scan(&j.ID, &j.Printer, &j.Jenis, &payload, &j.Status, &j.Percobaan, &j.Galat, &j.DibuatAt, &j.SelesaiAt, &diabaikan); err != nil {
 			return nil, err
+		}
+		if diabaikan.Valid {
+			j.Status, j.Galat = "diabaikan", "Diabaikan oleh "+diabaikan.String
 		}
 		var p dto.TiketPayload
 		if json.Unmarshal([]byte(payload), &p) == nil {
@@ -394,11 +398,56 @@ func (s *CetakService) Ulang(kid, id int64) error {
 	return nil
 }
 
+// Abaikan menutup tiket macet tanpa mencetaknya (misal sudah dicetak lewat browser atau disampaikan lisan),
+// supaya tidak keluar belakangan saat printer menyala lagi. Tercatat siapa yang mengabaikan.
+func (s *CetakService) Abaikan(kid, id int64, oleh string) error {
+	res, err := s.db.Exec("UPDATE cetak_job SET status='selesai', selesai_at=?, diabaikan_oleh=? WHERE id=? AND klien_id=? AND status='antri'",
+		time.Now(), oleh, id, kid)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return types.NotFound("Tiket yang belum tercetak")
+	}
+	s.hub.Publish(kid, "cetak")
+	return nil
+}
+
+const maksDaftarMacet = 20
+
 func (s *CetakService) Status(kid int64) (*dto.CetakStatus, error) {
-	var st dto.CetakStatus
+	st := dto.CetakStatus{Daftar: []dto.CetakMacet{}}
+	batasMacet := time.Now().Add(-macetSetelah)
 	if err := s.db.QueryRow(`SELECT COUNT(*), COALESCE(SUM(dibuat_at<?),0) FROM cetak_job WHERE klien_id=? AND status='antri' AND dibuat_at>?`,
-		kid, time.Now().Add(-macetSetelah), batasAktif()).Scan(&st.Antri, &st.Macet); err != nil {
+		batasMacet, kid, batasAktif()).Scan(&st.Antri, &st.Macet); err != nil {
 		return nil, err
+	}
+	if st.Macet > 0 {
+		rows, err := s.db.Query(`SELECT j.id,j.jenis,p.nama,j.payload,j.percobaan,j.galat,j.dibuat_at FROM cetak_job j JOIN printer p ON p.id=j.printer_id
+			WHERE j.klien_id=? AND j.status='antri' AND j.dibuat_at>? AND j.dibuat_at<? ORDER BY j.id LIMIT ?`, kid, batasAktif(), batasMacet, maksDaftarMacet)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var m dto.CetakMacet
+			var payload string
+			if err := rows.Scan(&m.ID, &m.Jenis, &m.Printer, &payload, &m.Percobaan, &m.Galat, &m.DibuatAt); err != nil {
+				return nil, err
+			}
+			var p dto.TiketPayload
+			if json.Unmarshal([]byte(payload), &p) == nil {
+				m.Judul, m.Tenant, m.MejaNama = p.Judul, p.Tenant, p.MejaNama
+			}
+			// hanya tiket dapur/batal yang bisa dicetak ulang di browser; struk dicetak lagi dari dialog struk
+			if m.Jenis == jenisDapur || m.Jenis == jenisBatal {
+				m.Payload = json.RawMessage(payload)
+			}
+			st.Daftar = append(st.Daftar, m)
+		}
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
 	}
 	s.mu.Lock()
 	st.StasiunAktif = time.Since(s.terakhir[kid]) < stasiunHidupSetelah

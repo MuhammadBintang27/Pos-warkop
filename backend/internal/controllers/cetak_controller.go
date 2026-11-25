@@ -100,6 +100,18 @@ func (h *CetakController) Ulang(c *fiber.Ctx) error {
 	return utils.SendSuccess(c, fiber.StatusOK, "Tiket dikirim ulang ke antrean")
 }
 
+func (h *CetakController) Abaikan(c *fiber.Ctx) error {
+	id, err := utils.ParamID(c, "id")
+	if err != nil {
+		return handleErr(c, err, "")
+	}
+	u := middleware.CurrentUser(c)
+	if err := h.svc.Abaikan(u.KlienID, id, u.Nama); err != nil {
+		return handleErr(c, err, "AbaikanCetak error")
+	}
+	return utils.SendSuccess(c, fiber.StatusOK, "Tiket tidak akan dicetak printer")
+}
+
 func (h *CetakController) Status(c *fiber.Ctx) error {
 	st, err := h.svc.Status(kid(c))
 	if err != nil {
