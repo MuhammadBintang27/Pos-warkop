@@ -17,7 +17,11 @@ export const useKasirStore = defineStore('kasir', () => {
   const loadMenu = async () => (kategori.value = (await get('/menu')).kategori)
   const loadCetak = async () => (cetak.value = await get('/cetak/status'))
   const loadTenant = async () => (tenant.value = await get('/tenant'))
-  const loadDenah = async () => (denah.value = await get('/meja'))
+  const loadDenah = async () => {
+    denah.value = await get('/meja')
+    // detail tiap bill terbuka diambil di belakang supaya tersimpan (src/sw.js) dan tetap bisa dibuka saat offline
+    if (navigator.onLine) [...denah.value.meja.flatMap((m) => m.pesanan), ...denah.value.takeaway].forEach((p) => get(`/pesanan/${p.id}`).catch(() => {}))
+  }
   const loadShift = async () => (shift.value = (await get('/shift/aktif')) ?? null)
 
   async function refreshPesanan() {
