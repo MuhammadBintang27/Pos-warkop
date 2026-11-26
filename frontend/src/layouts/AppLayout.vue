@@ -154,6 +154,29 @@ const versiApk = hp?.versiNama ? hp.versiNama() : hp?.versi ? `build ${hp.versi(
 
 watch(() => route.path, () => (drawer.value = false))
 
+// Tarik ke bawah dari atas halaman untuk memuat ulang: halaman digulir di .content, jadi WebView tidak punya bawaannya.
+const konten = ref()
+const tarik = ref(0)
+const BATAS_TARIK = 70
+let awalTarik = null
+
+// daftar di dalam halaman yang sedang tergulir harus kembali ke atas dulu, supaya gulir biasa tidak memicu muat ulang
+function diPuncak(el) {
+  for (; el && el !== konten.value; el = el.parentElement) if (el.scrollTop > 0) return false
+  return konten.value.scrollTop === 0
+}
+function tarikMulai(e) {
+  awalTarik = e.touches.length === 1 && diPuncak(e.target) ? e.touches[0].clientY : null
+}
+function tarikGerak(e) {
+  if (awalTarik !== null) tarik.value = Math.max(0, Math.min(BATAS_TARIK * 1.4, (e.touches[0].clientY - awalTarik) / 2))
+}
+function tarikSelesai() {
+  if (tarik.value >= BATAS_TARIK) return location.reload()
+  tarik.value = 0
+  awalTarik = null
+}
+
 onMounted(() => {
   if (pantauCetak) {
     muatCetak()
@@ -254,7 +277,19 @@ onBeforeUnmount(() => {
         </div>
       </header>
 
-      <main class="content"><RouterView /></main>
+      <div v-if="tarik" class="tarik" :class="{ siap: tarik >= BATAS_TARIK }" :style="{ transform: `translate(-50%, ${tarik}px)` }">
+        <i class="pi pi-refresh" :style="{ rotate: `${tarik * 4}deg` }" />
+      </div>
+      <main
+        ref="konten"
+        class="content"
+        @touchstart.passive="tarikMulai"
+        @touchmove.passive="tarikGerak"
+        @touchend="tarikSelesai"
+        @touchcancel="tarikSelesai"
+      >
+        <RouterView />
+      </main>
     </div>
   </div>
 </template>
@@ -535,6 +570,23 @@ onBeforeUnmount(() => {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
+}
+.tarik {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: 30;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--p-content-background);
+  color: var(--p-text-muted-color);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.18);
+}
+.tarik.siap {
+  color: var(--p-primary-color);
 }
 
 @media (max-width: 600px) {
