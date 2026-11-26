@@ -18,6 +18,9 @@ if (url.searchParams.has('fcm')) {
   history.replaceState(null, '', url)
 }
 
+// Tampilan aplikasi disimpan di perangkat (src/sw.js) supaya tetap bisa dibuka saat internet putus.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {})
+
 const app = createApp(App)
 
 app.use(createPinia())
