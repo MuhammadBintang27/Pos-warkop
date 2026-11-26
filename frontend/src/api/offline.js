@@ -13,6 +13,8 @@ export const offline = reactive({
   galat: '', // aksi terdepan ditolak server; antrean berhenti sampai kasir mencoba lagi atau melewatinya
   sinkron: false,
   gagalCetak: [], // tiket yang tidak sampai ke printer: { label, printer, data, galat }
+  lokal: false, // jawaban terakhir dari simpanan HP, bukan server: layar wajib memberi tahu, data bisa basi
+  terakhir: load('offline:terakhir', null), // kapan simpanan terakhir diperbarui dari server
 })
 
 let data = load('offline:data', {}) // jawaban GET terakhir per URL, ditambah perubahan lokal
@@ -345,7 +347,11 @@ function ingat(r, cfg, d) {
   if (d === undefined) return
   if (cfg.method === 'get' && !r.url.startsWith('/pesanan/') && r.url !== '/cetak/status') {
     data[r.url] = d
-    if (r.url === '/meja') buangBillLama(d)
+    if (r.url === '/meja') {
+      buangBillLama(d)
+      offline.terakhir = new Date().toISOString()
+      save('offline:terakhir', offline.terakhir)
+    }
     simpanData()
     return
   }
@@ -392,6 +398,7 @@ export function pasangOffline(h, bawaan) {
         if (e.response) throw e // server menjawab: itu keputusan server, bukan masalah jaringan
       }
       if (res) {
+        offline.lokal = false
         // adapter menerima teks mentah (axios baru mengurai JSON sesudahnya); gagal menyimpan tidak boleh menggagalkan jawaban server
         try {
           ingat(r, cfg, (typeof res.data === 'string' ? JSON.parse(res.data) : res.data)?.data)
@@ -402,6 +409,7 @@ export function pasangOffline(h, bawaan) {
       }
     }
     const d = await jalankanLokal(r, cfg)
+    offline.lokal = true
     setTimeout(sinkron, 0)
     return { data: { data: d }, status: 200, statusText: 'OK', headers: {}, config: cfg, request: null }
   }
@@ -447,6 +455,7 @@ export async function sinkron() {
     for (const k of Object.keys(data)) if (k.startsWith('/pesanan/-')) delete data[k]
     simpanData()
     simpanAntrean()
+    offline.lokal = false
     window.dispatchEvent(new CustomEvent('offline:tersinkron', { detail: selesai }))
   } finally {
     offline.sinkron = false

@@ -114,6 +114,7 @@ function setTheme(theme) {
   run(() => peng.save({ ...peng.settings, theme }))
 }
 
+const jamTerakhir = computed(() => new Date(offline.terakhir).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }))
 const confirm = useConfirm()
 function konfirmasiLewati() {
   konfirmasi(confirm, {
@@ -294,7 +295,11 @@ onBeforeUnmount(() => {
         </div>
       </header>
 
-      <div v-if="offline.galat || offline.antrean.length || offline.gagalCetak.length" class="offline-bar" role="status">
+      <div v-if="offline.lokal || offline.galat || offline.antrean.length || offline.gagalCetak.length" class="offline-bar" role="status">
+        <div v-if="offline.lokal && !offline.antrean.length" class="baris">
+          <i class="pi pi-wifi" />
+          <span>Server tidak terjangkau. Data dari simpanan HP{{ offline.terakhir ? `, terakhir diperbarui ${jamTerakhir}` : '' }}</span>
+        </div>
         <div v-if="offline.galat" class="baris galat">
           <i class="pi pi-exclamation-triangle" />
           <span>Aksi offline ditolak server: {{ offline.galat }}</span>
