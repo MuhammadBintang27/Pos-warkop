@@ -18,7 +18,11 @@ func NewMejaController(svc *services.MejaService) *MejaController {
 }
 
 func (h *MejaController) Denah(c *fiber.Ctx) error {
-	denah, err := h.svc.Denah(kid(c))
+	ambil := h.svc.Denah
+	if c.Query("detail") == "1" {
+		ambil = h.svc.DenahDetail
+	}
+	denah, err := ambil(kid(c))
 	if err != nil {
 		return handleErr(c, err, "Denah error")
 	}

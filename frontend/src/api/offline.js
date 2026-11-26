@@ -12,7 +12,8 @@ export const offline = reactive({
   antrean: load('offline:antrean', []),
   galat: '', // aksi terdepan ditolak server; antrean berhenti sampai kasir mencoba lagi atau melewatinya
   sinkron: false,
-  gagalCetak: [], // tiket yang tidak sampai ke printer: { label, printer, data, galat }
+  // tiket yang tidak sampai ke printer: { label, printer, data (array byte), galat }; disimpan supaya selamat walau aplikasi ditutup
+  gagalCetak: load('offline:gagalCetak', []),
   lokal: false, // jawaban terakhir dari simpanan HP, bukan server: layar wajib memberi tahu, data bisa basi
   terakhir: load('offline:terakhir', null), // kapan simpanan terakhir diperbarui dari server
 })
@@ -137,9 +138,11 @@ function kePrinter(printer, bytes, label) {
   try {
     cetakLangsung(printer, bytes)
   } catch (e) {
-    offline.gagalCetak.push({ label, printer, data: bytes, galat: e.message })
+    offline.gagalCetak.push({ label, printer, data: Array.from(bytes), galat: e.message })
+    simpanGagalCetak()
   }
 }
+const simpanGagalCetak = () => save('offline:gagalCetak', offline.gagalCetak)
 
 // tiket per tenant ke printer tenantnya; tenant tanpa printer tidak masuk antrean (klien memakai dialog cetak bila diatur)
 function cetakTiket(tiket, batal) {
@@ -174,7 +177,7 @@ const ambilData = (url) => () => (data[url] !== undefined ? data[url] : gagal('D
 const RUTE = [
   ['get', /^\/menu$/, ambilData('/menu')],
   ['get', /^\/tenant$/, ambilData('/tenant')],
-  ['get', /^\/meja$/, ambilData('/meja')],
+  ['get', /^\/meja(\?detail=1)?$/, ambilData('/meja')],
   ['get', /^\/shift\/aktif$/, ambilData('/shift/aktif')],
   ['get', /^\/pengaturan$/, ambilData('/pengaturan')],
   ['get', /^\/printer$/, ambilData('/printer')],
@@ -346,12 +349,15 @@ const pesananDari = (d) => (d?.pesanan ?? d)?.items && (d.pesanan ?? d).id && (d
 function ingat(r, cfg, d) {
   if (d === undefined) return
   if (cfg.method === 'get' && !r.url.startsWith('/pesanan/') && r.url !== '/cetak/status') {
-    data[r.url] = d
-    if (r.url === '/meja') {
-      buangBillLama(d)
+    const url = r.url.split('?')[0]
+    if (url === '/meja') {
+      const { detail = [], ...denah } = d
+      data['/meja'] = denah
+      buangBillLama(denah)
+      for (const p of detail) data[kunciPesanan(p.id)] = p // dari server bersama denahnya, ringkasan sudah cocok
       offline.terakhir = new Date().toISOString()
       save('offline:terakhir', offline.terakhir)
-    }
+    } else data[url] = d
     simpanData()
     return
   }
@@ -468,13 +474,31 @@ export function cobaLagi() {
 }
 
 // aksi terdepan dibuang tanpa dikirim; kasir sudah diberi tahu bahwa server tidak akan mencatatnya
+// bill tempat sebuah aksi berlaku: bill yang dibuatnya (sementara), atau nomor bill di alamatnya
+const billDari = (e) => e.sementara ?? Number(e.url?.match(/^\/pesanan\/(-?\d+)/)?.[1] ?? NaN)
+
+// Aksi yang ikut dibuang bila aksi terdepan dilewati. Hanya untuk bill buatan offline (nomor sementara): tanpa bill itu
+// di server, aksi lanjutannya pasti ditolak. Bill yang sudah ada di server tidak, supaya misalnya bayarnya tetap terkirim.
+export function aksiTerkait() {
+  const bill = billDari(offline.antrean[0] ?? {})
+  return bill < 0 ? offline.antrean.filter((e) => billDari(e) === bill).length : 1
+}
+
 export function lewati() {
-  offline.antrean.shift()
+  const bill = billDari(offline.antrean[0])
+  offline.antrean.splice(0, 1)
+  if (bill < 0) offline.antrean = offline.antrean.filter((e) => billDari(e) !== bill)
   simpanAntrean()
   cobaLagi()
 }
 
 export function cetakUlang(i) {
   const [g] = offline.gagalCetak.splice(i, 1)
+  simpanGagalCetak()
   kePrinter(g.printer, g.data, g.label)
+}
+
+export function tutupGagalCetak(i) {
+  offline.gagalCetak.splice(i, 1)
+  simpanGagalCetak()
 }

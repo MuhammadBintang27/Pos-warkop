@@ -239,3 +239,24 @@ func (s *MejaService) HapusArea(kid, id int64) error {
 	s.hub.Publish(kid, "meja")
 	return nil
 }
+
+// DenahDetail: denah beserta isi lengkap tiap bill terbuka dalam satu jawaban, supaya HP kasir tidak meminta bill satu per satu.
+func (s *MejaService) DenahDetail(kid int64) (*dto.DenahResponse, error) {
+	out, err := s.Denah(kid)
+	if err != nil {
+		return nil, err
+	}
+	out.Detail = []*dto.PesananResponse{}
+	ringkas := out.Takeaway
+	for _, m := range out.Meja {
+		ringkas = append(ringkas, m.Pesanan...)
+	}
+	for _, r := range ringkas {
+		p, err := loadPesanan(s.db, kid, r.ID)
+		if err != nil {
+			return nil, err
+		}
+		out.Detail = append(out.Detail, p)
+	}
+	return out, nil
+}

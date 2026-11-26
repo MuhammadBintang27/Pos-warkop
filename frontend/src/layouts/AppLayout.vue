@@ -11,7 +11,7 @@ import { usePengaturanStore } from '@/stores/pengaturan'
 import { useRun } from '@/composables/useRun'
 import { load, save } from '@/utils/storage'
 import { useConfirm } from 'primevue/useconfirm'
-import { cetakUlang, cobaLagi, lewati, offline } from '@/api/offline'
+import { aksiTerkait, cetakUlang, cobaLagi, lewati, offline, tutupGagalCetak } from '@/api/offline'
 import { konfirmasi } from '@/utils/confirm'
 
 const NAV = [
@@ -117,9 +117,11 @@ function setTheme(theme) {
 const jamTerakhir = computed(() => new Date(offline.terakhir).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }))
 const confirm = useConfirm()
 function konfirmasiLewati() {
+  const n = aksiTerkait()
+  const ikut = n > 1 ? ` Bill ini dibuat saat offline, jadi ${n - 1} aksi lanjutannya (tambah item, kirim, bayar, dll.) ikut dibuang.` : ''
   konfirmasi(confirm, {
-    header: 'Lewati aksi ini?',
-    message: `"${offline.galat}" tidak akan pernah tercatat di server. Lewati hanya bila sudah dipastikan, misalnya bill itu sudah diurus dari perangkat lain.`,
+    header: n > 1 ? `Lewati ${n} aksi?` : 'Lewati aksi ini?',
+    message: `"${offline.galat}" tidak akan pernah tercatat di server.${ikut} Lewati hanya bila sudah dipastikan, misalnya bill itu sudah diurus dari perangkat lain.`,
     label: 'Lewati',
     accept: lewati,
   })
@@ -314,7 +316,7 @@ onBeforeUnmount(() => {
           <i class="pi pi-print" />
           <span>{{ g.label }} gagal dicetak: {{ g.galat }}</span>
           <Button label="Cetak ulang" size="small" @click="cetakUlang(i)" />
-          <Button icon="pi pi-times" size="small" text severity="secondary" aria-label="Tutup" @click="offline.gagalCetak.splice(i, 1)" />
+          <Button icon="pi pi-times" size="small" text severity="secondary" aria-label="Tutup" @click="tutupGagalCetak(i)" />
         </div>
       </div>
       <div v-if="tarik" class="tarik" :class="{ siap: tarik >= BATAS_TARIK }" :style="{ transform: `translate(-50%, ${tarik}px)` }">

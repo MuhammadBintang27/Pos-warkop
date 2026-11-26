@@ -136,4 +136,6 @@ type DenahResponse struct {
 	Area     []AreaResponse   `json:"area"`
 	Meja     []*MejaResponse  `json:"meja"`
 	Takeaway []PesananRingkas `json:"takeaway"`
+	// Detail: isi lengkap tiap bill terbuka, hanya bila diminta (?detail=1) oleh HP kasir untuk disimpan sebagai data offline.
+	Detail []*PesananResponse `json:"detail,omitempty"`
 }

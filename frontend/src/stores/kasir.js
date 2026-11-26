@@ -22,11 +22,8 @@ export const useKasirStore = defineStore('kasir', () => {
     if (offlineAktif()) get('/printer').catch(() => {}) // alamat printer tenant disimpan untuk cetak langsung saat offline
   }
   const loadDenah = async () => {
-    denah.value = await get('/meja')
-    // detail tiap bill terbuka diambil di belakang supaya tersimpan (api/offline.js) dan tetap bisa dibuka saat offline
-    if (offlineAktif() && navigator.onLine) {
-      ;[...denah.value.meja.flatMap((m) => m.pesanan), ...denah.value.takeaway].forEach((p) => p.id > 0 && get(`/pesanan/${p.id}`).catch(() => {}))
-    }
+    // HP kasir sekalian meminta isi tiap bill terbuka (satu permintaan) supaya tersimpan untuk offline (api/offline.js)
+    denah.value = await get(offlineAktif() ? '/meja?detail=1' : '/meja')
   }
   const loadShift = async () => (shift.value = (await get('/shift/aktif')) ?? null)
 
