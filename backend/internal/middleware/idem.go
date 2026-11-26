@@ -22,6 +22,8 @@ func Idempoten(c *fiber.Ctx) error {
 	var body string
 	if config.DB.QueryRow("SELECT status,body FROM idem WHERE klien_id=? AND kunci=?", u.KlienID, kunci).Scan(&status, &body) == nil {
 		c.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSONCharsetUTF8)
+		// tanda jawaban ulangan: HP tahu permintaan pertamanya sudah diproses (dan tiketnya sudah dicetak stasiun)
+		c.Set("X-Idem-Ulang", "1")
 		return c.Status(status).SendString(body)
 	}
 	if err := c.Next(); err != nil {

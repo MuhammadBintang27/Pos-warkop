@@ -34,22 +34,28 @@ const SERVER = {
   },
   'get /shift/aktif': { id: 1 },
   'post /pesanan': { id: 100, items: [] },
-  'post /pesanan/100/item': { id: 100, items: [{ id: 900, menuId: 1, harga: 6000, opsi: 'Es', catatan: '', dikirim: false }] },
+  'post /pesanan/100/item': {
+    id: 100, mejaId: null, mejaNama: '', atasNama: '', status: 'open', diskon: 0, pembayaran: [], pembatalan: [],
+    items: [{ id: 900, menuId: 1, nama: 'Kopi', tenantId: 7, tenantNama: 'Dapur', harga: 6000, qty: 1, opsi: 'Es', catatan: '', dikirim: false }],
+  },
   'put /pesanan/100/item/900': { id: 100, items: [{ id: 900, menuId: 1, harga: 6000, opsi: 'Es', catatan: '', dikirim: false, qty: 2 }] },
   'post /pesanan/100/kirim': { items: [] },
   'post /pesanan/100/bayar': { id: 100, status: 'lunas', items: [] },
 }
 let putus = false
 const tolak = new Set() // aksi yang ditolak server dengan 400
+const habisWaktu = new Set() // aksi yang jawabannya tidak sampai dalam batas waktu
+let ulang = false // server menjawab dari tabel idem: permintaan pertama sudah diproses
 const terkirim = []
 const server = async (cfg) => {
   if (putus) throw Object.assign(new Error('Network Error'), { code: 'ERR_NETWORK' })
+  if (habisWaktu.has(`${cfg.method} ${cfg.url}`)) throw Object.assign(new Error('timeout'), { code: 'ECONNABORTED' })
   if (tolak.has(`${cfg.method} ${cfg.url}`)) {
     throw Object.assign(new Error('Bad Request'), { response: { status: 400, data: JSON.stringify({ message: 'Meja tidak ditemukan' }), headers: {}, config: cfg } })
   }
   terkirim.push({ url: cfg.url, idem: cfg.headers['X-Idem'], offline: cfg.headers['X-Offline'] })
   // seperti adapter xhr sungguhan: isi masih teks JSON, axios yang mengurainya sesudah adapter
-  return { data: JSON.stringify({ data: SERVER[`${cfg.method} ${cfg.url}`] }), status: 200, headers: {}, config: cfg }
+  return { data: JSON.stringify({ data: SERVER[`${cfg.method} ${cfg.url}`] }), status: 200, headers: ulang ? { 'x-idem-ulang': '1' } : {}, config: cfg }
 }
 
 let http, mod
@@ -146,5 +152,42 @@ describe('mode offline HP kasir', () => {
     mod.cetakUlang(0)
     expect(mod.offline.gagalCetak).toHaveLength(0)
     expect(JSON.parse(localStorage.getItem('offline:gagalCetak'))).toEqual([])
+  })
+
+  it('kirim yang habis waktu menunda tiketnya: dibuang bila server sudah memprosesnya, dicetak HP bila belum', async () => {
+    putus = false
+    await vi.waitFor(async () => {
+      await mod.sinkron()
+      expect(mod.offline.antrean).toHaveLength(0)
+    })
+    const kirimRagu = async () => {
+      await http.post('/pesanan/100/item', { menuId: 1, qty: 1, opsiIds: [11], catatan: '' }) // online, bill 100 tersimpan
+      habisWaktu.add('post /pesanan/100/kirim')
+      const tiket = await data(http.post('/pesanan/100/kirim'))
+      habisWaktu.clear()
+      return tiket
+    }
+
+    cetak.mockClear()
+    expect((await kirimRagu()).ragu).toBe(true)
+    expect(cetak).not.toHaveBeenCalled()
+    expect(mod.offline.tundaCetak).toHaveLength(1)
+    ulang = true // permintaan pertama ternyata sampai: stasiun di server yang mencetak
+    await vi.waitFor(async () => {
+      await mod.sinkron()
+      expect(mod.offline.antrean).toHaveLength(0)
+    })
+    ulang = false
+    expect(mod.offline.tundaCetak).toHaveLength(0)
+    expect(cetak).not.toHaveBeenCalled()
+
+    await kirimRagu()
+    expect(mod.offline.tundaCetak).toHaveLength(1)
+    await vi.waitFor(async () => {
+      await mod.sinkron()
+      expect(mod.offline.antrean).toHaveLength(0)
+    })
+    expect(mod.offline.tundaCetak).toHaveLength(0)
+    expect(cetak).toHaveBeenCalledTimes(1) // server baru memprosesnya sekarang tanpa mencetak, jadi HP yang mencetak
   })
 })

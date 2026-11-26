@@ -78,7 +78,8 @@ async function simpanCatatan() {
 
 async function kirim() {
   let tiket
-  if (!(await run(async () => (tiket = await store.kirim()), 'Terkirim ke dapur'))) return
+  const pesan = () => (tiket?.ragu ? 'Disimpan, tiket menunggu kepastian server' : 'Terkirim ke dapur')
+  if (!(await run(async () => (tiket = await store.kirim()), pesan))) return
   const lokal = sisaLokal(tiket)
   if (lokal.items.length && usePengaturanStore().settings.dialogDapur) printDapur(lokal)
 }

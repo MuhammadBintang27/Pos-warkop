@@ -14,6 +14,9 @@ export const offline = reactive({
   sinkron: false,
   // tiket yang tidak sampai ke printer: { label, printer, data (array byte), galat }; disimpan supaya selamat walau aplikasi ditutup
   gagalCetak: load('offline:gagalCetak', []),
+  // Tiket yang belum dicetak karena ragu: permintaannya habis waktu, padahal bisa saja sudah diterima server (dan
+  // dicetak stasiun). Diputuskan saat sinkron lewat X-Idem-Ulang, atau oleh kasir: { kunci, label, printer, data }
+  tundaCetak: load('offline:tundaCetak', []),
   lokal: false, // jawaban terakhir dari simpanan HP, bukan server: layar wajib memberi tahu, data bisa basi
   terakhir: load('offline:terakhir', null), // kapan simpanan terakhir diperbarui dari server
 })
@@ -143,6 +146,8 @@ function kePrinter(printer, bytes, label) {
   }
 }
 const simpanGagalCetak = () => save('offline:gagalCetak', offline.gagalCetak)
+const simpanTunda = () => save('offline:tundaCetak', offline.tundaCetak)
+let raguKunci = null // diisi selama penangan lokal berjalan untuk aksi yang permintaannya habis waktu
 
 // tiket per tenant ke printer tenantnya; tenant tanpa printer tidak masuk antrean (klien memakai dialog cetak bila diatur)
 function cetakTiket(tiket, batal) {
@@ -158,7 +163,13 @@ function cetakTiket(tiket, batal) {
     if (!printer) continue
     const judul = batal ? 'BATAL' : tiket.tambahan?.[tid] ? 'PESANAN TAMBAHAN' : 'PESANAN BARU'
     const p = { judul, mejaNama: tiket.mejaNama, atasNama: tiket.atasNama, oleh: tiket.oleh, tenant: g.nama, waktu: new Date(), items: g.items }
-    kePrinter(printer, escposTiket(p, printer.lebarMm), `${judul} ${tiket.mejaNama || 'Bawa pulang'} (${g.nama})`)
+    const bytes = escposTiket(p, printer.lebarMm)
+    const label = `${judul} ${tiket.mejaNama || 'Bawa pulang'} (${g.nama})`
+    if (raguKunci) {
+      offline.tundaCetak.push({ kunci: raguKunci, label, printer, data: Array.from(bytes) })
+      simpanTunda()
+      tiket.ragu = true
+    } else kePrinter(printer, bytes, label)
     tiket.antrean[tid] = true
   }
   return tiket
@@ -376,10 +387,16 @@ function buangBillLama(d) {
   }
 }
 
-async function jalankanLokal(r, cfg) {
+async function jalankanLokal(r, cfg, ragu) {
   const body = typeof cfg.data === 'string' ? JSON.parse(cfg.data || '{}') : (cfg.data ?? {})
   const entri = { kunci: cfg.headers['X-Idem'], method: cfg.method, url: r.url, body, pemilik: user()?.id }
-  const hasil = await r.fn(...r.angka, body, entri)
+  raguKunci = ragu ? entri.kunci : null
+  let hasil
+  try {
+    hasil = await r.fn(...r.angka, body, entri)
+  } finally {
+    raguKunci = null
+  }
   if (r.catat) {
     offline.antrean.push(entri)
     simpanAntrean()
@@ -396,12 +413,15 @@ export function pasangOffline(h, bawaan) {
     const r = !cfg.langsung && aktif() && cocokRute(cfg)
     if (!r) return bawaan(cfg)
     if (r.catat) cfg.headers['X-Idem'] = crypto.randomUUID()
+    let ragu = false
     if (!offline.antrean.length) {
       let res
       try {
         res = await bawaan({ ...cfg, timeout: cfg.timeout || 10000 })
       } catch (e) {
         if (e.response) throw e // server menjawab: itu keputusan server, bukan masalah jaringan
+        // habis waktu: permintaan sudah terkirim dan mungkin sudah diproses server; gagal tersambung berarti belum
+        ragu = e.code === 'ECONNABORTED' || e.code === 'ETIMEDOUT'
       }
       if (res) {
         offline.lokal = false
@@ -414,7 +434,7 @@ export function pasangOffline(h, bawaan) {
         return res
       }
     }
-    const d = await jalankanLokal(r, cfg)
+    const d = await jalankanLokal(r, cfg, ragu)
     offline.lokal = true
     setTimeout(sinkron, 0)
     return { data: { data: d }, status: 200, statusText: 'OK', headers: {}, config: cfg, request: null }
@@ -447,6 +467,7 @@ export async function sinkron() {
         if (err.response) offline.galat = `${labelAksi(e)}: ${err.response.data?.message || 'ditolak server'}`
         return // tanpa jawaban server: masih offline, dicoba lagi nanti
       }
+      selesaikanTunda(e.kunci, res.headers?.['x-idem-ulang'] === '1')
       const d = res.data.data
       if (e.sementara) peta[e.sementara] = d.id
       if (e.item) {
@@ -501,4 +522,27 @@ export function cetakUlang(i) {
 export function tutupGagalCetak(i) {
   offline.gagalCetak.splice(i, 1)
   simpanGagalCetak()
+}
+
+// Server menjawab aksi yang tiketnya ditunda. ulang=true: server sudah memproses permintaan pertama (tanpa X-Offline),
+// jadi stasiun cetak sudah mencetaknya; tiket di HP dibuang. Selain itu server baru memprosesnya sekarang tanpa
+// mencetak, jadi HP yang mencetak.
+function selesaikanTunda(kunci, ulang) {
+  const milik = offline.tundaCetak.filter((t) => t.kunci === kunci)
+  if (!milik.length) return
+  offline.tundaCetak = offline.tundaCetak.filter((t) => t.kunci !== kunci)
+  simpanTunda()
+  if (!ulang) milik.forEach((t) => kePrinter(t.printer, t.data, t.label))
+}
+
+// kasir memastikan sendiri (mis. bertanya ke dapur) tanpa menunggu internet kembali
+export function cetakTunda(i) {
+  const [t] = offline.tundaCetak.splice(i, 1)
+  simpanTunda()
+  kePrinter(t.printer, t.data, t.label)
+}
+
+export function tutupTunda(i) {
+  offline.tundaCetak.splice(i, 1)
+  simpanTunda()
 }

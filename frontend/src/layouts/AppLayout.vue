@@ -11,7 +11,7 @@ import { usePengaturanStore } from '@/stores/pengaturan'
 import { useRun } from '@/composables/useRun'
 import { load, save } from '@/utils/storage'
 import { useConfirm } from 'primevue/useconfirm'
-import { aksiTerkait, cetakUlang, cobaLagi, lewati, offline, tutupGagalCetak } from '@/api/offline'
+import { aksiTerkait, cetakTunda, cetakUlang, cobaLagi, lewati, offline, tutupGagalCetak, tutupTunda } from '@/api/offline'
 import { konfirmasi } from '@/utils/confirm'
 
 const NAV = [
@@ -297,7 +297,7 @@ onBeforeUnmount(() => {
         </div>
       </header>
 
-      <div v-if="offline.lokal || offline.galat || offline.antrean.length || offline.gagalCetak.length" class="offline-bar" role="status">
+      <div v-if="offline.lokal || offline.galat || offline.antrean.length || offline.gagalCetak.length || offline.tundaCetak.length" class="offline-bar" role="status">
         <div v-if="offline.lokal && !offline.antrean.length" class="baris">
           <i class="pi pi-wifi" />
           <span>Server tidak terjangkau. Data dari simpanan HP{{ offline.terakhir ? `, terakhir diperbarui ${jamTerakhir}` : '' }}</span>
@@ -311,6 +311,12 @@ onBeforeUnmount(() => {
         <div v-else-if="offline.antrean.length" class="baris">
           <i class="pi" :class="offline.sinkron ? 'pi-spin pi-sync' : 'pi-cloud-upload'" />
           <span>Mode offline: {{ offline.antrean.length }} aksi menunggu dikirim ke server</span>
+        </div>
+        <div v-for="(t, i) in offline.tundaCetak" :key="`t${i}`" class="baris">
+          <i class="pi pi-hourglass" />
+          <span>Tiket {{ t.label }} menunggu kepastian server, mungkin sudah tercetak lewat stasiun. Tanyakan ke dapur bila internet belum kembali.</span>
+          <Button label="Cetak sekarang" size="small" @click="cetakTunda(i)" />
+          <Button icon="pi pi-times" size="small" text severity="secondary" aria-label="Sudah tercetak, tutup" @click="tutupTunda(i)" />
         </div>
         <div v-for="(g, i) in offline.gagalCetak" :key="i" class="baris galat">
           <i class="pi pi-print" />
