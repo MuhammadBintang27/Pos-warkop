@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { del, get, post, put } from '@/api/http'
+import { aktif as offlineAktif } from '@/api/offline'
 
 export const useKasirStore = defineStore('kasir', () => {
   const kategori = ref([])
@@ -16,11 +17,16 @@ export const useKasirStore = defineStore('kasir', () => {
 
   const loadMenu = async () => (kategori.value = (await get('/menu')).kategori)
   const loadCetak = async () => (cetak.value = await get('/cetak/status'))
-  const loadTenant = async () => (tenant.value = await get('/tenant'))
+  const loadTenant = async () => {
+    tenant.value = await get('/tenant')
+    if (offlineAktif()) get('/printer').catch(() => {}) // alamat printer tenant disimpan untuk cetak langsung saat offline
+  }
   const loadDenah = async () => {
     denah.value = await get('/meja')
-    // detail tiap bill terbuka diambil di belakang supaya tersimpan (src/sw.js) dan tetap bisa dibuka saat offline
-    if (navigator.onLine) [...denah.value.meja.flatMap((m) => m.pesanan), ...denah.value.takeaway].forEach((p) => get(`/pesanan/${p.id}`).catch(() => {}))
+    // detail tiap bill terbuka diambil di belakang supaya tersimpan (api/offline.js) dan tetap bisa dibuka saat offline
+    if (offlineAktif() && navigator.onLine) {
+      ;[...denah.value.meja.flatMap((m) => m.pesanan), ...denah.value.takeaway].forEach((p) => p.id > 0 && get(`/pesanan/${p.id}`).catch(() => {}))
+    }
   }
   const loadShift = async () => (shift.value = (await get('/shift/aktif')) ?? null)
 
@@ -107,6 +113,14 @@ export const useKasirStore = defineStore('kasir', () => {
     }
     return tiket
   }
+
+  // antrean offline selesai terkirim: bill yang dibuat saat offline kini punya nomor asli dari server
+  window.addEventListener('offline:tersinkron', (e) => {
+    const id = pesanan.value?.id
+    if (id < 0 && e.detail[id]) bukaPesanan(e.detail[id]).catch(() => (pesanan.value = null))
+    else refreshPesanan()
+    loadDenah().catch(() => {})
+  })
 
   async function bayar(pembayaran) {
     const lunas = await post(path('/bayar'), { pembayaran })

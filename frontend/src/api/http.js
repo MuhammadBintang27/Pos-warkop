@@ -1,7 +1,9 @@
 import axios from 'axios'
 import { load } from '@/utils/storage'
+import { pasangOffline } from './offline'
 
 export const http = axios.create({ baseURL: '/api' })
+pasangOffline(http, axios.getAdapter(axios.defaults.adapter)) // HP kasir: jaringan gagal -> dijawab lokal (api/offline.js)
 
 http.interceptors.request.use((cfg) => {
   const token = load('token', '')

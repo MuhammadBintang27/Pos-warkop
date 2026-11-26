@@ -15,6 +15,7 @@ var (
 	super  = middleware.Authorize(types.RoleSuper)
 	// tenantRole: akun tenant tanpa tenant_id (data rusak) ditolak di service karena tenant 0 tidak pernah ada.
 	tenantRole = middleware.Authorize(types.RoleTenant)
+	idem       = middleware.Idempoten
 )
 
 func RegisterAuthRoutes(r fiber.Router, h *controllers.AuthController, loginLimiter fiber.Handler) {
@@ -76,19 +77,19 @@ func RegisterMejaRoutes(r fiber.Router, h *controllers.MejaController) {
 }
 
 func RegisterPesananRoutes(r fiber.Router, h *controllers.PesananController, k *controllers.KasirController) {
-	r.Post("/pesanan", authed, h.Create)
+	r.Post("/pesanan", authed, idem, h.Create)
 	r.Get("/pesanan/:id", authed, h.Get)
-	r.Post("/pesanan/:id/item", authed, h.AddItem)
-	r.Put("/pesanan/:id/item/:itemId", authed, h.UpdateItem)
-	r.Delete("/pesanan/:id/item/:itemId", authed, h.DeleteItem)
-	r.Post("/pesanan/:id/kirim", authed, h.Kirim)
-	r.Post("/pesanan/:id/pindah", authed, h.Pindah)
+	r.Post("/pesanan/:id/item", authed, idem, h.AddItem)
+	r.Put("/pesanan/:id/item/:itemId", authed, idem, h.UpdateItem)
+	r.Delete("/pesanan/:id/item/:itemId", authed, idem, h.DeleteItem)
+	r.Post("/pesanan/:id/kirim", authed, idem, h.Kirim)
+	r.Post("/pesanan/:id/pindah", authed, idem, h.Pindah)
 	r.Put("/pesanan/:id/diskon", authed, kasir, middleware.Audit("Diskon bill"), h.SetDiskon)
-	r.Post("/pesanan/:id/batal", authed, kasir, middleware.Audit("Batal bill"), h.Batal)
-	r.Post("/pesanan/:id/item/:itemId/batal", authed, kasir, middleware.Audit("Batal item"), h.BatalItem)
+	r.Post("/pesanan/:id/batal", authed, kasir, idem, middleware.Audit("Batal bill"), h.Batal)
+	r.Post("/pesanan/:id/item/:itemId/batal", authed, kasir, idem, middleware.Audit("Batal item"), h.BatalItem)
 	r.Post("/pesanan/:id/gabung", authed, kasir, h.Gabung)
 	r.Post("/pesanan/:id/pisah", authed, kasir, h.Pisah)
-	r.Post("/pesanan/:id/bayar", authed, kasir, k.Bayar)
+	r.Post("/pesanan/:id/bayar", authed, kasir, idem, k.Bayar)
 	r.Post("/pesanan/:id/buka-ulang", authed, owner, middleware.Audit("Buka ulang bill"), k.BukaUlang)
 	r.Post("/pesanan/:id/refund", authed, owner, middleware.Audit("Refund bill"), k.Refund)
 }

@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { http, post } from '@/api/http'
 import { load, remove, save } from '@/utils/storage'
+import { lupakanData } from '@/api/offline'
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref(load('token', ''))
@@ -12,12 +13,9 @@ export const useAuthStore = defineStore('auth', () => {
   const isKasir = computed(() => role.value === 'kasir' || role.value === 'owner')
   const isOwner = computed(() => role.value === 'owner')
 
-  // data kasir yang disimpan untuk offline (src/sw.js) milik akun sebelumnya, jangan terbawa ke akun lain
-  const hapusDataOffline = () => window.caches?.delete('psd-api').catch(() => {})
-
   async function login(username, password) {
     const res = await post('/auth/login', { username, password })
-    hapusDataOffline()
+    lupakanData() // data offline milik akun sebelumnya jangan terbawa
     token.value = res.token
     user.value = res.user
     save('token', res.token)
@@ -33,7 +31,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   function logout() {
     lepasPerangkat()
-    hapusDataOffline()
+    lupakanData()
     token.value = ''
     user.value = null
     remove('token')

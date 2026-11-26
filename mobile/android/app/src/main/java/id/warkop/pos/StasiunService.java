@@ -178,7 +178,7 @@ public class StasiunService extends Service {
         }
     }
 
-    private static void kirimKePrinter(String ip, int port, byte[] data) throws Exception {
+    static void kirimKePrinter(String ip, int port, byte[] data) throws Exception {
         try (Socket s = new Socket()) {
             try {
                 s.connect(new InetSocketAddress(ip, port), 5000);

@@ -9,6 +9,7 @@ import { useRun } from '@/composables/useRun'
 import { useAuthStore } from '@/stores/auth'
 import { konfirmasi } from '@/utils/confirm'
 import { tgl } from '@/utils/format'
+import { bisaCetakLangsung, cetakLangsung, escposTiket } from '@/utils/escpos'
 
 const LEBAR = [
   { label: '58 mm', value: 58 },
@@ -81,6 +82,14 @@ const tes = (p) =>
     await post(`/printer/${p.id}/tes`)
     await muat()
   }, 'Tiket percobaan dikirim ke antrean')
+
+// cetak dari HP ini langsung ke printer, tanpa server: jalur yang dipakai kasir saat offline
+const langsung = bisaCetakLangsung()
+const tesLangsung = (p) =>
+  run(async () => {
+    const tiket = { judul: 'TES LANGSUNG', mejaNama: '-', tenant: p.nama, waktu: new Date(), items: [{ qty: 1, nama: 'Dicetak langsung dari HP' }] }
+    cetakLangsung(p, escposTiket(tiket, p.lebarMm))
+  }, 'Terkirim langsung ke printer')
 
 const ulang = (j) =>
   run(async () => {
@@ -156,6 +165,7 @@ const { cari: cariPrinter, hasil: printerTampil } = useCari(printer, 'nama', 'ip
         <Column>
           <template #body="{ data }">
             <Button label="Tes cetak" size="small" outlined severity="secondary" @click="tes(data)" />
+            <Button v-if="langsung" label="Tes langsung" size="small" text severity="secondary" title="Cetak dari HP ini tanpa server, jalur yang dipakai saat offline" @click="tesLangsung(data)" />
             <Button icon="pi pi-pencil" text severity="secondary" aria-label="Ubah" @click="form = { ...data }" />
             <Button v-if="auth.isOwner" icon="pi pi-trash" text severity="danger" aria-label="Hapus" @click="hapus(data)" />
           </template>

@@ -13,6 +13,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.PowerManager;
 import android.provider.Settings;
+import android.util.Base64;
 import android.webkit.JavascriptInterface;
 
 import androidx.core.content.ContextCompat;
@@ -56,6 +57,20 @@ public class MainActivity extends BridgeActivity {
             e.apply();
             if (aktif) mintaBebasHematBaterai();
             StasiunService.terapkan(MainActivity.this);
+        }
+
+        /**
+         * Cetak langsung dari HP ke printer jaringan (mode offline kasir), tanpa lewat server.
+         * Hasil "" bila berhasil, selain itu alasan gagalnya. Dipanggil di thread JavaBridge, bukan thread layar.
+         */
+        @JavascriptInterface
+        public String cetak(String ip, int port, String base64) {
+            try {
+                StasiunService.kirimKePrinter(ip, port, Base64.decode(base64, Base64.DEFAULT));
+                return "";
+            } catch (Exception e) {
+                return String.valueOf(e.getMessage());
+            }
         }
 
         /** versionCode APK yang terpasang; dibandingkan halaman web dengan /dl/versi.json di server. */

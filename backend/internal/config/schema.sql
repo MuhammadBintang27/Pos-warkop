@@ -466,3 +466,14 @@ CREATE TABLE IF NOT EXISTS audit_log (
   INDEX (klien_id, at),
   FOREIGN KEY (klien_id) REFERENCES klien(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Jawaban pertama aksi kasir per kunci X-Idem: HP yang mengulang aksi dari antrean offline menerima jawaban yang sama, tidak diproses dua kali.
+CREATE TABLE IF NOT EXISTS idem (
+  klien_id BIGINT NOT NULL,
+  kunci VARCHAR(64) NOT NULL,
+  status INT NOT NULL,
+  body MEDIUMTEXT NOT NULL,
+  at DATETIME NOT NULL,
+  PRIMARY KEY (klien_id, kunci),
+  INDEX (at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

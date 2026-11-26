@@ -98,7 +98,7 @@ func (h *PesananController) Kirim(c *fiber.Ctx) error {
 	if err != nil {
 		return handleErr(c, err, "")
 	}
-	res, err := h.svc.Kirim(middleware.CurrentUser(c), id)
+	res, err := h.svc.Kirim(middleware.CurrentUser(c), id, cetakServer(c))
 	if err != nil {
 		return handleErr(c, err, "Kirim error")
 	}
@@ -130,7 +130,7 @@ func (h *PesananController) Batal(c *fiber.Ctx) error {
 	if err := middleware.ParseAndValidate(c, &req); err != nil {
 		return err
 	}
-	res, err := h.svc.Batal(middleware.CurrentUser(c), id, req)
+	res, err := h.svc.Batal(middleware.CurrentUser(c), id, req, cetakServer(c))
 	if err != nil {
 		return handleErr(c, err, "Batal error")
 	}
@@ -150,7 +150,7 @@ func (h *PesananController) BatalItem(c *fiber.Ctx) error {
 	if err := middleware.ParseAndValidate(c, &req); err != nil {
 		return err
 	}
-	res, err := h.svc.BatalItem(middleware.CurrentUser(c), id, itemID, req)
+	res, err := h.svc.BatalItem(middleware.CurrentUser(c), id, itemID, req, cetakServer(c))
 	if err != nil {
 		return handleErr(c, err, "BatalItem error")
 	}
@@ -204,3 +204,6 @@ func (h *PesananController) Pisah(c *fiber.Ctx) error {
 	}
 	return utils.SendSuccess(c, fiber.StatusCreated, "Pesanan dipisah", p)
 }
+
+// cetakServer false bila aksi dikirim ulang dari antrean offline HP kasir: tiketnya sudah dicetak HP, jangan dobel.
+func cetakServer(c *fiber.Ctx) bool { return c.Get("X-Offline") != "1" }

@@ -458,7 +458,8 @@ func clampDiskon(tx *sql.Tx, kid, id int64, diskon int) error {
 }
 
 // Kirim menandai item baru sebagai terkirim ke dapur dan mengembalikannya untuk dicetak.
-func (s *PesananService) Kirim(actor *utils.JWTPayload, id int64) (*dto.KirimResponse, error) {
+// cetak=false untuk aksi dari antrean offline HP kasir: tiketnya sudah dicetak HP langsung ke printer.
+func (s *PesananService) Kirim(actor *utils.JWTPayload, id int64, cetak bool) (*dto.KirimResponse, error) {
 	kid := actor.KlienID
 	out := &dto.KirimResponse{Items: []dto.ItemResponse{}, Oleh: actor.Nama}
 	err := utils.WithTx(s.db, func(tx *sql.Tx) error {
@@ -486,7 +487,7 @@ func (s *PesananService) Kirim(actor *utils.JWTPayload, id int64) (*dto.KirimRes
 			time.Now(), actor.Nama, kid, id); err != nil {
 			return err
 		}
-		out.Antrean, err = s.cetak.Antrekan(tx, kid, jenisDapur, out)
+		out.Antrean, err = s.antrekan(tx, kid, jenisDapur, out, cetak)
 		return err
 	})
 	if err != nil {
@@ -570,7 +571,7 @@ func catatBatal(tx *sql.Tx, kid, pesananID int64, it dto.ItemResponse, qty int, 
 }
 
 // Batal membatalkan seluruh pesanan. Bila sudah ada item terkirim, alasan wajib dan tiket BATAL dikembalikan untuk dapur.
-func (s *PesananService) Batal(actor *utils.JWTPayload, id int64, req dto.BatalRequest) (*dto.BatalResponse, error) {
+func (s *PesananService) Batal(actor *utils.JWTPayload, id int64, req dto.BatalRequest, cetak bool) (*dto.BatalResponse, error) {
 	kid := actor.KlienID
 	var tiket *dto.KirimResponse
 	alasan := strings.TrimSpace(req.Alasan)
@@ -610,7 +611,7 @@ func (s *PesananService) Batal(actor *utils.JWTPayload, id int64, req dto.BatalR
 		}
 		if len(terkirim) > 0 {
 			tiket = &dto.KirimResponse{MejaNama: p.MejaNama, AtasNama: p.AtasNama, Oleh: actor.Nama, Items: terkirim}
-			if tiket.Antrean, err = s.cetak.Antrekan(tx, kid, jenisBatal, tiket); err != nil {
+			if tiket.Antrean, err = s.antrekan(tx, kid, jenisBatal, tiket, cetak); err != nil {
 				return err
 			}
 		}
@@ -632,7 +633,7 @@ func (s *PesananService) Batal(actor *utils.JWTPayload, id int64, req dto.BatalR
 }
 
 // BatalItem membatalkan sebagian atau seluruh jumlah satu item. Stok kembali kecuali makanannya sudah dibuat.
-func (s *PesananService) BatalItem(actor *utils.JWTPayload, id, itemID int64, req dto.BatalItemRequest) (*dto.BatalResponse, error) {
+func (s *PesananService) BatalItem(actor *utils.JWTPayload, id, itemID int64, req dto.BatalItemRequest, cetak bool) (*dto.BatalResponse, error) {
 	kid := actor.KlienID
 	alasan := strings.TrimSpace(req.Alasan)
 	if alasan == "" {
@@ -684,7 +685,7 @@ func (s *PesananService) BatalItem(actor *utils.JWTPayload, id, itemID int64, re
 			}
 			tiket = &dto.KirimResponse{MejaNama: pl.MejaNama, AtasNama: pl.AtasNama, Oleh: actor.Nama,
 				Items: []dto.ItemResponse{{Nama: it.Nama, Opsi: it.Opsi, Qty: req.Qty, TenantID: it.TenantID, TenantNama: it.TenantNama}}}
-			if tiket.Antrean, err = s.cetak.Antrekan(tx, kid, jenisBatal, tiket); err != nil {
+			if tiket.Antrean, err = s.antrekan(tx, kid, jenisBatal, tiket, cetak); err != nil {
 				return err
 			}
 		}
@@ -829,4 +830,12 @@ func (s *PesananService) Pisah(actor *utils.JWTPayload, id int64, req dto.PisahR
 		return nil, err
 	}
 	return s.result(kid, newID, "pesanan", "meja")
+}
+
+// antrekan melewatkan tiket printer bila cetak=false (aksi dari antrean offline yang tiketnya sudah dicetak HP kasir).
+func (s *PesananService) antrekan(tx *sql.Tx, kid int64, jenis string, t *dto.KirimResponse, cetak bool) (map[int64]bool, error) {
+	if !cetak {
+		return map[int64]bool{}, nil
+	}
+	return s.cetak.Antrekan(tx, kid, jenis, t)
 }

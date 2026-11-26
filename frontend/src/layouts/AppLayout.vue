@@ -10,6 +10,9 @@ import { useKasirStore } from '@/stores/kasir'
 import { usePengaturanStore } from '@/stores/pengaturan'
 import { useRun } from '@/composables/useRun'
 import { load, save } from '@/utils/storage'
+import { useConfirm } from 'primevue/useconfirm'
+import { cetakUlang, cobaLagi, lewati, offline } from '@/api/offline'
+import { konfirmasi } from '@/utils/confirm'
 
 const NAV = [
   { label: 'Klien', icon: 'pi pi-building', to: '/admin', roles: ['superadmin'] },
@@ -111,7 +114,21 @@ function setTheme(theme) {
   run(() => peng.save({ ...peng.settings, theme }))
 }
 
+const confirm = useConfirm()
+function konfirmasiLewati() {
+  konfirmasi(confirm, {
+    header: 'Lewati aksi ini?',
+    message: `"${offline.galat}" tidak akan pernah tercatat di server. Lewati hanya bila sudah dipastikan, misalnya bill itu sudah diurus dari perangkat lain.`,
+    label: 'Lewati',
+    accept: lewati,
+  })
+}
+
 function logout() {
+  // antrean offline hanya bisa dikirim dengan akun yang membuatnya
+  if (offline.antrean.length) {
+    return toast.add({ severity: 'warn', summary: `Masih ada ${offline.antrean.length} aksi offline belum terkirim`, detail: 'Sambungkan internet dulu sebelum keluar', life: 6000 })
+  }
   auth.logout()
   router.push('/login')
 }
@@ -277,6 +294,24 @@ onBeforeUnmount(() => {
         </div>
       </header>
 
+      <div v-if="offline.galat || offline.antrean.length || offline.gagalCetak.length" class="offline-bar" role="status">
+        <div v-if="offline.galat" class="baris galat">
+          <i class="pi pi-exclamation-triangle" />
+          <span>Aksi offline ditolak server: {{ offline.galat }}</span>
+          <Button label="Coba lagi" size="small" @click="cobaLagi" />
+          <Button label="Lewati" size="small" severity="danger" text @click="konfirmasiLewati" />
+        </div>
+        <div v-else-if="offline.antrean.length" class="baris">
+          <i class="pi" :class="offline.sinkron ? 'pi-spin pi-sync' : 'pi-cloud-upload'" />
+          <span>Mode offline: {{ offline.antrean.length }} aksi menunggu dikirim ke server</span>
+        </div>
+        <div v-for="(g, i) in offline.gagalCetak" :key="i" class="baris galat">
+          <i class="pi pi-print" />
+          <span>{{ g.label }} gagal dicetak: {{ g.galat }}</span>
+          <Button label="Cetak ulang" size="small" @click="cetakUlang(i)" />
+          <Button icon="pi pi-times" size="small" text severity="secondary" aria-label="Tutup" @click="offline.gagalCetak.splice(i, 1)" />
+        </div>
+      </div>
       <div v-if="tarik" class="tarik" :class="{ siap: tarik >= BATAS_TARIK }" :style="{ transform: `translate(-50%, ${tarik}px)` }">
         <i class="pi pi-refresh" :style="{ rotate: `${tarik * 4}deg` }" />
       </div>
@@ -587,6 +622,29 @@ onBeforeUnmount(() => {
 }
 .tarik.siap {
   color: var(--p-primary-color);
+}
+.offline-bar {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 0.875rem;
+  background: color-mix(in srgb, var(--p-yellow-500) 16%, var(--p-content-background));
+  border-bottom: 1px solid var(--p-content-border-color);
+}
+.offline-bar .baris {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.offline-bar .baris span {
+  flex: 1;
+  min-width: 12rem;
+}
+.offline-bar .galat {
+  color: var(--p-red-600);
 }
 
 @media (max-width: 600px) {

@@ -16,39 +16,33 @@ self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k.startsWith('psd-app-') && k !== CACHE).map((k) => caches.delete(k))))
+      // termasuk psd-api dari versi lama: data offline kini disimpan api/offline.js
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE && k !== UPLOADS).map((k) => caches.delete(k))))
       .then(() => self.clients.claim()),
   )
 })
 
 const bukanHalaman = /^\/(api|uploads|dl)\//
 
-// Data yang dibutuhkan kasir saat offline; laporan dll sengaja tidak, supaya angka lama tidak dikira terbaru.
-// Cache ini dihapus saat login/logout (stores/auth.js) karena kuncinya hanya URL, bukan akun.
-const API_CACHE = 'psd-api'
-const dataKasir = /^\/api\/(menu|tenant|meja|shift\/aktif|pengaturan|pesanan\/\d+)$/
-
-// online: selalu ambil dari server lalu simpan; hanya saat jaringan gagal salinan terakhir dipakai
-async function dataTerakhir(req) {
-  try {
-    const res = await fetch(req)
-    if (res.ok) {
-      const salin = res.clone()
-      caches.open(API_CACHE).then((c) => c.put(req.url, salin))
-    }
-    return res
-  } catch (err) {
-    const simpan = await caches.match(req.url, { cacheName: API_CACHE })
-    if (simpan) return simpan
-    throw err
+// Data kasir untuk offline disimpan api/offline.js, bukan di sini. Unggahan (logo struk, foto menu) bernama unik
+// per unggahan, jadi aman disimpan selamanya; logo tetap bisa dicetak HP saat offline.
+const UPLOADS = 'psd-uploads'
+async function unggahan(req) {
+  const ada = await caches.match(req, { cacheName: UPLOADS })
+  if (ada) return ada
+  const res = await fetch(req)
+  if (res.ok) {
+    const salin = res.clone()
+    caches.open(UPLOADS).then((c) => c.put(req, salin))
   }
+  return res
 }
 
 self.addEventListener('fetch', (e) => {
   const req = e.request
   const url = new URL(req.url)
   if (req.method !== 'GET' || url.origin !== location.origin) return
-  if (dataKasir.test(url.pathname)) return e.respondWith(dataTerakhir(req))
+  if (url.pathname.startsWith('/uploads/') && req.mode !== 'navigate') return e.respondWith(unggahan(req))
   if (req.mode === 'navigate') {
     if (bukanHalaman.test(url.pathname)) return
     // semua halaman SPA = index.html yang tersimpan; versi baru terpakai sekali buka setelah sw.js berubah
