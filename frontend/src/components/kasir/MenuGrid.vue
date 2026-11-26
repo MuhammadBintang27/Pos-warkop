@@ -36,10 +36,7 @@ const menus = computed(() => {
   return daftar.filter((m) => m.laku > 0).sort((a, b) => b.laku - a.laku).slice(0, 20)
 })
 
-function pick(m) {
-  emit('pick', m)
-  q.value = ''
-}
+const pick = (m) => emit('pick', m)
 
 function pilihTenant(id) {
   tenantAktif.value = id
@@ -53,6 +50,7 @@ function pilihTenant(id) {
       <IconField class="grow">
         <InputIcon class="pi pi-search" />
         <InputText v-model="q" placeholder="Cari menu…" fluid />
+        <InputIcon v-if="q" class="pi pi-times hapus" role="button" aria-label="Hapus pencarian" @click="q = ''" />
       </IconField>
       <Button
         v-if="store.tenant.length > 1"
@@ -120,6 +118,9 @@ function pilihTenant(id) {
 }
 .grow {
   flex: 1;
+}
+.hapus {
+  cursor: pointer;
 }
 .tenant {
   min-width: 160px;
