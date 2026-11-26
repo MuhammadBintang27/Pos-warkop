@@ -61,9 +61,16 @@ type BatalItemRequest struct {
 	SudahDibuat bool   `json:"sudahDibuat"`
 }
 
+// KirimRequest: kosong = kirim semua item yang belum dikirim. ItemIDs diisi antrean offline HP kasir.
+type KirimRequest struct {
+	ItemIDs []int64 `json:"itemIds"`
+}
+
 type BatalRequest struct {
 	Alasan      string `json:"alasan" validate:"max=100"`
 	SudahDibuat bool   `json:"sudahDibuat"`
+	// ItemIDs: item yang dilihat kasir saat membatalkan offline; bill yang punya item lain ditolak
+	ItemIDs []int64 `json:"itemIds"`
 }
 
 type PembatalanResponse struct {

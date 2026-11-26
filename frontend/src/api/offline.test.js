@@ -53,7 +53,7 @@ const server = async (cfg) => {
   if (tolak.has(`${cfg.method} ${cfg.url}`)) {
     throw Object.assign(new Error('Bad Request'), { response: { status: 400, data: JSON.stringify({ message: 'Meja tidak ditemukan' }), headers: {}, config: cfg } })
   }
-  terkirim.push({ url: cfg.url, idem: cfg.headers['X-Idem'], offline: cfg.headers['X-Offline'] })
+  terkirim.push({ url: cfg.url, idem: cfg.headers['X-Idem'], offline: cfg.headers['X-Offline'], body: cfg.data && JSON.parse(cfg.data) })
   // seperti adapter xhr sungguhan: isi masih teks JSON, axios yang mengurainya sesudah adapter
   return { data: JSON.stringify({ data: SERVER[`${cfg.method} ${cfg.url}`] }), status: 200, headers: ulang ? { 'x-idem-ulang': '1' } : {}, config: cfg }
 }
@@ -106,6 +106,8 @@ describe('mode offline HP kasir', () => {
       '/pesanan', '/pesanan/100/item', '/pesanan/100/item/900', '/pesanan/100/kirim', '/pesanan/100/bayar',
     ])
     expect(terkirim.every((t) => t.offline === '1')).toBe(true)
+    // kirim menyebut item yang dicetak HP, dengan id asli dari server (bukan id sementara)
+    expect(terkirim.find((t) => t.url === '/pesanan/100/kirim').body.itemIds).toEqual([900])
     expect(terkirim.map((t) => t.idem)).toEqual(kunci) // kunci sama dengan percobaan pertama: server tidak memproses dua kali
     expect(peristiwa.at(-1).detail[bill.id]).toBe(100)
   })

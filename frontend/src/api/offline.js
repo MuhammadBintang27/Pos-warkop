@@ -253,10 +253,12 @@ const RUTE = [
     return simpanPesanan(p)
   }, true],
 
-  ['post', /^\/pesanan\/(-?\d+)\/kirim$/, (id) => {
+  ['post', /^\/pesanan\/(-?\d+)\/kirim$/, (id, b) => {
     const p = bukaOpen(id)
     const sudah = new Set(p.items.filter((i) => i.dikirim).map((i) => i.tenantId))
     const baru = p.items.filter((i) => !i.dikirim)
+    // server hanya menandai item yang dicetak HP ini; tambahan perangkat lain selama offline tetap belum dikirim
+    b.itemIds = baru.map((i) => i.id)
     const tiket = {
       mejaNama: p.mejaNama, atasNama: p.atasNama, oleh: user()?.nama ?? '',
       items: baru.map((i) => ({ ...i })), tambahan: Object.fromEntries(baru.map((i) => [i.tenantId, sudah.has(i.tenantId)])),
@@ -276,6 +278,7 @@ const RUTE = [
 
   ['post', /^\/pesanan\/(-?\d+)\/batal$/, (id, b) => {
     const p = bukaOpen(id)
+    b.itemIds = p.items.map((i) => i.id) // server menolak bila bill punya item lain (ditambah perangkat lain selama offline)
     const terkirim = p.items.filter((i) => i.dikirim)
     let alasan = (b.alasan ?? '').trim()
     if (terkirim.length && !alasan) gagal('Alasan pembatalan wajib diisi karena sudah ada item yang dikirim ke dapur')
@@ -444,6 +447,7 @@ export function pasangOffline(h, bawaan) {
 }
 
 const gantiId = (url) => url.replace(/-\d+/g, (s) => peta[s] ?? s)
+const gantiIdBody = (b) => (b?.itemIds ? { ...b, itemIds: b.itemIds.map((x) => peta[x] ?? x) } : b)
 const labelAksi = (e) =>
   ({ post: 'Kirim', put: 'Ubah', delete: 'Hapus' })[e.method] + ' ' + e.url.replace(/^\/pesanan\/-?\d+/, 'bill').replace(/-?\d+/g, '')
 
@@ -460,7 +464,7 @@ export async function sinkron() {
       let res
       try {
         res = await http.request({
-          method: e.method, url: gantiId(e.url), data: e.body, langsung: true, timeout: 15000,
+          method: e.method, url: gantiId(e.url), data: gantiIdBody(e.body), langsung: true, timeout: 15000,
           headers: { 'X-Idem': e.kunci, 'X-Offline': '1' },
         })
       } catch (err) {

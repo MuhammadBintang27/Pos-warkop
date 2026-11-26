@@ -4,6 +4,7 @@ import (
 	"warkop/internal/dto"
 	"warkop/internal/middleware"
 	"warkop/internal/services"
+	"warkop/internal/types"
 	"warkop/internal/utils"
 
 	"github.com/gofiber/fiber/v2"
@@ -98,7 +99,13 @@ func (h *PesananController) Kirim(c *fiber.Ctx) error {
 	if err != nil {
 		return handleErr(c, err, "")
 	}
-	res, err := h.svc.Kirim(middleware.CurrentUser(c), id, cetakServer(c))
+	var req dto.KirimRequest
+	if len(c.Body()) > 0 {
+		if err := c.BodyParser(&req); err != nil {
+			return handleErr(c, types.BadRequest("Data kirim tidak valid"), "")
+		}
+	}
+	res, err := h.svc.Kirim(middleware.CurrentUser(c), id, cetakServer(c), req.ItemIDs)
 	if err != nil {
 		return handleErr(c, err, "Kirim error")
 	}

@@ -459,7 +459,9 @@ func clampDiskon(tx *sql.Tx, kid, id int64, diskon int) error {
 
 // Kirim menandai item baru sebagai terkirim ke dapur dan mengembalikannya untuk dicetak.
 // cetak=false untuk aksi dari antrean offline HP kasir: tiketnya sudah dicetak HP langsung ke printer.
-func (s *PesananService) Kirim(actor *utils.JWTPayload, id int64, cetak bool) (*dto.KirimResponse, error) {
+// hanya: bila diisi (antrean offline), hanya item itu yang ditandai terkirim. Item yang ditambahkan perangkat lain selama
+// kasir offline tetap belum dikirim; kalau ikut ditandai, item itu tidak pernah tercetak dan tidak sampai ke dapur.
+func (s *PesananService) Kirim(actor *utils.JWTPayload, id int64, cetak bool, hanya []int64) (*dto.KirimResponse, error) {
 	kid := actor.KlienID
 	out := &dto.KirimResponse{Items: []dto.ItemResponse{}, Oleh: actor.Nama}
 	err := utils.WithTx(s.db, func(tx *sql.Tx) error {
@@ -471,11 +473,15 @@ func (s *PesananService) Kirim(actor *utils.JWTPayload, id int64, cetak bool) (*
 			return err
 		}
 		out.MejaNama, out.AtasNama = p.MejaNama, p.AtasNama
+		pilih := map[int64]bool{}
+		for _, x := range hanya {
+			pilih[x] = true
+		}
 		sudah := map[int64]bool{}
 		for _, i := range p.Items {
 			if i.Dikirim {
 				sudah[i.TenantID] = true
-			} else {
+			} else if hanya == nil || pilih[i.ID] {
 				out.Items = append(out.Items, i)
 			}
 		}
@@ -483,9 +489,11 @@ func (s *PesananService) Kirim(actor *utils.JWTPayload, id int64, cetak bool) (*
 		for _, i := range out.Items {
 			out.Tambahan[i.TenantID] = sudah[i.TenantID]
 		}
-		if _, err = tx.Exec("UPDATE pesanan_item SET dikirim=1, dikirim_at=?, dikirim_oleh=? WHERE klien_id=? AND pesanan_id=? AND dikirim=0",
-			time.Now(), actor.Nama, kid, id); err != nil {
-			return err
+		now := time.Now()
+		for _, i := range out.Items {
+			if _, err = tx.Exec("UPDATE pesanan_item SET dikirim=1, dikirim_at=?, dikirim_oleh=? WHERE id=? AND klien_id=?", now, actor.Nama, i.ID, kid); err != nil {
+				return err
+			}
 		}
 		out.Antrean, err = s.antrekan(tx, kid, jenisDapur, out, cetak)
 		return err
@@ -582,6 +590,18 @@ func (s *PesananService) Batal(actor *utils.JWTPayload, id int64, req dto.BatalR
 		p, err := loadPesanan(tx, kid, id)
 		if err != nil {
 			return err
+		}
+		// dari antrean offline: kasir hanya boleh membatalkan bill seperti yang ia lihat, bukan item tambahan perangkat lain
+		if req.ItemIDs != nil {
+			kenal := map[int64]bool{}
+			for _, x := range req.ItemIDs {
+				kenal[x] = true
+			}
+			for _, i := range p.Items {
+				if !kenal[i.ID] {
+					return types.BadRequest("Bill berubah di perangkat lain selama kasir offline (ada " + i.Nama + "). Periksa bill ini, lalu batalkan ulang bila perlu")
+				}
+			}
 		}
 		var terkirim []dto.ItemResponse
 		for _, i := range p.Items {
