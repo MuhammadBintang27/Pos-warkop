@@ -39,7 +39,8 @@ const terkirim = []
 const server = async (cfg) => {
   if (putus) throw Object.assign(new Error('Network Error'), { code: 'ERR_NETWORK' })
   terkirim.push({ url: cfg.url, idem: cfg.headers['X-Idem'], offline: cfg.headers['X-Offline'] })
-  return { data: { data: structuredClone(SERVER[`${cfg.method} ${cfg.url}`]) }, status: 200, headers: {}, config: cfg }
+  // seperti adapter xhr sungguhan: isi masih teks JSON, axios yang mengurainya sesudah adapter
+  return { data: JSON.stringify({ data: SERVER[`${cfg.method} ${cfg.url}`] }), status: 200, headers: {}, config: cfg }
 }
 
 let http, mod

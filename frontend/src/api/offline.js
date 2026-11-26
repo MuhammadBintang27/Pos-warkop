@@ -166,7 +166,7 @@ function catatBatal(p, i, qty, alasan, sudahDibuat) {
   })
 }
 
-const ambilData = (url) => () => (url in data ? data[url] : gagal('Data ini belum tersimpan di HP ini, sambungkan internet sekali'))
+const ambilData = (url) => () => (data[url] !== undefined ? data[url] : gagal('Data ini belum tersimpan di HP ini, sambungkan internet sekali'))
 
 // [metode, pola URL, penangan, catat ke antrean?]; penangan menerima (angka dari URL..., body, entri antrean)
 const RUTE = [
@@ -341,6 +341,7 @@ const pesananDari = (d) => (d?.pesanan ?? d)?.items && (d.pesanan ?? d).id && (d
 
 // jawaban online yang berhasil disimpan untuk dipakai saat offline
 function ingat(r, cfg, d) {
+  if (d === undefined) return
   if (cfg.method === 'get' && !r.url.startsWith('/pesanan/') && r.url !== '/cetak/status') {
     data[r.url] = d
     if (r.url === '/meja') buangBillLama(d)
@@ -383,12 +384,20 @@ export function pasangOffline(h, bawaan) {
     if (!r) return bawaan(cfg)
     if (r.catat) cfg.headers['X-Idem'] = crypto.randomUUID()
     if (!offline.antrean.length) {
+      let res
       try {
-        const res = await bawaan({ ...cfg, timeout: cfg.timeout || 10000 })
-        ingat(r, cfg, res.data?.data)
-        return res
+        res = await bawaan({ ...cfg, timeout: cfg.timeout || 10000 })
       } catch (e) {
         if (e.response) throw e // server menjawab: itu keputusan server, bukan masalah jaringan
+      }
+      if (res) {
+        // adapter menerima teks mentah (axios baru mengurai JSON sesudahnya); gagal menyimpan tidak boleh menggagalkan jawaban server
+        try {
+          ingat(r, cfg, (typeof res.data === 'string' ? JSON.parse(res.data) : res.data)?.data)
+        } catch (e) {
+          console.warn('data offline tidak tersimpan', r.url, e)
+        }
+        return res
       }
     }
     const d = await jalankanLokal(r, cfg)
