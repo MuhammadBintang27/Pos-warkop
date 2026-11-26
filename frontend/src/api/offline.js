@@ -176,6 +176,7 @@ const RUTE = [
   ['get', /^\/shift\/aktif$/, ambilData('/shift/aktif')],
   ['get', /^\/pengaturan$/, ambilData('/pengaturan')],
   ['get', /^\/printer$/, ambilData('/printer')],
+  ['get', /^\/pelanggan$/, ambilData('/pelanggan')], // dimuat dialog bayar; kasbon sendiri tetap butuh internet
   ['get', /^\/pesanan\/(-?\d+)$/, (id) => ambil(id)],
   ['get', /^\/cetak\/status$/, () => ({ antri: 0, macet: 0, stasiunAktif: true, daftar: [] })],
 
