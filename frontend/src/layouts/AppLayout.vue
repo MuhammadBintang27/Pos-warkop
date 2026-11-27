@@ -560,13 +560,14 @@ onBeforeUnmount(() => {
   border-bottom: 1px solid var(--p-content-border-color);
 }
 /* tab melayang, cukup besar untuk jari di HP, tidak memakan baris sendiri */
+/* di bawah status bar HP dan lebih besar: di ujung layar sentuhan tertelan gerakan tarik-notifikasi Android */
 .top-mini {
   position: absolute;
-  top: 0;
+  top: env(safe-area-inset-top, 0px);
   left: 50%;
   z-index: 30;
-  width: 72px;
-  height: 32px;
+  width: 96px;
+  height: 40px;
   transform: translateX(-50%);
   display: grid;
   place-items: center;
@@ -582,6 +583,12 @@ onBeforeUnmount(() => {
 }
 .top-mini:hover {
   opacity: 1;
+}
+/* area sentuh tak terlihat diperluas ke samping dan ke bawah */
+.top-mini::after {
+  content: '';
+  position: absolute;
+  inset: 0 -16px -16px;
 }
 .right {
   margin-left: auto;
