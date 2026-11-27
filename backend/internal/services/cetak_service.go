@@ -130,7 +130,8 @@ func gabungStruk(items []dto.ItemResponse) []dto.StrukItem {
 	return out
 }
 
-// CetakStruk mengantrekan struk pesanan lunas ke printer kasir. Hasil false bila printer kasir belum diatur.
+// CetakStruk mengantrekan struk pesanan lunas, atau bill tagihan untuk pesanan yang belum dibayar, ke printer kasir.
+// Hasil false bila printer kasir belum diatur.
 func (s *CetakService) CetakStruk(kid, pesananID int64) (bool, error) {
 	usaha, printerID, lebarMM, ok, err := s.printerKasir(kid)
 	if err != nil || !ok {
@@ -140,15 +141,20 @@ func (s *CetakService) CetakStruk(kid, pesananID int64) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if p.Status != types.StatusLunas {
-		return false, types.BadRequest("Struk hanya untuk pesanan yang sudah lunas")
+	judul := "STRUK"
+	switch p.Status {
+	case types.StatusLunas:
+	case types.StatusOpen:
+		judul = "BILL"
+	default:
+		return false, types.BadRequest("Pesanan yang dibatalkan tidak bisa dicetak")
 	}
 	payload := dto.StrukPayload{
-		Judul: "STRUK", MejaNama: p.MejaNama, Usaha: usaha.NamaUsaha, Alamat: usaha.Alamat, Footer: usaha.FooterStruk,
+		Judul: judul, MejaNama: p.MejaNama, Usaha: usaha.NamaUsaha, Alamat: usaha.Alamat, Footer: usaha.FooterStruk,
 		ID: p.ID, AtasNama: p.AtasNama, Kasir: p.Kasir, Items: gabungStruk(p.Items),
 		Subtotal: p.Subtotal, Diskon: p.Diskon, Total: p.Total,
 	}
-	payload.Waktu = p.DibuatAt
+	payload.Waktu = time.Now() // bill tagihan: jam dicetak
 	if p.LunasAt != nil {
 		payload.Waktu = *p.LunasAt
 	}

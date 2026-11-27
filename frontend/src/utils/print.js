@@ -84,7 +84,7 @@ export async function printStruk(p, usaha) {
   const baris = (i) => `<div class="r"><span>${i.qty}x ${esc(i.nama)}</span><span>${rp(i.harga * i.qty)}</span></div>` +
     (i.opsi ? `<div class="sub">${esc(i.opsi)}</div>` : '')
   const items = gabungItem(p.items).map(baris).join('')
-  const bayar = p.pembayaran
+  const bayar = !p.pembayaran?.length ? '<div class="c b">BELUM DIBAYAR</div>' : p.pembayaran
     .map((b) => `<div class="r"><span>${esc(b.metode)}${b.pelanggan ? ' ' + esc(b.pelanggan) : ''}</span><span>${rp(b.diterima)}</span></div>` +
       (b.kembalian ? `<div class="r"><span>Kembali</span><span>${rp(b.kembalian)}</span></div>` : ''))
     .join('')
@@ -92,7 +92,7 @@ export async function printStruk(p, usaha) {
     <div class="c">${esc(usaha.alamat)}</div><hr>
     <div class="r"><span>${esc(p.mejaNama || 'Bawa pulang')}</span><span>#${p.id}</span></div>
     ${p.atasNama ? `<div>${esc(p.atasNama)}</div>` : ''}
-    <div>${tgl(p.lunasAt || p.dibuatAt)}</div>${p.kasir ? `<div>Kasir: ${esc(p.kasir)}</div>` : ''}<hr>
+    <div>${tgl(p.lunasAt || (p.status === 'open' ? new Date() : p.dibuatAt))}</div>${p.kasir ? `<div>Kasir: ${esc(p.kasir)}</div>` : ''}<hr>
     ${items}<hr>
     <div class="r"><span>Subtotal</span><span>${rp(p.subtotal)}</span></div>
     ${p.diskon ? `<div class="r"><span>Diskon</span><span>-${rp(p.diskon)}</span></div>` : ''}

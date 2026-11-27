@@ -144,6 +144,11 @@ func escposStruk(p dto.StrukPayload, lebarMM int, logo []byte) []byte {
 	w.kolom("TOTAL", rupiah(p.Total))
 	w.tebal(false)
 	w.garis()
+	if len(p.Bayar) == 0 {
+		w.tebal(true)
+		w.tengah("BELUM DIBAYAR", w.lebar)
+		w.tebal(false)
+	}
 	for _, b := range p.Bayar {
 		nama := kapital(b.Metode)
 		if b.Pelanggan != "" {

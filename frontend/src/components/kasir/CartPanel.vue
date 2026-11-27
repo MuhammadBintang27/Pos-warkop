@@ -5,6 +5,7 @@ import { useRun } from '@/composables/useRun'
 import { useAuthStore } from '@/stores/auth'
 import { useKasirStore } from '@/stores/kasir'
 import { usePengaturanStore } from '@/stores/pengaturan'
+import { cetakStruk } from '@/utils/cetak'
 import { rp } from '@/utils/format'
 import { gabungTerkirim, printDapur, sisaLokal } from '@/utils/print'
 
@@ -37,6 +38,9 @@ const menu = ref()
 const edit = ref(null)
 
 const aksi = [
+  // bill tagihan sebelum bayar, untuk pelanggan yang minta lihat dulu
+  { label: 'Cetak bill', icon: 'pi pi-print', command: () => p.value.items.length && run(() => cetakStruk(p.value, usePengaturanStore().settings)) },
+  { separator: true },
   { label: 'Pindah meja', icon: 'pi pi-arrow-right-arrow-left', command: () => emit('pindah') },
   { label: 'Gabung bill', icon: 'pi pi-clone', command: () => emit('gabung') },
   { label: 'Pisah bill', icon: 'pi pi-share-alt', command: () => emit('pisah') },

@@ -54,6 +54,14 @@ func TestEscposStruk(t *testing.T) {
 	if !bytes.HasPrefix(b, []byte{0x1b, 0x40}) || !bytes.HasSuffix(b, []byte{0x1d, 0x56, 0x42, 0x00}) {
 		t.Error("struk harus diawali inisialisasi dan diakhiri potong")
 	}
+	if bytes.Contains(b, []byte("BELUM DIBAYAR")) {
+		t.Error("struk lunas tidak boleh bertanda belum dibayar")
+	}
+	bill := strukUji()
+	bill.Bayar = nil
+	if !bytes.Contains(escposStruk(bill, 58, nil), []byte("BELUM DIBAYAR")) {
+		t.Error("bill sebelum bayar harus bertanda belum dibayar")
+	}
 	if logo := []byte{0x1d, 0x76, 0x30, 0, 1, 0, 1, 0, 0x80}; !bytes.Contains(escposStruk(strukUji(), 58, logo), logo) {
 		t.Error("logo harus ikut tercetak di struk")
 	}
