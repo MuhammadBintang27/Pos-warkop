@@ -7,7 +7,8 @@ self.addEventListener('install', (e) => {
   e.waitUntil(
     caches
       .open(CACHE)
-      .then((c) => c.addAll(FILES))
+      // cache: 'reload' melewati cache HTTP browser; tanpa ini index.html lama bisa tersimpan sebagai tampilan versi baru
+      .then((c) => c.addAll(FILES.map((f) => new Request(f, { cache: 'reload' }))))
       .then(() => self.skipWaiting()),
   )
 })
