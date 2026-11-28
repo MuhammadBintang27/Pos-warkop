@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { get, put } from '@/api/http'
 import { onEvent } from '@/composables/useEvents'
-import { useArea } from '@/composables/useArea'
+import { SEMUA, useArea } from '@/composables/useArea'
 import { useRun } from '@/composables/useRun'
 import { useAuthStore } from '@/stores/auth'
 import { useKasirStore } from '@/stores/kasir'
@@ -24,6 +24,14 @@ const denah = ref({ area: [], meja: [], takeaway: [] })
 // tiap area punya denah sendiri: hanya meja area yang dipilih yang tampil dan diatur
 const { tabs, aktif, pilih, cocok } = useArea(denah, { kunci: 'denah.area' })
 const meja = computed(() => denah.value.meja.filter(cocok))
+// tab "Bawa pulang" di samping tab area; tanpa area tetap ada tab "Meja" supaya bisa kembali
+const BAWA = 'bawa'
+const bawa = ref(false)
+const tabTampil = computed(() => [...(tabs.value.length ? tabs.value : [{ id: SEMUA, nama: 'Meja' }]), { id: BAWA, nama: 'Bawa pulang' }])
+function pilihTab(id) {
+  bawa.value = id === BAWA
+  if (!bawa.value) pilih.value = id
+}
 const posisi = reactive({})
 const edit = ref(false)
 const kanvas = ref()
@@ -118,7 +126,7 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
       title="Denah Meja"
       :subtitle="edit ? 'Seret meja untuk mengatur letaknya' : 'Ketuk meja untuk mulai memesan'"
     >
-      <template v-if="auth.isKasir">
+      <template v-if="auth.isKasir && !bawa">
         <button v-if="!edit" class="pill" @click="edit = true"><i class="pi pi-pencil" /> Atur denah</button>
         <template v-else>
           <button class="pill" @click="susun"><i class="pi pi-th-large" /> Susun otomatis</button>
@@ -129,17 +137,26 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
     </PageHeader>
 
     <SelectButton
-      v-if="tabs.length"
-      :model-value="aktif"
-      :options="tabs"
+      :model-value="bawa ? BAWA : aktif"
+      :options="tabTampil"
       option-label="nama"
       option-value="id"
       :allow-empty="false"
       :disabled="edit"
       class="area"
-      @update:model-value="pilih = $event"
+      @update:model-value="pilihTab"
     />
 
+    <section v-if="bawa" class="panel">
+      <div v-if="denah.takeaway.length" class="take">
+        <button v-for="p in denah.takeaway" :key="p.id" @click="bukaBill(p.id)">
+          #{{ p.id }} {{ p.atasNama }} · {{ rp(p.total) }}
+        </button>
+      </div>
+      <p v-else class="none">Tidak ada pesanan bawa pulang yang terbuka.</p>
+    </section>
+
+    <template v-else>
     <div class="legend">
       <span><i class="sw" /> Kosong</span>
       <span><i class="sw terisi" /> Terisi</span>
@@ -171,26 +188,11 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
       </div>
       <p v-if="!meja.length" class="none">Belum ada meja{{ tabs.length ? ' di area ini' : '' }}. Tambahkan di Master Data › Meja.</p>
     </section>
-
-    <section v-if="!edit" class="panel">
-      <h4 class="judul"><i class="pi pi-shopping-bag" /> Bawa pulang</h4>
-      <div v-if="denah.takeaway.length" class="take">
-        <button v-for="p in denah.takeaway" :key="p.id" @click="bukaBill(p.id)">
-          #{{ p.id }} {{ p.atasNama }} · {{ rp(p.total) }}
-        </button>
-      </div>
-      <p v-else class="none">Tidak ada pesanan bawa pulang yang terbuka.</p>
-    </section>
+    </template>
   </div>
 </template>
 
 <style scoped>
-.judul {
-  margin: 0 0 10px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
 .take {
   display: flex;
   flex-wrap: wrap;
