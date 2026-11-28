@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { get, put } from '@/api/http'
 import { onEvent } from '@/composables/useEvents'
 import { SEMUA, useArea } from '@/composables/useArea'
+import { cocokNama } from '@/composables/useCari'
 import { useRun } from '@/composables/useRun'
 import { useAuthStore } from '@/stores/auth'
 import { useKasirStore } from '@/stores/kasir'
@@ -32,6 +33,10 @@ function pilihTab(id) {
   bawa.value = id === BAWA
   if (!bawa.value) pilih.value = id
 }
+const cari = ref('')
+// di kanvas meja yang tidak cocok hanya diredupkan, supaya letak denah tidak berantakan
+const redup = (m) => !cocokNama(cari.value, m.nama, ...m.pesanan.map((p) => p.atasNama))
+const takeTampil = computed(() => denah.value.takeaway.filter((p) => cocokNama(cari.value, p.atasNama, `#${p.id}`)))
 const posisi = reactive({})
 const edit = ref(false)
 const kanvas = ref()
@@ -147,13 +152,15 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
       @update:model-value="pilihTab"
     />
 
+    <CariInput v-if="!edit" v-model="cari" class="cari" placeholder="Cari meja / atas nama…" />
+
     <section v-if="bawa" class="panel">
-      <div v-if="denah.takeaway.length" class="take">
-        <button v-for="p in denah.takeaway" :key="p.id" @click="bukaBill(p.id)">
+      <div v-if="takeTampil.length" class="take">
+        <button v-for="p in takeTampil" :key="p.id" @click="bukaBill(p.id)">
           #{{ p.id }} {{ p.atasNama }} · {{ rp(p.total) }}
         </button>
       </div>
-      <p v-else class="none">Tidak ada pesanan bawa pulang yang terbuka.</p>
+      <p v-else class="none">{{ cari.trim() && denah.takeaway.length ? 'Tidak ada yang cocok.' : 'Tidak ada pesanan bawa pulang yang terbuka.' }}</p>
     </section>
 
     <template v-else>
@@ -169,7 +176,7 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
             v-for="m in meja"
             :key="m.id"
             class="meja"
-            :class="{ terisi: m.pesanan.length }"
+            :class="{ terisi: m.pesanan.length, redup: !edit && redup(m) }"
             :style="{ '--x': posisi[m.id]?.x, '--y': posisi[m.id]?.y }"
             @click="buka(m)"
             @pointerdown="mulaiSeret($event, m)"
@@ -372,6 +379,13 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
   font-weight: 700;
   background: var(--p-primary-color);
   color: var(--p-primary-contrast-color);
+}
+.meja.redup {
+  opacity: 0.25;
+}
+/* jarak antar elemen sudah diatur .gap, margin bawaan CariInput tidak perlu */
+.gap > .cari {
+  margin-bottom: 0;
 }
 .kanvas.edit .meja {
   cursor: grab;

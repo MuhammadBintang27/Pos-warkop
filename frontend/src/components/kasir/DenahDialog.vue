@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useArea } from '@/composables/useArea'
+import { cocokNama } from '@/composables/useCari'
 import { useKasirStore } from '@/stores/kasir'
 import { rp } from '@/utils/format'
 
@@ -10,7 +11,11 @@ const store = useKasirStore()
 const atasNama = ref('')
 // pelayan di lantai 2 langsung melihat meja lantai 2; pilihan diingat per HP
 const { tabs, aktif, pilih, cocok } = useArea(computed(() => store.denah), { semua: true, kunci: 'kasir.area' })
-const mejaTampil = computed(() => store.denah.meja.filter(cocok))
+const cari = ref('')
+const cocokMeja = (m) => cocokNama(cari.value, m.nama, ...m.pesanan.map((p) => p.atasNama))
+// saat mencari, semua area ikut dicari supaya pelanggan di area lain tetap ketemu
+const mejaTampil = computed(() => store.denah.meja.filter(cari.value.trim() ? cocokMeja : cocok))
+const takeTampil = computed(() => store.denah.takeaway.filter((p) => cocokNama(cari.value, p.atasNama, `#${p.id}`)))
 
 const sum = (m) => m.pesanan.reduce((s, p) => s + p.total, 0)
 
@@ -22,8 +27,9 @@ function baru() {
 
 <template>
   <Dialog v-model:visible="visible" modal header="Pilih meja" :style="{ width: '46rem' }" :breakpoints="{ '760px': '96vw' }">
+    <CariInput v-model="cari" placeholder="Cari meja / atas nama…" />
     <SelectButton
-      v-if="tabs.length"
+      v-if="tabs.length && !cari.trim()"
       :model-value="aktif"
       :options="tabs"
       option-label="nama"
@@ -49,15 +55,16 @@ function baru() {
         </div>
       </div>
     </div>
-    <p v-if="!mejaTampil.length" class="none">Belum ada meja{{ tabs.length ? ' di area ini' : '' }}. Tambahkan di Master Data › Meja.</p>
+    <p v-if="!mejaTampil.length && cari.trim()" class="none">Tidak ada meja yang cocok.</p>
+    <p v-else-if="!mejaTampil.length" class="none">Belum ada meja{{ tabs.length ? ' di area ini' : '' }}. Tambahkan di Master Data › Meja.</p>
 
     <h4>Bawa pulang</h4>
     <div class="take">
       <InputText v-model="atasNama" maxlength="100" placeholder="Atas nama (opsional)" class="grow" @keyup.enter="baru" />
       <Button label="Pesanan baru" icon="pi pi-plus" @click="baru" />
     </div>
-    <div v-if="store.denah.takeaway.length" class="bills open">
-      <button v-for="p in store.denah.takeaway" :key="p.id" @click="emit('pesanan', p.id)">
+    <div v-if="takeTampil.length" class="bills open">
+      <button v-for="p in takeTampil" :key="p.id" @click="emit('pesanan', p.id)">
         #{{ p.id }} {{ p.atasNama }} · {{ rp(p.total) }}
       </button>
     </div>

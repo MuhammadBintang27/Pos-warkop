@@ -11,3 +11,9 @@ export function useCari(sumber, ...kolom) {
   })
   return { cari, hasil }
 }
+
+/** true bila salah satu nama memuat kata yang dicari (kata kosong = semua cocok). */
+export function cocokNama(q, ...nama) {
+  q = q.trim().toLowerCase()
+  return !q || nama.some((n) => String(n ?? '').toLowerCase().includes(q))
+}
