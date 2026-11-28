@@ -273,8 +273,8 @@ func sisipItem(tx *sql.Tx, kid, pesananID int64, it itemBaru) (int64, error) {
 		kid, pesananID, it.menuID, it.harga, it.komisi, it.opsi, it.catatan).Scan(&itemID, &qtyAda)
 	switch {
 	case err == nil:
-		if qtyAda+it.qty > 99 {
-			return 0, types.BadRequest("Maksimal 99 porsi per baris pesanan")
+		if qtyAda+it.qty > 999 {
+			return 0, types.BadRequest("Maksimal 999 porsi per baris pesanan")
 		}
 		_, err = tx.Exec("UPDATE pesanan_item SET qty=qty+? WHERE id=? AND klien_id=?", it.qty, itemID, kid)
 	case err == sql.ErrNoRows:

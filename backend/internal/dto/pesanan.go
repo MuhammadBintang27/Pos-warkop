@@ -13,13 +13,13 @@ type CreatePesananRequest struct {
 
 type AddItemRequest struct {
 	MenuID  int64   `json:"menuId" validate:"required,gt=0"`
-	Qty     int     `json:"qty" validate:"required,min=1,max=99"`
+	Qty     int     `json:"qty" validate:"required,min=1,max=999"`
 	OpsiIDs []int64 `json:"opsiIds"`
 	Catatan string  `json:"catatan" validate:"max=255"`
 }
 
 type UpdateItemRequest struct {
-	Qty     int    `json:"qty" validate:"required,min=1,max=99"`
+	Qty     int    `json:"qty" validate:"required,min=1,max=999"`
 	Catatan string `json:"catatan" validate:"max=255"`
 }
 

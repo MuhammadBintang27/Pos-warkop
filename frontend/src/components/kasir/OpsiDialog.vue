@@ -70,7 +70,7 @@ function submit() {
     </div>
 
     <template #footer>
-      <InputNumber v-model="qty" show-buttons button-layout="horizontal" :min="1" :max="99" input-class="qty-input" />
+      <InputNumber v-model="qty" show-buttons button-layout="horizontal" :min="1" :max="999" input-class="qty-input" />
       <Button :label="`Tambah · ${rp(total)}`" icon="pi pi-plus" :disabled="!lengkap" @click="submit" />
     </template>
   </Dialog>

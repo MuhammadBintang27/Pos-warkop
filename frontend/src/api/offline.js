@@ -126,7 +126,7 @@ const kunciItem = (i) => ({ menuId: i.menuId, harga: i.harga, opsi: i.opsi, cata
 function sisip(p, it) {
   const ada = p.items.find((i) => sama(i, it))
   if (ada) {
-    if (ada.qty + it.qty > 99) gagal('Maksimal 99 porsi per baris pesanan')
+    if (ada.qty + it.qty > 999) gagal('Maksimal 999 porsi per baris pesanan')
     ada.qty += it.qty
     return ada
   }
