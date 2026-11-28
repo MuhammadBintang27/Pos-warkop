@@ -20,7 +20,7 @@ const auth = useAuthStore()
 const kasir = useKasirStore()
 const run = useRun()
 
-const denah = ref({ area: [], meja: [] })
+const denah = ref({ area: [], meja: [], takeaway: [] })
 // tiap area punya denah sendiri: hanya meja area yang dipilih yang tampil dan diatur
 const { tabs, aktif, pilih, cocok } = useArea(denah, { kunci: 'denah.area' })
 const meja = computed(() => denah.value.meja.filter(cocok))
@@ -51,6 +51,13 @@ function buka(m) {
   if (edit.value) return
   run(async () => {
     await kasir.bukaMeja(m)
+    router.push('/')
+  })
+}
+
+function bukaBill(id) {
+  run(async () => {
+    await kasir.bukaPesanan(id)
     router.push('/')
   })
 }
@@ -164,10 +171,41 @@ onBeforeUnmount(() => offs.forEach((off) => off()))
       </div>
       <p v-if="!meja.length" class="none">Belum ada meja{{ tabs.length ? ' di area ini' : '' }}. Tambahkan di Master Data › Meja.</p>
     </section>
+
+    <section v-if="!edit" class="panel">
+      <h4 class="judul"><i class="pi pi-shopping-bag" /> Bawa pulang</h4>
+      <div v-if="denah.takeaway.length" class="take">
+        <button v-for="p in denah.takeaway" :key="p.id" @click="bukaBill(p.id)">
+          #{{ p.id }} {{ p.atasNama }} · {{ rp(p.total) }}
+        </button>
+      </div>
+      <p v-else class="none">Tidak ada pesanan bawa pulang yang terbuka.</p>
+    </section>
   </div>
 </template>
 
 <style scoped>
+.judul {
+  margin: 0 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.take {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.take button {
+  padding: 10px 12px;
+  border: 1px solid var(--p-primary-color);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--p-primary-color) 12%, var(--p-content-background));
+  color: var(--accent-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
 .gap {
   gap: 14px;
 }
